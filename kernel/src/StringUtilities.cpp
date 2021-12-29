@@ -1,21 +1,21 @@
 #include "StringUtilities.h"
+#include "SerialOutput.h"
 
-static char buffer[32];
-
+static char bufferToString[32];
 char* ToString(int64_t n)
 {
     if (n == 0)
     {
-        buffer[0] = '0';
-        buffer[1] = 0;
-        return buffer;
+        bufferToString[0] = '0';
+        bufferToString[1] = 0;
+        return bufferToString;
     }
 
     bool isNegative = n < 0;
     if (isNegative)
     {
         n = -n;
-        buffer[0] = '-';
+        bufferToString[0] = '-';
     }
 
     uint8_t size = 0;
@@ -28,25 +28,26 @@ char* ToString(int64_t n)
 
     for (uint8_t i = size + isNegative; i > isNegative; --i)
     {
-        buffer[i - 1] = n % 10 + '0';
+        bufferToString[i - 1] = n % 10 + '0';
         n /= 10;
     }
-    buffer[size + isNegative] = 0;
+    bufferToString[size + isNegative] = 0;
 
-    return buffer;
+    return bufferToString;
 }
 
+static char bufferToHexString[32];
 char* ToHexString(uint64_t n)
 {
     if (n == 0)
     {
-        buffer[0] = '0';
-        buffer[1] = 0;
-        return buffer;
+        bufferToHexString[0] = '0';
+        bufferToHexString[1] = 0;
+        return bufferToHexString;
     }
 
-    buffer[0] = '0';
-    buffer[1] = 'x';
+    bufferToHexString[0] = '0';
+    bufferToHexString[1] = 'x';
 
     uint8_t size = 0;
     int64_t num = n;
@@ -58,12 +59,12 @@ char* ToHexString(uint64_t n)
 
     for (uint8_t i = size + 2; i > 2; --i)
     {
-        buffer[i - 1] = "0123456789ABCDEF"[n % 16];
+        bufferToHexString[i - 1] = "0123456789abcdef"[n % 16];
         n /= 16;
     }
-    buffer[size + 2] = 0;
+    bufferToHexString[size + 2] = 0;
 
-    return buffer;
+    return bufferToHexString;
 }
 
 size_t StringLength(const char* string)
@@ -74,4 +75,59 @@ size_t StringLength(const char* string)
         length++;
     }
     return length;
+}
+
+char bufferFormatString[128];
+char* FormatString(const char* string, int64_t value)
+{
+    const char* c = string;
+    char* bufferPtr = bufferFormatString;
+
+    bool nextIsFormatCode = false;
+    while (*c != 0)
+    {
+        if (nextIsFormatCode)
+        {
+            switch (*c++)
+            {
+                case 'd':
+                {
+                    char* intString = ToString(value);
+                    while (*intString != 0)
+                    {
+                        *bufferPtr++ = *intString++;
+                    }
+                    nextIsFormatCode = false;
+                    continue;
+                }
+                case 'x':
+                {
+                    char* hexString = ToHexString(value);
+                    while (*hexString != 0)
+                    {
+                        *bufferPtr++ = *hexString++;
+                    }
+                    nextIsFormatCode = false;
+                    continue;
+                }
+                default:
+                {
+                    nextIsFormatCode = false;
+                    continue;
+                }
+            }
+        }
+
+        if (*c == '%')
+        {
+            nextIsFormatCode = true;
+            c++;
+            continue;
+        }
+
+        *bufferPtr++ = *c++;
+    }
+    *bufferPtr = 0;
+
+    return bufferFormatString;
 }

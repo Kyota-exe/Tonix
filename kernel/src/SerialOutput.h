@@ -10,6 +10,7 @@ public:
     uint16_t port;
 
     void Print(const char* string, const char* end = "\n");
+    void Print(int64_t number, const char* end = "\n");
     SerialOutput(uint16_t _port);
 };
 

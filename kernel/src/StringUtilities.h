@@ -7,5 +7,6 @@
 char* ToString(int64_t n);
 char* ToHexString(uint64_t n);
 size_t StringLength(const char* string);
+char* FormatString(const char* string, int64_t value);
 
 #endif
