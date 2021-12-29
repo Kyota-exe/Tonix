@@ -19,6 +19,7 @@ INTERNALCFLAGS :=        \
 	-mno-sse2            \
 	-mno-red-zone        \
 	-mcmodel=kernel      \
+	-std=c++11			 \
 	-MMD
 
 INTERNALLDFLAGS :=         \

@@ -1,14 +1,11 @@
-#include <stddef.h>
 #include "Stivale2Interface.h"
+#include "StringUtilities.h"
 
 extern "C" void _start(struct stivale2_struct *stivale2Struct)
 {
-    struct stivale2_struct_tag_terminal* terminalTag = GetStivale2Terminal(stivale2Struct);
-    if (terminalTag == NULL) while (true) asm("hlt");
-
-    void (*terminalWrite)(const char* string, size_t size) = (void(*)(const char*, size_t))terminalTag->term_write;
-
-    terminalWrite("Kernel successfully loaded", 26);
+    InitializeStivale2Interface(stivale2Struct);
+    Stivale2TerminalWrite("Kernel successfully loaded");
+    Stivale2TerminalWrite(StringLength("hello"));
 
     while (true) asm("hlt");
 }

@@ -2,9 +2,12 @@
 #define MISKOS_STIVALE2INTERFACE_H
 
 #include <stdint.h>
+#include <stddef.h>
 #include "stivale2.h"
+#include "StringUtilities.h"
 
-stivale2_struct_tag_terminal* GetStivale2Terminal(struct stivale2_struct *stivale2Struct);
-void *GetStivale2Tag(struct stivale2_struct *stivale2Struct, uint64_t id);
+void InitializeStivale2Interface(struct stivale2_struct *stivale2Struct);
+void Stivale2TerminalWrite(const char* string, const char* end = "\n");
+void Stivale2TerminalWrite(int64_t number, const char* end = "\n");
 
 #endif
