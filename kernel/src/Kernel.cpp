@@ -1,11 +1,12 @@
 #include "Stivale2Interface.h"
-#include "StringUtilities.h"
+#include "SerialOutput.h"
 
 extern "C" void _start(struct stivale2_struct *stivale2Struct)
 {
     InitializeStivale2Interface(stivale2Struct);
-    Stivale2TerminalWrite("Kernel successfully loaded");
-    Stivale2TerminalWrite(StringLength("hello"));
+    SerialOutput serial = SerialOutput(0xe9);
+
+    serial.Print("Kernel ELF successfully loaded");
 
     while (true) asm("hlt");
 }
