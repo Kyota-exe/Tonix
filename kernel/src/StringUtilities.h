@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
-char* ToString(int64_t n);
-char* ToHexString(uint64_t n);
+const char* ToString(int64_t n);
+const char* ToHexString(uint64_t n);
 size_t StringLength(const char* string);
-char* FormatString(const char* string, int64_t value);
+const char* FormatString(const char* string, int64_t value);
 
 #endif

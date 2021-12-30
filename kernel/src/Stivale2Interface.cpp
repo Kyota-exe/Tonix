@@ -43,14 +43,6 @@ void Stivale2TerminalWrite(const char* string, const char* end)
     terminalWrite(end, StringLength(end));
 }
 
-void Stivale2TerminalWrite(int64_t number, const char* end)
-{
-    if (terminalWrite == 0) while (true) asm("hlt");
-    const char* string = ToString(number);
-    terminalWrite(string, StringLength(string));
-    terminalWrite(end, StringLength(end));
-}
-
 // Last node of linked list of stivale2 tags.
 // The next node added will be placed before this one and so on until the last node added will act as the head of the linked list.
 // This node requests stivale2 to load a terminal service for use by the kernel at runtime.

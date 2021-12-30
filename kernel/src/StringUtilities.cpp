@@ -1,15 +1,10 @@
 #include "StringUtilities.h"
-#include "SerialOutput.h"
 
 static char bufferToString[32];
-char* ToString(int64_t n)
+
+const char* ToString(int64_t n)
 {
-    if (n == 0)
-    {
-        bufferToString[0] = '0';
-        bufferToString[1] = 0;
-        return bufferToString;
-    }
+    if (n == 0) return "0";
 
     bool isNegative = n < 0;
     if (isNegative)
@@ -36,18 +31,12 @@ char* ToString(int64_t n)
     return bufferToString;
 }
 
-static char bufferToHexString[32];
-char* ToHexString(uint64_t n)
+const char* ToHexString(uint64_t n)
 {
-    if (n == 0)
-    {
-        bufferToHexString[0] = '0';
-        bufferToHexString[1] = 0;
-        return bufferToHexString;
-    }
+    if (n == 0) return "0";
 
-    bufferToHexString[0] = '0';
-    bufferToHexString[1] = 'x';
+    bufferToString[0] = '0';
+    bufferToString[1] = 'x';
 
     uint8_t size = 0;
     int64_t num = n;
@@ -59,12 +48,12 @@ char* ToHexString(uint64_t n)
 
     for (uint8_t i = size + 2; i > 2; --i)
     {
-        bufferToHexString[i - 1] = "0123456789abcdef"[n % 16];
+        bufferToString[i - 1] = "0123456789abcdef"[n % 16];
         n /= 16;
     }
-    bufferToHexString[size + 2] = 0;
+    bufferToString[size + 2] = 0;
 
-    return bufferToHexString;
+    return bufferToString;
 }
 
 size_t StringLength(const char* string)
@@ -78,7 +67,7 @@ size_t StringLength(const char* string)
 }
 
 char bufferFormatString[128];
-char* FormatString(const char* string, int64_t value)
+const char* FormatString(const char* string, int64_t value)
 {
     const char* c = string;
     char* bufferPtr = bufferFormatString;
@@ -92,7 +81,7 @@ char* FormatString(const char* string, int64_t value)
             {
                 case 'd':
                 {
-                    char* intString = ToString(value);
+                    const char* intString = ToString(value);
                     while (*intString != 0)
                     {
                         *bufferPtr++ = *intString++;
@@ -102,7 +91,7 @@ char* FormatString(const char* string, int64_t value)
                 }
                 case 'x':
                 {
-                    char* hexString = ToHexString(value);
+                    const char* hexString = ToHexString(value);
                     while (*hexString != 0)
                     {
                         *bufferPtr++ = *hexString++;

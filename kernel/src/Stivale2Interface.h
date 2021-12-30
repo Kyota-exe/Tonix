@@ -8,6 +8,5 @@
 
 void InitializeStivale2Interface(struct stivale2_struct *stivale2Struct);
 void Stivale2TerminalWrite(const char* string, const char* end = "\n");
-void Stivale2TerminalWrite(int64_t number, const char* end = "\n");
 
 #endif

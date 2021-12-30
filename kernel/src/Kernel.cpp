@@ -1,14 +1,14 @@
 #include "Stivale2Interface.h"
-#include "SerialOutput.h"
+#include "IDT.h"
+#include "Serial.h"
 
 extern "C" void _start(struct stivale2_struct *stivale2Struct)
 {
     InitializeStivale2Interface(stivale2Struct);
-    SerialOutput serial = SerialOutput(0xe9);
 
-    serial.Print("Kernel ELF successfully loaded");
+    Serial::Print("Kernel ELF successfully loaded\n");
 
-    serial.Print(FormatString("Hello %x yes", 0x346a2));
+    LoadIDT();
 
-    while (true) asm("hlt");
+    while (true) asm ("hlt");
 }
