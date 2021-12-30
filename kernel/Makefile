@@ -1,6 +1,6 @@
 KERNEL := bin/kernel.elf
 CC := x86_64-elf-gcc
-LD := ld
+LD := x86_64-elf-ld
 
 CFLAGS ?= -Wall -Wextra -O2 -pipe
 LDFLAGS ?=
@@ -52,6 +52,7 @@ obj/%.o: src/%.cpp src/stivale2.h
 .PHONY: clean
 clean:
 	rm -rf $(KERNEL) $(OBJ) $(HEADER_DEPS)
+	find ./obj/ -type f -delete
 
 .PHONY: distclean
 distclean: clean

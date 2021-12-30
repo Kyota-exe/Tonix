@@ -1,4 +1,5 @@
 #include "StringUtilities.h"
+#include "Serial.h"
 
 static char bufferToString[32];
 
@@ -39,7 +40,7 @@ const char* ToHexString(uint64_t n)
     bufferToString[1] = 'x';
 
     uint8_t size = 0;
-    int64_t num = n;
+    uint64_t num = n;
     while (num)
     {
         size++;

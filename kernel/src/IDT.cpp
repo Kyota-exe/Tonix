@@ -13,6 +13,7 @@ void LoadIDT()
 
     Serial::Printf("IDT base: %x", idtr.base);
     Serial::Printf("IDT limit: %x", idtr.limit);
+    Serial::Printf("IDT size: %x", idtr.limit + 1);
     Serial::Printf("IDT contains %d entries ", sizeof(IDT) / sizeof(IDTGateDescriptor), "");
     Serial::Printf("that are each %d bytes in size.", sizeof(IDTGateDescriptor));
 
