@@ -20,7 +20,7 @@ struct IDTGateDescriptor
 struct IDT
 {
     IDTGateDescriptor entries[256];
-    void SetInterruptHandler(int interrupt, uint64_t handler);
+    void SetInterruptHandler(int interrupt, uint64_t handler, int &initializedInterruptHandlersCount);
 } __attribute__((packed));
 
 struct IDTR

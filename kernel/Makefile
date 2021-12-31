@@ -4,7 +4,7 @@ LD := x86_64-elf-ld
 
 CFLAGS ?= -Wall -Wextra -O2 -pipe
 LDFLAGS ?=
-#ASMFLAGS ?= -f elf64 -gdwarf
+ASMFLAGS ?= -f elf64 -gdwarf
 
 INTERNALCFLAGS :=        \
 	-I.                  \
@@ -28,9 +28,9 @@ INTERNALLDFLAGS :=         \
 	-static
 
 SRC := $(shell find src -type f -name '*.cpp')
-#ASMSRC := $(shell find src -type f -name '*.asm')
+ASMSRC := $(shell find src -type f -name '*.asm')
 OBJ = $(patsubst src/%, obj/%, $(SRC:.cpp=.o))
-#OBJ += $(patsubst src/%, obj/%, $(ASMSRC:.asm=.o))
+OBJ += $(patsubst src/%, obj/%, $(ASMSRC:.asm=.o))
 HEADER_DEPS := $(OBJ:.o=.d)
 
 .PHONY: all
@@ -46,8 +46,8 @@ $(KERNEL): $(OBJ)
 obj/%.o: src/%.cpp src/stivale2.h
 	$(CC) $(CFLAGS) $(INTERNALCFLAGS) -c $< -o $@
 
-#obj/%.o: src/%.asm
-#	nasm $(ASMFLAGS) -g $< -o $@
+obj/%.o: src/%.asm
+	nasm $(ASMFLAGS) -g $< -o $@
 
 .PHONY: clean
 clean:
