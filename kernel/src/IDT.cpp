@@ -1,11 +1,27 @@
 #include "IDT.h"
 
-static IDTR idtr;
-static IDT idt;
-static uint8_t errorCodeInterruptNumbers[] { 0x08, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x11, 0x15, 0x1d, 0x1e };
+struct IDTGateDescriptor
+{
+    uint16_t offset0;
+    uint16_t segmentSelector;
+    uint8_t reserved0;
+    uint8_t typeAttributes;
+    uint16_t offset1;
+    uint32_t offset2;
+    uint32_t reserved1;
+} __attribute__((packed));
 
-extern "C" void ISRWrapperNoErrorCode();
-extern "C" void ISRWrapperErrorCode();
+struct IDT
+{
+    IDTGateDescriptor entries[256];
+    void SetInterruptHandler(int interrupt, uint64_t handler, int &initializedInterruptHandlersCount);
+} __attribute__((packed));
+
+struct IDTR
+{
+    uint16_t limit;
+    uint64_t base;
+} __attribute__((packed));
 
 struct InterruptFrame
 {
@@ -29,10 +45,17 @@ struct InterruptFrame
     uint64_t errorCode;
 } __attribute__((packed));
 
+static IDTR idtr;
+static IDT idt;
+static uint8_t errorCodeInterruptNumbers[] { 0x08, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x11, 0x15, 0x1d, 0x1e };
+
+extern "C" void ISRWrapperNoErrorCode();
+extern "C" void ISRWrapperErrorCode();
+
 extern "C" void ISRHandler(InterruptFrame* interruptFrame)
 {
     Serial::Printf("Exception occurred. Error Code: %x", interruptFrame->errorCode);
-    //while (true) asm volatile("hlt");
+    while (true) asm volatile("hlt");
 }
 
 void LoadIDT()
@@ -59,13 +82,9 @@ void LoadIDT()
     Serial::Printf("IDT contains %d initialized Interrupt Handlers (ISRs).", initializedInterruptHandlersCount);
 
     Serial::Print("Loading IDT...");
-    asm ( "lidt %0" : : "m"(idtr) );
+    asm("lidt %0" : : "m"(idtr));
 
-    Serial::Print("Doing Breakpoint (Interrupt 0x03) test...");
-    asm volatile ("int %0" : : "N"(3));
-    Serial::Print("Returned from Breakpoint (Interrupt 0x03) test.");
-
-    Serial::Print("Completed loading of IDT.\n");
+    Serial::Print("Completed loading of IDT.", "\n\n");
 }
 
 void IDT::SetInterruptHandler(int interrupt, uint64_t handler, int &initializedInterruptHandlersCount)

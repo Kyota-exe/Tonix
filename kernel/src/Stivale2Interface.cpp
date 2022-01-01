@@ -1,11 +1,12 @@
 #include "Stivale2Interface.h"
+#include "Serial.h"
 
 // Uninitialized static (stored in .bss) uint8_t array will act as stack to pass to stivale2
 static uint8_t stack[8192];
 
 static void (*terminalWrite)(const char* string, size_t size);
 
-static void* GetStivale2Tag(struct stivale2_struct *stivale2Struct, uint64_t id)
+static void* GetStivale2Tag(stivale2_struct *stivale2Struct, uint64_t id)
 {
     // Loop through each tag supplied by stivale2 and compare its identifier to the identifier of the tag we want.
     struct stivale2_tag* currentTag = (stivale2_tag*)stivale2Struct->tags;
@@ -25,7 +26,7 @@ static void* GetStivale2Tag(struct stivale2_struct *stivale2Struct, uint64_t id)
     }
 }
 
-void InitializeStivale2Interface(struct stivale2_struct *stivale2Struct)
+void InitializeStivale2Interface(stivale2_struct *stivale2Struct)
 {
     static bool isInitialized = false;
     if (isInitialized) return;
@@ -41,6 +42,11 @@ void Stivale2TerminalWrite(const char* string, const char* end)
     if (terminalWrite == 0) while (true) asm("hlt");
     terminalWrite(string, StringLength(string));
     terminalWrite(end, StringLength(end));
+}
+
+stivale2_struct_tag_memmap* GetMemoryMap(stivale2_struct *stivale2Struct)
+{
+    return (stivale2_struct_tag_memmap*)GetStivale2Tag(stivale2Struct, STIVALE2_STRUCT_TAG_MEMMAP_ID);
 }
 
 // Last node of linked list of stivale2 tags.

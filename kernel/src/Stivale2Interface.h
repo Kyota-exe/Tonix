@@ -6,7 +6,8 @@
 #include "stivale2.h"
 #include "StringUtilities.h"
 
-void InitializeStivale2Interface(struct stivale2_struct *stivale2Struct);
+void InitializeStivale2Interface(stivale2_struct *stivale2Struct);
 void Stivale2TerminalWrite(const char* string, const char* end = "\n");
+stivale2_struct_tag_memmap* GetMemoryMap(stivale2_struct *stivale2Struct);
 
 #endif

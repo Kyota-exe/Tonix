@@ -1,5 +1,5 @@
 KERNEL := bin/kernel.elf
-CC := x86_64-elf-gcc
+CC := x86_64-elf-g++
 LD := x86_64-elf-ld
 
 CFLAGS ?= -Wall -Wextra -O2 -pipe
@@ -11,6 +11,8 @@ INTERNALCFLAGS :=        \
 	-ffreestanding       \
 	-fno-stack-protector \
 	-fno-pic             \
+	-fno-rtti            \
+	-fno-exceptions      \
 	-mabi=sysv           \
 	-mno-80387           \
 	-mno-mmx             \
@@ -18,8 +20,7 @@ INTERNALCFLAGS :=        \
 	-mno-sse             \
 	-mno-sse2            \
 	-mno-red-zone        \
-	-mcmodel=kernel      \
-	-mgeneral-regs-only
+	-mcmodel=kernel
 
 INTERNALLDFLAGS :=         \
 	-Tlinker.ld            \
