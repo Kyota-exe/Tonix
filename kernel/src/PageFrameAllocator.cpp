@@ -84,5 +84,5 @@ void InitializePageFrameAllocator(stivale2_struct *stivale2Struct)
         pageFrameBitmap.SetBit(bitmapPage, true);
     }
 
-    Serial::Print("Completed initialization of page frame allocator (physical memory allocator).");
+    Serial::Print("Completed initialization of page frame allocator (physical memory allocator).", "\n\n");
 }
