@@ -108,7 +108,7 @@ struct PageTable
 class PagingManager
 {
 public:
-    void InitializePaging();
+    void InitializePaging(stivale2_struct* stivale2Struct);
     void MapMemory(void* virtAddr, void* physAddr);
 
 private:

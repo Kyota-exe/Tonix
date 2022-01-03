@@ -45,7 +45,7 @@ $(KERNEL): $(OBJ)
 
 -include $(HEADER_DEPS)
 obj/%.o: src/%.cpp src/stivale2.h
-	$(CC) $(CFLAGS) $(INTERNALCFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(INTERNALCFLAGS) -g -c $< -o $@
 
 obj/%.o: src/%.asm
 	nasm $(ASMFLAGS) -g $< -o $@

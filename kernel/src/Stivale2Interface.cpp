@@ -10,7 +10,7 @@ static void* GetStivale2Tag(stivale2_struct *stivale2Struct, uint64_t id)
 {
     // Loop through each tag supplied by stivale2 and compare its identifier to the identifier of the tag we want.
     struct stivale2_tag* currentTag = (stivale2_tag*)stivale2Struct->tags;
-    for (;;)
+    while (true)
     {
         if (currentTag == 0)
         {
@@ -44,9 +44,19 @@ void Stivale2TerminalWrite(const char* string, const char* end)
     terminalWrite(end, StringLength(end));
 }
 
-stivale2_struct_tag_memmap* GetMemoryMap(stivale2_struct *stivale2Struct)
+stivale2_struct_tag_memmap* GetMemoryMap(stivale2_struct* stivale2Struct)
 {
     return (stivale2_struct_tag_memmap*)GetStivale2Tag(stivale2Struct, STIVALE2_STRUCT_TAG_MEMMAP_ID);
+}
+
+stivale2_struct_tag_pmrs* GetPMRs(stivale2_struct* stivale2Struct)
+{
+    return (stivale2_struct_tag_pmrs*)GetStivale2Tag(stivale2Struct, STIVALE2_STRUCT_TAG_PMRS_ID);
+}
+
+stivale2_struct_tag_kernel_base_address* GetKernelAddressTag(stivale2_struct* stivale2Struct)
+{
+    return (stivale2_struct_tag_kernel_base_address*)GetStivale2Tag(stivale2Struct, STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID);
 }
 
 // Last node of linked list of stivale2 tags.

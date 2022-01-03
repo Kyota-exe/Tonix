@@ -95,11 +95,6 @@ void* PageFrameAllocator::RequestPage()
         if (!pageFrameBitmap.GetBit(pageFrame))
         {
             pageFrameBitmap.SetBit(pageFrame, true);
-            if (pageFrame * 0x1000 == 0xfd000000)
-            {
-                Serial::Print("PANIC");
-                while (true) asm("hlt");
-            }
             return (void*)(pageFrame * 0x1000);
         }
     }

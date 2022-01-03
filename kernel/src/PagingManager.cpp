@@ -2,7 +2,7 @@
 
 using namespace PageFrameAllocator;
 
-void PagingManager::InitializePaging()
+void PagingManager::InitializePaging(stivale2_struct* stivale2Struct)
 {
     Serial::Print("Initializing paging...");
 
@@ -19,20 +19,51 @@ void PagingManager::InitializePaging()
     Memset(plm4, 0, 0x1000);
     Serial::Printf("PLM4 Physical Address: %x", (uint64_t)plm4PhysAddr);
 
-    Serial::Print("Mapping all physical addresses to the virtual higher-half...");
+    /*Serial::Print("Mapping all physical addresses to the virtual higher-half...");
     for (uint64_t pageFrameIndex = 0; pageFrameIndex < pageFrameCount; ++pageFrameIndex)
     {
         uint64_t physAddr = pageFrameIndex * 0x1000;
         MapMemory((void*)(physAddr + 0xffff'8000'0000'0000), (void*)physAddr);
+    }*/
+
+    Serial::Print("Mapping kernel to PMR...");
+    stivale2_struct_tag_kernel_base_address* kernelBaseAddrTag = GetKernelAddressTag(stivale2Struct);
+    stivale2_struct_tag_pmrs* pmrsTag = GetPMRs(stivale2Struct);
+    Serial::Printf("PMR count: %d", pmrsTag->entries);
+    Serial::Printf("Kernel physical base: %x", kernelBaseAddrTag->physical_base_address);
+    Serial::Printf("Kernel virtual base: %x", kernelBaseAddrTag->virtual_base_address);
+    for (uint64_t pmrIndex = 0; pmrIndex < pmrsTag->entries; ++pmrIndex)
+    {
+        stivale2_pmr pmr = pmrsTag->pmrs[pmrIndex];
+        Serial::Print("============================");
+        Serial::Printf("PMR base: %x", pmr.base);
+        Serial::Printf("PMR length: %x", pmr.length);
+        Serial::Print("============================");
+//        for (uint64_t pmrVirtAddr = pmr.base; pmrVirtAddr < pmr.base + pmr.length; pmrVirtAddr += 0x1000)
+//        {
+//            uint64_t offset = pmrVirtAddr - kernelBaseAddrTag->virtual_base_address;
+//            MapMemory((void*)pmrVirtAddr, (void*)(kernelBaseAddrTag->physical_base_address + offset));
+//        }
+        for (uint64_t pageIndex = 0; pageIndex < pmr.length / 0x1000; ++pageIndex)
+        {
+            uint64_t offset = pmr.base + pageIndex * 0x1000 - kernelBaseAddrTag->virtual_base_address;
+            MapMemory((void*)(pmr.base + pageIndex * 0x1000), (void*)(kernelBaseAddrTag->physical_base_address + offset));
+        }
     }
 
-    //asm volatile("mov %0, %%cr3" : : "r" (plm4PhysAddr));
+    asm volatile("mov %0, %%cr3" : : "r" (plm4PhysAddr));
 
-    //Serial::Print("Paging initialized.", "\n\n");
+    Serial::Print("Paging initialized.", "\n\n");
+    while (true) asm volatile("hlt");
 }
 
 void PagingManager::MapMemory(void* virtAddr, void* physAddr)
 {
+    Serial::Print("---------------------------------");
+    Serial::Printf("Virt: %x", (uint64_t)virtAddr);
+    Serial::Printf("Phys: %x", (uint64_t)physAddr);
+    Serial::Print("---------------------------------");
+
     uint64_t virtualAddress = (uint64_t)virtAddr;
     virtualAddress >>= 12;
     uint16_t pageIndex = virtualAddress & 0b111'111'111;
@@ -42,6 +73,11 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
     uint16_t pageDirectoryIndex = virtualAddress & 0b111'111'111;
     virtualAddress >>= 9;
     uint16_t pdptIndex = virtualAddress & 0b111'111'111;
+
+    Serial::Printf("Page Index: %d", pageIndex);
+    Serial::Printf("Page Table Index: %d", pageTableIndex);
+    Serial::Printf("Page Directory Index: %d", pageDirectoryIndex);
+    Serial::Printf("PDPT Index: %d", pdptIndex);
 
     PLM4Entry* plm4Entry = &plm4->entries[pdptIndex];
     PDPT* pdpt = NULL;
@@ -55,6 +91,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
         // Flags
         plm4Entry->present = true;
         plm4Entry->readWrite = true;
+        plm4Entry->userSupervisor = true;
     }
     else
     {
@@ -73,6 +110,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
         // Flags
         pdptEntry->present = true;
         pdptEntry->readWrite = true;
+        pdptEntry->userSupervisor = true;
     }
     else
     {
@@ -91,6 +129,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
         // Flags
         pageDirectoryEntry->present = true;
         pageDirectoryEntry->readWrite = true;
+        pageDirectoryEntry->userSupervisor = true;
     }
     else
     {
@@ -101,4 +140,5 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
     page->pageFramePhysAddr = (uint64_t)physAddr >> 12;
     page->present = true;
     page->readWrite = true;
+    page->userSupervisor = true;
 }
