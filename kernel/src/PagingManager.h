@@ -2,6 +2,18 @@
 #define MISKOS_PAGING_H
 
 #include <stdint.h>
+#include "PageFrameAllocator.h"
+#include "Memory.h"
+#include "Stivale2Interface.h"
+
+struct CR3Contents
+{
+    uint64_t ignored0 : 3;
+    bool writeThrough : 1;
+    bool cacheDisable : 1;
+    uint64_t ignored1 : 7;
+    uint64_t plm4PhysAddr : 52;
+} __attribute__((packed));
 
 struct PLM4Entry
 {
@@ -92,5 +104,15 @@ struct PageTable
 {
     PageTableEntry entries[512];
 } __attribute__((aligned(0x1000)));
+
+class PagingManager
+{
+public:
+    void InitializePaging();
+    void MapMemory(void* virtAddr, void* physAddr);
+
+private:
+    PLM4* plm4;
+};
 
 #endif

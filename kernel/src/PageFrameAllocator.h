@@ -5,8 +5,15 @@
 #include "Serial.h"
 #include "Stivale2Interface.h"
 #include "Bitmap.h"
+#include "Memory.h"
 
-void InitializePageFrameAllocator(stivale2_struct *stivale2Struct);
-void RequestPage();
+namespace PageFrameAllocator
+{
+    void InitializePageFrameAllocator(stivale2_struct *stivale2Struct);
+    void* RequestPage();
+
+    extern bool initialized;
+    extern uint64_t pageFrameCount;
+}
 
 #endif

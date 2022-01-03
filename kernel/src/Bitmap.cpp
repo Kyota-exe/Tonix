@@ -1,8 +1,16 @@
 #include "Bitmap.h"
+#include "Serial.h"
 
 bool Bitmap::GetBit(uint64_t index)
 {
     uint64_t byteIndex = index / 8;
+
+    if (byteIndex > size - 1)
+    {
+        Serial::Printf("Bitfield: Index %x exceeds bitmap bounds.", index);
+        while (true) asm("hlt");
+    }
+
     uint8_t bitIndex = index % 8;
     return (buffer[byteIndex] & (1 << bitIndex));
 }
@@ -10,6 +18,13 @@ bool Bitmap::GetBit(uint64_t index)
 void Bitmap::SetBit(uint64_t index, bool value)
 {
     uint64_t byteIndex = index / 8;
+
+    if (byteIndex > size - 1)
+    {
+        Serial::Printf("Bitfield: Index %x exceeds bitmap bounds.", index);
+        while (true) asm("hlt");
+    }
+
     uint8_t bitIndex = index % 8;
     if (value)
     {

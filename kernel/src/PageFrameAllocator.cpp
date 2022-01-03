@@ -2,62 +2,55 @@
 
 Bitmap pageFrameBitmap;
 
-void InitializePageFrameAllocator(stivale2_struct *stivale2Struct)
+bool PageFrameAllocator::initialized = false;
+uint64_t PageFrameAllocator::pageFrameCount = 0;
+
+void PageFrameAllocator::InitializePageFrameAllocator(stivale2_struct *stivale2Struct)
 {
     Serial::Print("Initializing bitmap page frame allocator (physical memory allocator)...");
 
     stivale2_struct_tag_memmap* memoryMapTag = GetMemoryMap(stivale2Struct);
     Serial::Printf("Memory Map provided by stivale2 contains %d entries.", memoryMapTag->entries);
 
-    Serial::Print("Finding last usable byte...");
-    uint64_t lastUsableByte = 0;
-    for (uint64_t entryIndex = 0; entryIndex < memoryMapTag->entries; ++entryIndex)
+    stivale2_mmap_entry lastMemoryMapEntry = memoryMapTag->memmap[memoryMapTag->entries - 1];
+    uint64_t memorySize = lastMemoryMapEntry.base + lastMemoryMapEntry.length;
+    Serial::Printf("Memory size: %x", memorySize);
+
+//    for (uint64_t entryIndex = 0; entryIndex < memoryMapTag->entries; ++entryIndex)
+//    {
+//        stivale2_mmap_entry memoryMapEntry = memoryMapTag->memmap[entryIndex];
+//        Serial::Print("---------------");
+//        Serial::Printf("Type: %x", memoryMapEntry.type);
+//        Serial::Printf("Base: %x", memoryMapEntry.base);
+//        Serial::Printf("Length: %x", memoryMapEntry.length);
+//        Serial::Print("---------------");
+//    }
+
+    if (memorySize % 0x1000 != 0)
     {
-        stivale2_mmap_entry memoryMapEntry = memoryMapTag->memmap[entryIndex];
-
-        /*Serial::Print("---------------");
-        Serial::Printf("Type: %x", memoryMapEntry.type);
-        Serial::Printf("Base: %x", memoryMapEntry.base);
-        Serial::Printf("Length: %x", memoryMapEntry.length);
-        Serial::Print("---------------");*/
-
-        // 1 for usable memory, 0x1000 for bootloader reclaimable memory
-        if (memoryMapEntry.type == 1 || memoryMapEntry.type == 0x1000)
-        {
-            lastUsableByte = memoryMapEntry.base + memoryMapEntry.length;
-        }
-    }
-
-    if (lastUsableByte % 0x1000 != 0)
-    {
-        Serial::Print("Last usable byte address is not aligned to page size (4096).");
+        Serial::Print("Memory size is not aligned to page size (4096).");
         Serial::Print("Hanging...");
         while (true) asm("hlt");
     }
 
-    if (lastUsableByte == 0)
-    {
-        Serial::Print("Could not find usable or bootloader reclaimable memory.");
-        Serial::Print("Hanging...");
-        while (true) asm("hlt");
-    }
+    pageFrameCount = memorySize / 0x1000;
+    Serial::Printf("Physical memory contains %x page frames.", pageFrameCount);
 
-    Serial::Printf("Last usable byte: %x", lastUsableByte);
-    uint64_t pageFrameCount = lastUsableByte / 0x1000;
-    Serial::Printf("Physical memory contains %x page frames, excluding reserved page frames at the end.", pageFrameCount);
-    uint64_t bitmapSize = pageFrameCount / 8 + 1;
+    uint64_t bitmapSize = pageFrameCount / 8 + (pageFrameCount % 8 == 0 ? 0 : 1);
     Serial::Printf("Page Frame Bitmap Size: %x", bitmapSize);
+    pageFrameBitmap.size = bitmapSize;
 
-    Serial::Print("Finding first usable memory section large enough to insert page frame bitmap...");
+    Serial::Printf("Number of padding bits at the end of the page frame bitmap: %d", (pageFrameCount % 8 == 0) ? 0 : (8 - pageFrameCount % 8));
+
+    Serial::Print("Finding first usable memory section large enough to insert the page frame bitmap...");
     uint8_t* bitmapBuffer = NULL;
     for (uint64_t entryIndex = 0; entryIndex < memoryMapTag->entries; ++entryIndex)
     {
         stivale2_mmap_entry memoryMapEntry = memoryMapTag->memmap[entryIndex];
-        if ((memoryMapEntry.type == 1 || memoryMapEntry.type == 0x1000) && memoryMapEntry.length > bitmapSize)
+        if (memoryMapEntry.type == 1 && memoryMapEntry.length > bitmapSize)
         {
             bitmapBuffer = (uint8_t*)memoryMapEntry.base;
-            Serial::Print("Found usable memory section.");
-            Serial::Printf("Base: %x", memoryMapEntry.base);
+            Serial::Printf("Found usable memory section. Base: %x", memoryMapEntry.base);
             break;
         }
     }
@@ -70,12 +63,18 @@ void InitializePageFrameAllocator(stivale2_struct *stivale2Struct)
     }
 
     pageFrameBitmap.buffer = bitmapBuffer;
+    Serial::Print("Clearing all the bits in the page frame bitmap...");
+    Memset(bitmapBuffer, 0, bitmapSize);
 
     Serial::Print("Locking reserved page frames...");
     for (uint64_t entryIndex = 0; entryIndex < memoryMapTag->entries; ++entryIndex)
     {
         stivale2_mmap_entry memoryMapEntry = memoryMapTag->memmap[entryIndex];
-        pageFrameBitmap.SetBit(memoryMapEntry.base / 0x1000, memoryMapEntry.type != 1 && memoryMapEntry.type != 0x1000);
+
+        if (memoryMapEntry.type != 1)
+        {
+            pageFrameBitmap.SetBit(memoryMapEntry.base / 0x1000, true);
+        }
     }
 
     Serial::Print("Locking page frames taken by the page frame bitmap...");
@@ -84,5 +83,28 @@ void InitializePageFrameAllocator(stivale2_struct *stivale2Struct)
         pageFrameBitmap.SetBit(bitmapPage, true);
     }
 
+    initialized = true;
     Serial::Print("Completed initialization of page frame allocator (physical memory allocator).", "\n\n");
+}
+
+void* PageFrameAllocator::RequestPage()
+{
+    // Find first free page frame, starting from page frame with the lowest physical address (0)
+    for (uint64_t pageFrame = 0; pageFrame < pageFrameBitmap.size * 8; ++pageFrame)
+    {
+        if (!pageFrameBitmap.GetBit(pageFrame))
+        {
+            pageFrameBitmap.SetBit(pageFrame, true);
+            if (pageFrame * 0x1000 == 0xfd000000)
+            {
+                Serial::Print("PANIC");
+                while (true) asm("hlt");
+            }
+            return (void*)(pageFrame * 0x1000);
+        }
+    }
+
+    // Free page frame could not be found.
+    Serial::Print("Free page frame could not be found!");
+    while (true) asm("hlt");
 }
