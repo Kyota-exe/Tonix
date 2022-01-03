@@ -10,7 +10,7 @@
 namespace PageFrameAllocator
 {
     void InitializePageFrameAllocator(stivale2_struct *stivale2Struct);
-    void* RequestPage();
+    void* RequestPageFrame();
 
     extern bool initialized;
     extern uint64_t pageFrameCount;

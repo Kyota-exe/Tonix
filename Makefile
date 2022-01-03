@@ -1,5 +1,12 @@
 ISO_IMAGE = bin/disk.iso
 
+.DEFAULT_GOAL := default
+
+.PHONY: default
+default:
+	make clean
+	make all
+
 .PHONY: all
 all: $(ISO_IMAGE)
 

@@ -1,6 +1,6 @@
 #include "PageFrameAllocator.h"
 
-Bitmap pageFrameBitmap;
+static Bitmap pageFrameBitmap;
 
 bool PageFrameAllocator::initialized = false;
 uint64_t PageFrameAllocator::pageFrameCount = 0;
@@ -87,8 +87,15 @@ void PageFrameAllocator::InitializePageFrameAllocator(stivale2_struct *stivale2S
     Serial::Print("Completed initialization of page frame allocator (physical memory allocator).", "\n\n");
 }
 
-void* PageFrameAllocator::RequestPage()
+void* PageFrameAllocator::RequestPageFrame()
 {
+    if (!initialized)
+    {
+        Serial::Print("Page frame allocator (physical memory allocator) must be initialized before requesting pages.");
+        Serial::Print("Hanging...");
+        while (true) asm("hlt");
+    }
+
     // Find first free page frame, starting from page frame with the lowest physical address (0)
     for (uint64_t pageFrame = 0; pageFrame < pageFrameBitmap.size * 8; ++pageFrame)
     {
