@@ -49,8 +49,8 @@ void PageFrameAllocator::InitializePageFrameAllocator(stivale2_struct *stivale2S
         stivale2_mmap_entry memoryMapEntry = memoryMapTag->memmap[entryIndex];
         if (memoryMapEntry.type == 1 && memoryMapEntry.length > bitmapSize)
         {
-            bitmapBuffer = (uint8_t*)memoryMapEntry.base;
-            Serial::Printf("Found usable memory section. Base: %x", memoryMapEntry.base);
+            bitmapBuffer = (uint8_t*)(memoryMapEntry.base + 0xffff'8000'0000'0000);
+            Serial::Printf("Found usable memory section. Physical Base: %x", memoryMapEntry.base);
             break;
         }
     }
@@ -63,24 +63,32 @@ void PageFrameAllocator::InitializePageFrameAllocator(stivale2_struct *stivale2S
     }
 
     pageFrameBitmap.buffer = bitmapBuffer;
-    Serial::Print("Clearing all the bits in the page frame bitmap...");
-    Memset(bitmapBuffer, 0, bitmapSize);
+    Serial::Print("Setting all bits in the page frame bitmap...");
+    Memset(bitmapBuffer, 0xff, bitmapSize);
 
-    Serial::Print("Locking reserved page frames...");
+    Serial::Print("Freeing usable page frames...");
+    uint64_t freedUsablePageFrames = 0;
     for (uint64_t entryIndex = 0; entryIndex < memoryMapTag->entries; ++entryIndex)
     {
         stivale2_mmap_entry memoryMapEntry = memoryMapTag->memmap[entryIndex];
 
-        if (memoryMapEntry.type != 1)
+        if (memoryMapEntry.type == 1)
         {
-            pageFrameBitmap.SetBit(memoryMapEntry.base / 0x1000, true);
+            uint64_t basePageFrame = memoryMapEntry.base / 0x1000;
+            for (uint64_t pageFrame = 0; pageFrame < memoryMapEntry.length / 0x1000; ++pageFrame)
+            {
+                pageFrameBitmap.SetBit(basePageFrame + pageFrame, false);
+                freedUsablePageFrames++;
+            }
         }
     }
+    Serial::Printf("Freed %x usable page frames.", freedUsablePageFrames);
 
     Serial::Print("Locking page frames taken by the page frame bitmap...");
+    uint64_t bitmapBasePageFrame = ((uint64_t)bitmapBuffer - 0xffff'8000'0000'0000) / 0x1000;
     for (uint64_t bitmapPage = 0; bitmapPage < bitmapSize / 0x1000 + 1; ++bitmapPage)
     {
-        pageFrameBitmap.SetBit(bitmapPage, true);
+        pageFrameBitmap.SetBit(bitmapBasePageFrame + bitmapPage, true);
     }
 
     initialized = true;

@@ -39,7 +39,7 @@ public:
     void MapMemory(void* virtAddr, void* physAddr);
 
 private:
-    PagingStructure* plm4;
+    PagingStructure* pml4;
 };
 
 #endif
