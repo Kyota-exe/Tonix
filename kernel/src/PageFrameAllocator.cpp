@@ -36,11 +36,15 @@ void PageFrameAllocator::InitializePageFrameAllocator(stivale2_struct *stivale2S
     pageFrameCount = memorySize / 0x1000;
     Serial::Printf("Physical memory contains %x page frames.", pageFrameCount);
 
-    uint64_t bitmapSize = pageFrameCount / 8 + (pageFrameCount % 8 == 0 ? 0 : 1);
-    Serial::Printf("Page Frame Bitmap Size: %x", bitmapSize);
-    pageFrameBitmap.size = bitmapSize;
+    if (pageFrameCount % 8 != 0)
+    {
+        Serial::Print("Page frame count is not a multiple of 8.");
+        Serial::Print("Hanging...");
+        while (true) asm("hlt");
+    }
 
-    Serial::Printf("Number of padding bits at the end of the page frame bitmap: %d", (pageFrameCount % 8 == 0) ? 0 : (8 - pageFrameCount % 8));
+    uint64_t bitmapSize = pageFrameCount / 8;
+    pageFrameBitmap.size = bitmapSize;
 
     Serial::Print("Finding first usable memory section large enough to insert the page frame bitmap...");
     uint8_t* bitmapBuffer = NULL;
@@ -86,7 +90,7 @@ void PageFrameAllocator::InitializePageFrameAllocator(stivale2_struct *stivale2S
 
     Serial::Print("Locking page frames taken by the page frame bitmap...");
     uint64_t bitmapBasePageFrame = ((uint64_t)bitmapBuffer - 0xffff'8000'0000'0000) / 0x1000;
-    for (uint64_t bitmapPage = 0; bitmapPage < bitmapSize / 0x1000 + 1; ++bitmapPage)
+    for (uint64_t bitmapPage = 0; bitmapPage < bitmapSize / 0x1000; ++bitmapPage)
     {
         pageFrameBitmap.SetBit(bitmapBasePageFrame + bitmapPage, true);
     }

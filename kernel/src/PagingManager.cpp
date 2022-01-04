@@ -19,7 +19,6 @@ void PagingManager::InitializePaging(stivale2_struct* stivale2Struct)
     Memset(pml4, 0, 0x1000);
     Serial::Printf("PML4 Physical Address: %x", pml4PhysAddr);
 
-    // Commented out for now since MapMemory prints a lot of stuff
     Serial::Print("Mapping all physical addresses to the virtual higher-half...");
     for (uint64_t pageFrameIndex = 0; pageFrameIndex < pageFrameCount; ++pageFrameIndex)
     {
@@ -36,17 +35,11 @@ void PagingManager::InitializePaging(stivale2_struct* stivale2Struct)
     for (uint64_t pmrIndex = 0; pmrIndex < pmrsTag->entries; ++pmrIndex)
     {
         stivale2_pmr pmr = pmrsTag->pmrs[pmrIndex];
-//        uint64_t virt = pmr.base;
-//        uint64_t phys = kernelBaseAddrTag->physical_base_address + (pmr.base - kernelBaseAddrTag->virtual_base_address);
         for (uint64_t pmrVirtAddr = pmr.base; pmrVirtAddr < pmr.base + pmr.length; pmrVirtAddr += 0x1000)
         {
             uint64_t offset = pmrVirtAddr - kernelBaseAddrTag->virtual_base_address;
             MapMemory((void*)pmrVirtAddr, (void*)(kernelBaseAddrTag->physical_base_address + offset));
         }
-//        for (uint64_t j = 0; j < pmr.length; j += 4096)
-//        {
-//            this->MapMemory((void*)(virt + j), (void*)(phys + j));
-//        }
     }
 
     Serial::Printf("Moving the PML4's physical address into CR3...", pml4PhysAddr);
@@ -72,7 +65,6 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
     if (!pml4Entry->GetFlag(Present))
     {
         uint64_t pdptPhysAddr = (uint64_t)RequestPageFrame();
-        //Serial::Printf("Allocated page for new PDPT - PhysAddr = %x", pdptPhysAddr);
         pdpt = (PagingStructure*)(pdptPhysAddr + 0xffff'8000'0000'0000);
         Memset(pdpt, 0, 0x1000);
         pml4Entry->SetPhysicalAddress(pdptPhysAddr);
@@ -127,6 +119,26 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
     pageTableEntry->SetPhysicalAddress((uint64_t)physAddr);
     pageTableEntry->SetFlag(Present, true);
     pageTableEntry->SetFlag(ReadWrite, true);
+}
+
+void PagingManager::UnmapMemory(void* virtAddr)
+{
+    uint64_t virtualAddress = (uint64_t)virtAddr;
+    virtualAddress >>= 12;
+    uint16_t pageIndex = virtualAddress & 0b111'111'111;
+    virtualAddress >>= 9;
+    uint16_t pageTableIndex = virtualAddress & 0b111'111'111;
+    virtualAddress >>= 9;
+    uint16_t pageDirectoryIndex = virtualAddress & 0b111'111'111;
+    virtualAddress >>= 9;
+    uint16_t pdptIndex = virtualAddress & 0b111'111'111;
+
+    PagingStructure* pdpt = (PagingStructure*)(pml4->entries[pdptIndex].GetPhysicalAddress() + 0xffff'8000'0000'0000);
+    PagingStructure* pageDirectory = (PagingStructure*)(pdpt->entries[pageDirectoryIndex].GetPhysicalAddress() + 0xffff'8000'0000'0000);
+    PagingStructure* pageTable = (PagingStructure*)(pageDirectory->entries[pageTableIndex].GetPhysicalAddress() + 0xffff'8000'0000'0000);
+    pageTable->entries[pageIndex].SetFlag(Present, false);
+
+    asm volatile("invlpg (%0)" : : "b"(virtAddr) : "memory");
 }
 
 void PagingStructureEntry::SetFlag(PagingFlag flag, bool enable)
