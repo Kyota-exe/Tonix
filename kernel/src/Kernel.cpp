@@ -1,8 +1,6 @@
-#include "Stivale2Interface.h"
-#include "IDT.h"
-#include "PageFrameAllocator.h"
-#include "PagingManager.h"
-#include "Serial.h"
+#include "KernelUtilities.h"
+
+PagingManager kernelPagingManager;
 
 extern "C" void _start(stivale2_struct *stivale2Struct)
 {
@@ -12,9 +10,9 @@ extern "C" void _start(stivale2_struct *stivale2Struct)
 
     LoadIDT();
     PageFrameAllocator::InitializePageFrameAllocator(stivale2Struct);
-
-    PagingManager pagingManager;
-    pagingManager.InitializePaging(stivale2Struct);
+    kernelPagingManager.InitializePaging(stivale2Struct);
+    ActivateLAPIC();
+    //ActivateLAPICTimer();
 
     while (true) asm("hlt");
 }

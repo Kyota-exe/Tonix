@@ -14,7 +14,7 @@ struct IDTGateDescriptor
 struct IDT
 {
     IDTGateDescriptor entries[256];
-    void SetInterruptHandler(int interrupt, uint64_t handler, int &initializedInterruptHandlersCount);
+    void SetInterruptHandler(int interrupt, uint64_t handler);
 } __attribute__((packed));
 
 struct IDTR
@@ -42,20 +42,133 @@ struct InterruptFrame
     uint64_t rcx;
     uint64_t rbx;
     uint64_t rax;
+    uint64_t interruptNumber;
     uint64_t errorCode;
 } __attribute__((packed));
 
 static IDTR idtr;
 static IDT idt;
-static uint8_t errorCodeInterruptNumbers[] { 0x08, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x11, 0x15, 0x1d, 0x1e };
+static int initializedInterruptHandlersCount = 0;
 
-extern "C" void ISRWrapperNoErrorCode();
-extern "C" void ISRWrapperErrorCode();
+// Exceptions
+extern "C" void ISRWrapper0();
+extern "C" void ISRWrapper1();
+extern "C" void ISRWrapper2();
+extern "C" void ISRWrapper3();
+extern "C" void ISRWrapper4();
+extern "C" void ISRWrapper5();
+extern "C" void ISRWrapper6();
+extern "C" void ISRWrapper7();
+extern "C" void ISRWrapper8();
+extern "C" void ISRWrapper9();
+extern "C" void ISRWrapper10();
+extern "C" void ISRWrapper11();
+extern "C" void ISRWrapper12();
+extern "C" void ISRWrapper13();
+extern "C" void ISRWrapper14();
+extern "C" void ISRWrapper16();
+extern "C" void ISRWrapper17();
+extern "C" void ISRWrapper18();
+extern "C" void ISRWrapper19();
+extern "C" void ISRWrapper20();
+extern "C" void ISRWrapper21();
+extern "C" void ISRWrapper28();
+extern "C" void ISRWrapper29();
+extern "C" void ISRWrapper30();
+
+// PIC IRQs
+extern "C" void ISRWrapper32();
+extern "C" void ISRWrapper33();
+extern "C" void ISRWrapper34();
+extern "C" void ISRWrapper35();
+extern "C" void ISRWrapper36();
+extern "C" void ISRWrapper37();
+extern "C" void ISRWrapper38();
+extern "C" void ISRWrapper39();
+extern "C" void ISRWrapper40();
+extern "C" void ISRWrapper41();
+extern "C" void ISRWrapper42();
+extern "C" void ISRWrapper43();
+extern "C" void ISRWrapper44();
+extern "C" void ISRWrapper45();
+extern "C" void ISRWrapper46();
+extern "C" void ISRWrapper47();
+
+// Local APIC IRQs
+extern "C" void ISRWrapper48();
+extern "C" void ISRWrapper255();
+
+void ExceptionHandler(InterruptFrame* interruptFrame)
+{
+    Serial::Printf("Exception %x occurred.", interruptFrame->interruptNumber);
+    Serial::Printf("Error code: %x", interruptFrame->errorCode);
+    Serial::Print("Hanging...");
+    while (true) asm("hlt");
+}
 
 extern "C" void ISRHandler(InterruptFrame* interruptFrame)
 {
-    Serial::Printf("Exception occurred. Error Code: %x", interruptFrame->errorCode);
-    while (true) asm volatile("hlt");
+    switch (interruptFrame->interruptNumber)
+    {
+        case 0 ... 31:
+            ExceptionHandler(interruptFrame);
+            break;
+        default:
+            Serial::Printf("Could not find ISR for interrupt %x.", interruptFrame->interruptNumber);
+            Serial::Print("Hanging...");
+            while (true) asm("hlt");
+    }
+}
+
+void InitializeInterruptHandlers()
+{
+    // Exceptions
+    idt.SetInterruptHandler(0, reinterpret_cast<uint64_t>(ISRWrapper0));
+    idt.SetInterruptHandler(1, reinterpret_cast<uint64_t>(ISRWrapper1));
+    idt.SetInterruptHandler(2, reinterpret_cast<uint64_t>(ISRWrapper2));
+    idt.SetInterruptHandler(3, reinterpret_cast<uint64_t>(ISRWrapper3));
+    idt.SetInterruptHandler(4, reinterpret_cast<uint64_t>(ISRWrapper4));
+    idt.SetInterruptHandler(5, reinterpret_cast<uint64_t>(ISRWrapper5));
+    idt.SetInterruptHandler(6, reinterpret_cast<uint64_t>(ISRWrapper6));
+    idt.SetInterruptHandler(7, reinterpret_cast<uint64_t>(ISRWrapper7));
+    idt.SetInterruptHandler(8, reinterpret_cast<uint64_t>(ISRWrapper8));
+    idt.SetInterruptHandler(9, reinterpret_cast<uint64_t>(ISRWrapper9));
+    idt.SetInterruptHandler(10, reinterpret_cast<uint64_t>(ISRWrapper10));
+    idt.SetInterruptHandler(11, reinterpret_cast<uint64_t>(ISRWrapper11));
+    idt.SetInterruptHandler(12, reinterpret_cast<uint64_t>(ISRWrapper12));
+    idt.SetInterruptHandler(13, reinterpret_cast<uint64_t>(ISRWrapper13));
+    idt.SetInterruptHandler(14, reinterpret_cast<uint64_t>(ISRWrapper14));
+    idt.SetInterruptHandler(16, reinterpret_cast<uint64_t>(ISRWrapper16));
+    idt.SetInterruptHandler(17, reinterpret_cast<uint64_t>(ISRWrapper17));
+    idt.SetInterruptHandler(18, reinterpret_cast<uint64_t>(ISRWrapper18));
+    idt.SetInterruptHandler(19, reinterpret_cast<uint64_t>(ISRWrapper19));
+    idt.SetInterruptHandler(20, reinterpret_cast<uint64_t>(ISRWrapper20));
+    idt.SetInterruptHandler(21, reinterpret_cast<uint64_t>(ISRWrapper21));
+    idt.SetInterruptHandler(28, reinterpret_cast<uint64_t>(ISRWrapper28));
+    idt.SetInterruptHandler(29, reinterpret_cast<uint64_t>(ISRWrapper29));
+    idt.SetInterruptHandler(30, reinterpret_cast<uint64_t>(ISRWrapper30));
+
+    // PIC IRQs
+    idt.SetInterruptHandler(32, reinterpret_cast<uint64_t>(ISRWrapper32));
+    idt.SetInterruptHandler(33, reinterpret_cast<uint64_t>(ISRWrapper33));
+    idt.SetInterruptHandler(34, reinterpret_cast<uint64_t>(ISRWrapper34));
+    idt.SetInterruptHandler(35, reinterpret_cast<uint64_t>(ISRWrapper35));
+    idt.SetInterruptHandler(36, reinterpret_cast<uint64_t>(ISRWrapper36));
+    idt.SetInterruptHandler(37, reinterpret_cast<uint64_t>(ISRWrapper37));
+    idt.SetInterruptHandler(38, reinterpret_cast<uint64_t>(ISRWrapper38));
+    idt.SetInterruptHandler(39, reinterpret_cast<uint64_t>(ISRWrapper39));
+    idt.SetInterruptHandler(40, reinterpret_cast<uint64_t>(ISRWrapper40));
+    idt.SetInterruptHandler(41, reinterpret_cast<uint64_t>(ISRWrapper41));
+    idt.SetInterruptHandler(42, reinterpret_cast<uint64_t>(ISRWrapper42));
+    idt.SetInterruptHandler(43, reinterpret_cast<uint64_t>(ISRWrapper43));
+    idt.SetInterruptHandler(44, reinterpret_cast<uint64_t>(ISRWrapper44));
+    idt.SetInterruptHandler(45, reinterpret_cast<uint64_t>(ISRWrapper45));
+    idt.SetInterruptHandler(46, reinterpret_cast<uint64_t>(ISRWrapper46));
+    idt.SetInterruptHandler(47, reinterpret_cast<uint64_t>(ISRWrapper47));
+
+    // Local APIC IRQs
+    idt.SetInterruptHandler(48, reinterpret_cast<uint64_t>(ISRWrapper48));
+    idt.SetInterruptHandler(255, reinterpret_cast<uint64_t>(ISRWrapper255));
 }
 
 void LoadIDT()
@@ -71,14 +184,7 @@ void LoadIDT()
     Serial::Printf("that are each %d bytes in size.", sizeof(IDTGateDescriptor));
 
     Serial::Print("Initializing Interrupt Handlers (ISRs)...");
-    int initializedInterruptHandlersCount = 0;
-    for (uint8_t interruptNum = 0; interruptNum <= 31; ++interruptNum)
-    {
-        bool hasErrorCode = false;
-        for (uint8_t n : errorCodeInterruptNumbers) if (interruptNum == n) hasErrorCode = true;
-        uint64_t isrWrapperAddr = reinterpret_cast<uint64_t>(hasErrorCode ? ISRWrapperErrorCode : ISRWrapperNoErrorCode);
-        idt.SetInterruptHandler(interruptNum, isrWrapperAddr, initializedInterruptHandlersCount);
-    }
+    InitializeInterruptHandlers();
     Serial::Printf("IDT contains %d initialized Interrupt Handlers (ISRs).", initializedInterruptHandlersCount);
 
     Serial::Print("Loading IDT...");
@@ -87,7 +193,7 @@ void LoadIDT()
     Serial::Print("Completed loading of IDT.", "\n\n");
 }
 
-void IDT::SetInterruptHandler(int interrupt, uint64_t handler, int &initializedInterruptHandlersCount)
+void IDT::SetInterruptHandler(int interrupt, uint64_t handler)
 {
     IDTGateDescriptor* idtGateDescriptor = &idt.entries[interrupt];
 
