@@ -8,8 +8,6 @@
 
 void InitializeStivale2Interface(stivale2_struct *stivale2Struct);
 void Stivale2TerminalWrite(const char* string, const char* end = "\n");
-stivale2_struct_tag_memmap* GetMemoryMap(stivale2_struct *stivale2Struct);
-stivale2_struct_tag_pmrs* GetPMRs(stivale2_struct* stivale2Struct);
-stivale2_struct_tag_kernel_base_address* GetKernelAddressTag(stivale2_struct* stivale2Struct);
+void* GetStivale2Tag(uint64_t id);
 
 #endif

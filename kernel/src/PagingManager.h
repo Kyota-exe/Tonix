@@ -35,7 +35,7 @@ struct PagingStructure
 class PagingManager
 {
 public:
-    void InitializePaging(stivale2_struct* stivale2Struct);
+    void InitializePaging();
     void MapMemory(void* virtAddr, void* physAddr);
     void UnmapMemory(void* virtAddr);
 

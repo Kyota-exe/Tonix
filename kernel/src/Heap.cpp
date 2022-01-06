@@ -13,7 +13,7 @@ void* KMalloc(uint64_t size)
             Serial::Print("Hanging...");
             while (true) asm("hlt");
         }
-        currentSlabAddr = (uint64_t)PageFrameAllocator::RequestPageFrame() + 0xffff'8000'0000'0000;
+        currentSlabAddr = (uint64_t)RequestPageFrame() + 0xffff'8000'0000'0000;
     }
     void* addr = (void*)(currentSlabAddr + currentSlabOffset);
     currentSlabOffset += size;

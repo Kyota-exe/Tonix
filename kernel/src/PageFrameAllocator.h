@@ -7,13 +7,9 @@
 #include "Bitmap.h"
 #include "Memory.h"
 
-namespace PageFrameAllocator
-{
-    void InitializePageFrameAllocator(stivale2_struct *stivale2Struct);
-    void* RequestPageFrame();
+void InitializePageFrameAllocator();
+void* RequestPageFrame();
 
-    extern bool initialized;
-    extern uint64_t pageFrameCount;
-}
+extern uint64_t pageFrameCount;
 
 #endif

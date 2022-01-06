@@ -1,17 +1,8 @@
 #include "PagingManager.h"
 
-using namespace PageFrameAllocator;
-
-void PagingManager::InitializePaging(stivale2_struct* stivale2Struct)
+void PagingManager::InitializePaging()
 {
     Serial::Print("Initializing paging...");
-
-    if (!initialized)
-    {
-        Serial::Print("Page frame allocator (physical memory allocator) must be initialized before initializing paging.");
-        Serial::Print("Hanging...");
-        while (true) asm("hlt");
-    }
 
     Serial::Print("Allocating memory for PML4...");
     uint64_t pml4PhysAddr = (uint64_t)RequestPageFrame();
@@ -27,8 +18,8 @@ void PagingManager::InitializePaging(stivale2_struct* stivale2Struct)
     }
 
     Serial::Print("Mapping kernel to PMR...");
-    stivale2_struct_tag_kernel_base_address* kernelBaseAddrTag = GetKernelAddressTag(stivale2Struct);
-    stivale2_struct_tag_pmrs* pmrsTag = GetPMRs(stivale2Struct);
+    stivale2_struct_tag_kernel_base_address* kernelBaseAddrTag = (stivale2_struct_tag_kernel_base_address*)GetStivale2Tag(STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID);
+    stivale2_struct_tag_pmrs* pmrsTag = (stivale2_struct_tag_pmrs*)GetStivale2Tag(STIVALE2_STRUCT_TAG_PMRS_ID);
     Serial::Printf("PMR count: %d", pmrsTag->entries);
     Serial::Printf("Kernel physical base: %x", kernelBaseAddrTag->physical_base_address);
     Serial::Printf("Kernel virtual base: %x", kernelBaseAddrTag->virtual_base_address);

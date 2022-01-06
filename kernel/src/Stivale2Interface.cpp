@@ -4,9 +4,11 @@
 // Uninitialized static (stored in .bss) uint8_t array will act as stack to pass to stivale2
 static uint8_t stack[8192];
 
+stivale2_struct* stivale2Struct;
+
 static void (*terminalWrite)(const char* string, size_t size);
 
-static void* GetStivale2Tag(stivale2_struct *stivale2Struct, uint64_t id)
+void* GetStivale2Tag(uint64_t id)
 {
     // Loop through each tag supplied by stivale2 and compare its identifier to the identifier of the tag we want.
     struct stivale2_tag* currentTag = (stivale2_tag*)stivale2Struct->tags;
@@ -26,15 +28,12 @@ static void* GetStivale2Tag(stivale2_struct *stivale2Struct, uint64_t id)
     }
 }
 
-void InitializeStivale2Interface(stivale2_struct *stivale2Struct)
+void InitializeStivale2Interface(stivale2_struct* _stivale2Struct)
 {
-    static bool isInitialized = false;
-    if (isInitialized) return;
+    stivale2Struct = _stivale2Struct;
 
-    stivale2_struct_tag_terminal* terminalTag = (stivale2_struct_tag_terminal*)GetStivale2Tag(stivale2Struct, STIVALE2_STRUCT_TAG_TERMINAL_ID);
+    stivale2_struct_tag_terminal* terminalTag = (stivale2_struct_tag_terminal*)GetStivale2Tag(STIVALE2_STRUCT_TAG_TERMINAL_ID);
     terminalWrite = (void(*)(const char*, size_t))terminalTag->term_write;
-
-    isInitialized = true;
 }
 
 void Stivale2TerminalWrite(const char* string, const char* end)
@@ -42,21 +41,6 @@ void Stivale2TerminalWrite(const char* string, const char* end)
     if (terminalWrite == 0) while (true) asm("hlt");
     terminalWrite(string, StringLength(string));
     terminalWrite(end, StringLength(end));
-}
-
-stivale2_struct_tag_memmap* GetMemoryMap(stivale2_struct* stivale2Struct)
-{
-    return (stivale2_struct_tag_memmap*)GetStivale2Tag(stivale2Struct, STIVALE2_STRUCT_TAG_MEMMAP_ID);
-}
-
-stivale2_struct_tag_pmrs* GetPMRs(stivale2_struct* stivale2Struct)
-{
-    return (stivale2_struct_tag_pmrs*)GetStivale2Tag(stivale2Struct, STIVALE2_STRUCT_TAG_PMRS_ID);
-}
-
-stivale2_struct_tag_kernel_base_address* GetKernelAddressTag(stivale2_struct* stivale2Struct)
-{
-    return (stivale2_struct_tag_kernel_base_address*)GetStivale2Tag(stivale2Struct, STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID);
 }
 
 // Last node of linked list of stivale2 tags.
@@ -89,6 +73,16 @@ static stivale2_header_tag_framebuffer framebufferHeaderTag
     .unused = 0
 };
 
+static stivale2_header_tag_smp smpHeaderTag
+{
+    .tag
+    {
+        .identifier = STIVALE2_STRUCT_TAG_SMP_ID,
+        .next = (uint64_t)&framebufferHeaderTag
+    },
+    .flags = 1
+};
+
 __attribute__((section(".stivale2hdr"), used))
 static stivale2_header stivale2Header
 {
@@ -107,5 +101,5 @@ static stivale2_header stivale2Header
     .flags = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4),
 
     // Points to head of linked list of tags, which is the last node we added.
-    .tags = (uintptr_t)&framebufferHeaderTag
+    .tags = (uintptr_t)&smpHeaderTag
 };

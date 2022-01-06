@@ -2,14 +2,13 @@
 
 static Bitmap pageFrameBitmap;
 
-bool PageFrameAllocator::initialized = false;
-uint64_t PageFrameAllocator::pageFrameCount = 0;
+uint64_t pageFrameCount = 0;
 
-void PageFrameAllocator::InitializePageFrameAllocator(stivale2_struct *stivale2Struct)
+void InitializePageFrameAllocator()
 {
     Serial::Print("Initializing bitmap page frame allocator (physical memory allocator)...");
 
-    stivale2_struct_tag_memmap* memoryMapTag = GetMemoryMap(stivale2Struct);
+    stivale2_struct_tag_memmap* memoryMapTag = (stivale2_struct_tag_memmap*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MEMMAP_ID);
     Serial::Printf("Memory Map provided by stivale2 contains %d entries.", memoryMapTag->entries);
 
     stivale2_mmap_entry lastMemoryMapEntry = memoryMapTag->memmap[memoryMapTag->entries - 1];
@@ -95,19 +94,11 @@ void PageFrameAllocator::InitializePageFrameAllocator(stivale2_struct *stivale2S
         pageFrameBitmap.SetBit(bitmapBasePageFrame + bitmapPage, true);
     }
 
-    initialized = true;
     Serial::Print("Completed initialization of page frame allocator (physical memory allocator).", "\n\n");
 }
 
-void* PageFrameAllocator::RequestPageFrame()
+void* RequestPageFrame()
 {
-    if (!initialized)
-    {
-        Serial::Print("Page frame allocator (physical memory allocator) must be initialized before requesting pages.");
-        Serial::Print("Hanging...");
-        while (true) asm("hlt");
-    }
-
     // Find first free page frame, starting from page frame with the lowest physical address (0)
     for (uint64_t pageFrame = 0; pageFrame < pageFrameBitmap.size * 8; ++pageFrame)
     {
