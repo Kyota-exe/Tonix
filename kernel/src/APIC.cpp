@@ -10,7 +10,7 @@ static uint64_t GetLAPICBaseMSR()
     return (uint64_t)high << 32 | low;
 }
 
-void LAPICEOI()
+void LAPICSendEOI()
 {
     *(volatile uint32_t*)(apicRegisterBase + 0xb0) = 0;
 }
@@ -24,7 +24,6 @@ void ActivateLAPIC()
     // Activate APIC and set the Spurious Interrupt Vector to map to 255 in the IDT
     *(volatile uint32_t*)(apicRegisterBase + 0xf0) = 0x1ff;
 
-    asm volatile("sti");
     Serial::Print("Activated the local APIC.", "\n\n");
 }
 

@@ -7,7 +7,7 @@
 #include "Serial.h"
 
 void ActivateLAPIC();
-void LAPICEOI();
+void LAPICSendEOI();
 void ActivateLAPICTimer();
 
 #endif

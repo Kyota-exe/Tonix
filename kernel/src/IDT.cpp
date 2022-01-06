@@ -106,12 +106,21 @@ void ExceptionHandler(InterruptFrame* interruptFrame)
     while (true) asm("hlt");
 }
 
+void KeyboardInterruptHandler()
+{
+    Serial::Printf("Keyboard interrupt: %x", inb(0x60));
+    PICSendEIO(1);
+}
+
 extern "C" void ISRHandler(InterruptFrame* interruptFrame)
 {
     switch (interruptFrame->interruptNumber)
     {
         case 0 ... 31:
             ExceptionHandler(interruptFrame);
+            break;
+        case 32 + 1:
+            KeyboardInterruptHandler();
             break;
         default:
             Serial::Printf("Could not find ISR for interrupt %x.", interruptFrame->interruptNumber);
