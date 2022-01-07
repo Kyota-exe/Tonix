@@ -5,9 +5,10 @@
 #include "PagingManager.h"
 #include "KernelUtilities.h"
 #include "Serial.h"
+#include "PIT.h"
 
 void ActivateLAPIC();
 void LAPICSendEOI();
-void ActivateLAPICTimer();
+uint64_t CalibrateLAPICTimer();
 
 #endif

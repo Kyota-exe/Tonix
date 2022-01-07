@@ -2,7 +2,7 @@
 
 PagingManager kernelPagingManager;
 
-extern "C" void _start(stivale2_struct *stivale2Struct)
+extern "C" void _start(stivale2_struct* stivale2Struct)
 {
     InitializeStivale2Interface(stivale2Struct);
 
@@ -11,11 +11,15 @@ extern "C" void _start(stivale2_struct *stivale2Struct)
     LoadIDT();
     InitializePageFrameAllocator();
     kernelPagingManager.InitializePaging();
-    ActivateLAPIC();
-    //ActivateLAPICTimer();
     InitializePIC();
+    ActivateLAPIC();
     ActivatePICKeyboardInterrupts();
     asm volatile("sti");
+
+    uint64_t lapicTimerFreq = CalibrateLAPICTimer();
+    Serial::Printf("Local APIC timer frequency: %d Hz", lapicTimerFreq);
+
+    StartNonBSPCores();
 
     while (true) asm("hlt");
 }

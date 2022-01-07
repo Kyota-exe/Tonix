@@ -7,6 +7,7 @@
 #include "PagingManager.h"
 #include "APIC.h"
 #include "PIC.h"
+#include "SMP.h"
 #include "Serial.h"
 
 extern PagingManager kernelPagingManager;

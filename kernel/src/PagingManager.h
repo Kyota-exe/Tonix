@@ -38,6 +38,7 @@ public:
     void InitializePaging();
     void MapMemory(void* virtAddr, void* physAddr);
     void UnmapMemory(void* virtAddr);
+    uint64_t pml4PhysAddr;
 
 private:
     PagingStructure* pml4;

@@ -77,10 +77,10 @@ static stivale2_header_tag_smp smpHeaderTag
 {
     .tag
     {
-        .identifier = STIVALE2_STRUCT_TAG_SMP_ID,
+        .identifier = STIVALE2_HEADER_TAG_SMP_ID,
         .next = (uint64_t)&framebufferHeaderTag
     },
-    .flags = 1
+    .flags = 0
 };
 
 __attribute__((section(".stivale2hdr"), used))

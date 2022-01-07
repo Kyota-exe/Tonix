@@ -5,7 +5,7 @@ void PagingManager::InitializePaging()
     Serial::Print("Initializing paging...");
 
     Serial::Print("Allocating memory for PML4...");
-    uint64_t pml4PhysAddr = (uint64_t)RequestPageFrame();
+    pml4PhysAddr = (uint64_t)RequestPageFrame();
     pml4 = (PagingStructure*)(pml4PhysAddr + 0xffff'8000'0000'0000);
     Memset(pml4, 0, 0x1000);
     Serial::Printf("PML4 Physical Address: %x", pml4PhysAddr);

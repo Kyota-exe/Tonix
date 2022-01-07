@@ -112,6 +112,15 @@ void KeyboardInterruptHandler()
     PICSendEIO(1);
 }
 
+void LAPICTimerInterrupt()
+{
+    uint32_t other;
+    uint32_t edx;
+    __cpuid(0xb0, other, other, other, edx);
+    Serial::Printf("%d", edx, "");
+    LAPICSendEOI();
+}
+
 extern "C" void ISRHandler(InterruptFrame* interruptFrame)
 {
     switch (interruptFrame->interruptNumber)
@@ -121,6 +130,9 @@ extern "C" void ISRHandler(InterruptFrame* interruptFrame)
             break;
         case 32 + 1:
             KeyboardInterruptHandler();
+            break;
+        case 48:
+            LAPICTimerInterrupt();
             break;
         default:
             Serial::Printf("Could not find ISR for interrupt %x.", interruptFrame->interruptNumber);
