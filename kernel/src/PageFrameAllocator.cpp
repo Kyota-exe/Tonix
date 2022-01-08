@@ -8,10 +8,10 @@ void InitializePageFrameAllocator()
 {
     Serial::Print("Initializing bitmap page frame allocator (physical memory allocator)...");
 
-    stivale2_struct_tag_memmap* memoryMapTag = (stivale2_struct_tag_memmap*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MEMMAP_ID);
-    Serial::Printf("Memory Map provided by stivale2 contains %d entries.", memoryMapTag->entries);
+    stivale2_struct_tag_memmap* memoryMapStruct = (stivale2_struct_tag_memmap*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MEMMAP_ID);
+    Serial::Printf("Memory Map provided by stivale2 contains %d entries.", memoryMapStruct->entries);
 
-    stivale2_mmap_entry lastMemoryMapEntry = memoryMapTag->memmap[memoryMapTag->entries - 1];
+    stivale2_mmap_entry lastMemoryMapEntry = memoryMapStruct->memmap[memoryMapStruct->entries - 1];
     uint64_t memorySize = lastMemoryMapEntry.base + lastMemoryMapEntry.length;
     Serial::Printf("Memory size: %x", memorySize);
 
@@ -47,9 +47,9 @@ void InitializePageFrameAllocator()
 
     Serial::Print("Finding first usable memory section large enough to insert the page frame bitmap...");
     uint8_t* bitmapBuffer = NULL;
-    for (uint64_t entryIndex = 0; entryIndex < memoryMapTag->entries; ++entryIndex)
+    for (uint64_t entryIndex = 0; entryIndex < memoryMapStruct->entries; ++entryIndex)
     {
-        stivale2_mmap_entry memoryMapEntry = memoryMapTag->memmap[entryIndex];
+        stivale2_mmap_entry memoryMapEntry = memoryMapStruct->memmap[entryIndex];
         if (memoryMapEntry.type == 1 && memoryMapEntry.length > bitmapSize)
         {
             bitmapBuffer = (uint8_t*)(memoryMapEntry.base + 0xffff'8000'0000'0000);
@@ -71,9 +71,9 @@ void InitializePageFrameAllocator()
 
     Serial::Print("Freeing usable page frames...");
     uint64_t freedUsablePageFrames = 0;
-    for (uint64_t entryIndex = 0; entryIndex < memoryMapTag->entries; ++entryIndex)
+    for (uint64_t entryIndex = 0; entryIndex < memoryMapStruct->entries; ++entryIndex)
     {
-        stivale2_mmap_entry memoryMapEntry = memoryMapTag->memmap[entryIndex];
+        stivale2_mmap_entry memoryMapEntry = memoryMapStruct->memmap[entryIndex];
 
         if (memoryMapEntry.type == 1)
         {

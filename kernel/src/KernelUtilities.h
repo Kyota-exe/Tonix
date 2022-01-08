@@ -8,6 +8,8 @@
 #include "APIC.h"
 #include "PIC.h"
 #include "SMP.h"
+#include "RAMFS.h"
+#include "Vector.h"
 #include "Serial.h"
 
 extern PagingManager kernelPagingManager;

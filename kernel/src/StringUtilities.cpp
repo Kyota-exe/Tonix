@@ -57,10 +57,10 @@ const char* ToHexString(uint64_t n)
     return bufferToString;
 }
 
-size_t StringLength(const char* string)
+uint64_t StringLength(const char* string, uint64_t max)
 {
     size_t length = 0;
-    while (*string++ != '\0')
+    while (*string++ != '\0' && (length < max || max == 0))
     {
         length++;
     }
@@ -120,4 +120,51 @@ const char* FormatString(const char* string, int64_t value)
     *bufferPtr = 0;
 
     return bufferFormatString;
+}
+
+bool StringEquals(const char* s1, const char* s2)
+{
+    const char* ptr1 = s1;
+    const char* ptr2 = s2;
+
+    while (*ptr1 != 0 && *ptr2 != 0)
+    {
+        if (*ptr1++ != *ptr2++) return false;
+    }
+
+    return *ptr1 == 0 && *ptr2 == 0;
+}
+
+void StringCopy(const char* source, const char* destination, uint64_t length, uint64_t pos)
+{
+    char* src = (char*)source;
+    char* dest = (char*)(destination + pos);
+    for (size_t i = 0; i < length; ++i)
+    {
+        *dest++ = *src++;
+    }
+}
+
+uint64_t StringToUInt(const char* string)
+{
+    uint64_t number = 0;
+    while (*string != 0)
+    {
+        number *= 10;
+        number += *string - '0';
+        string++;
+    }
+    return number;
+}
+
+uint64_t StringOctalToUInt(const char* string)
+{
+    uint64_t number = 0;
+    while (*string != 0)
+    {
+        number *= 8;
+        number += *string - '0';
+        string++;
+    }
+    return number;
 }

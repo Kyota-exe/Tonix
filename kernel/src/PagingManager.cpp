@@ -18,18 +18,18 @@ void PagingManager::InitializePaging()
     }
 
     Serial::Print("Mapping kernel to PMR...");
-    stivale2_struct_tag_kernel_base_address* kernelBaseAddrTag = (stivale2_struct_tag_kernel_base_address*)GetStivale2Tag(STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID);
-    stivale2_struct_tag_pmrs* pmrsTag = (stivale2_struct_tag_pmrs*)GetStivale2Tag(STIVALE2_STRUCT_TAG_PMRS_ID);
-    Serial::Printf("PMR count: %d", pmrsTag->entries);
-    Serial::Printf("Kernel physical base: %x", kernelBaseAddrTag->physical_base_address);
-    Serial::Printf("Kernel virtual base: %x", kernelBaseAddrTag->virtual_base_address);
-    for (uint64_t pmrIndex = 0; pmrIndex < pmrsTag->entries; ++pmrIndex)
+    stivale2_struct_tag_kernel_base_address* kernelBaseAddrStruct = (stivale2_struct_tag_kernel_base_address*)GetStivale2Tag(STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID);
+    stivale2_struct_tag_pmrs* pmrsStruct = (stivale2_struct_tag_pmrs*)GetStivale2Tag(STIVALE2_STRUCT_TAG_PMRS_ID);
+    Serial::Printf("PMR count: %d", pmrsStruct->entries);
+    Serial::Printf("Kernel physical base: %x", kernelBaseAddrStruct->physical_base_address);
+    Serial::Printf("Kernel virtual base: %x", kernelBaseAddrStruct->virtual_base_address);
+    for (uint64_t pmrIndex = 0; pmrIndex < pmrsStruct->entries; ++pmrIndex)
     {
-        stivale2_pmr pmr = pmrsTag->pmrs[pmrIndex];
+        stivale2_pmr pmr = pmrsStruct->pmrs[pmrIndex];
         for (uint64_t pmrVirtAddr = pmr.base; pmrVirtAddr < pmr.base + pmr.length; pmrVirtAddr += 0x1000)
         {
-            uint64_t offset = pmrVirtAddr - kernelBaseAddrTag->virtual_base_address;
-            MapMemory((void*)pmrVirtAddr, (void*)(kernelBaseAddrTag->physical_base_address + offset));
+            uint64_t offset = pmrVirtAddr - kernelBaseAddrStruct->virtual_base_address;
+            MapMemory((void*)pmrVirtAddr, (void*)(kernelBaseAddrStruct->physical_base_address + offset));
         }
     }
 
