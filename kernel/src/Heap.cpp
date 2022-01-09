@@ -1,4 +1,6 @@
 #include "Heap.h"
+#include "PageFrameAllocator.h"
+#include "Serial.h"
 
 static uint64_t currentSlabAddr = 0;
 static uint64_t currentSlabOffset = 0;

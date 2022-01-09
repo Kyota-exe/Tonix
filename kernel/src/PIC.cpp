@@ -1,4 +1,5 @@
 #include "PIC.h"
+#include "Serial.h"
 
 void InitializePIC()
 {

@@ -1,7 +1,6 @@
 #ifndef MISKOS_BITMAP_H
 #define MISKOS_BITMAP_H
 
-#include <stddef.h>
 #include <stdint.h>
 
 struct Bitmap

@@ -2,7 +2,6 @@
 #define MISKOS_PIT_H
 
 #include <stdint.h>
-#include "IO.h"
 
 uint16_t PITGetTick();
 void PITSetFrequency(uint64_t frequency);

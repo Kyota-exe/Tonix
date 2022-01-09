@@ -1,8 +1,7 @@
 #ifndef MISKOS_QEMUSERIAL_H
 #define MISKOS_QEMUSERIAL_H
 
-#include "IO.h"
-#include "StringUtilities.h"
+#include <stdint.h>
 
 namespace Serial
 {

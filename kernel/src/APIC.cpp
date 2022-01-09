@@ -1,4 +1,5 @@
 #include "APIC.h"
+#include "PIT.h"
 
 const uint64_t APIC_EIO_OFFSET = 0xb0;
 const uint64_t APIC_SPURIOUS_INTERRUPT_VECTOR = 0xf0;

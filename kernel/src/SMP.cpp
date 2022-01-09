@@ -1,4 +1,9 @@
 #include "SMP.h"
+#include "Serial.h"
+#include "Stivale2Interface.h"
+#include "PageFrameAllocator.h"
+#include "APIC.h"
+#include "KernelUtilities.h"
 
 static void InitializeCore(stivale2_smp_info* smpInfoPtr)
 {

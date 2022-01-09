@@ -1,4 +1,8 @@
 #include "PagingManager.h"
+#include "PageFrameAllocator.h"
+#include "Memory.h"
+#include "Stivale2Interface.h"
+#include "Serial.h"
 
 void PagingManager::InitializePaging()
 {
@@ -52,7 +56,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
     uint16_t pdptIndex = virtualAddress & 0b111'111'111;
 
     PagingStructureEntry* pml4Entry = &pml4->entries[pdptIndex];
-    PagingStructure* pdpt = NULL;
+    PagingStructure* pdpt;
     if (!pml4Entry->GetFlag(Present))
     {
         uint64_t pdptPhysAddr = (uint64_t)RequestPageFrame();
@@ -70,7 +74,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
     }
 
     PagingStructureEntry* pdptEntry = &pdpt->entries[pageDirectoryIndex];
-    PagingStructure* pageDirectory = NULL;
+    PagingStructure* pageDirectory;
     if (!pdptEntry->GetFlag(Present))
     {
         uint64_t pageDirectoryPhysAddr = (uint64_t)RequestPageFrame();
@@ -89,7 +93,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
     }
 
     PagingStructureEntry* pageDirectoryEntry = &pageDirectory->entries[pageTableIndex];
-    PagingStructure* pageTable = NULL;
+    PagingStructure* pageTable;
     if (!pageDirectoryEntry->GetFlag(Present))
     {
         uint64_t pageTablePhysAddr = (uint64_t)RequestPageFrame();

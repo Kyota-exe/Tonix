@@ -1,5 +1,4 @@
 #include "StringUtilities.h"
-#include "Serial.h"
 
 static char bufferToString[32];
 
@@ -59,7 +58,7 @@ const char* ToHexString(uint64_t n)
 
 uint64_t StringLength(const char* string, uint64_t max)
 {
-    size_t length = 0;
+    uint64_t length = 0;
     while (*string++ != '\0' && (length < max || max == 0))
     {
         length++;
@@ -133,16 +132,6 @@ bool StringEquals(const char* s1, const char* s2)
     }
 
     return *ptr1 == 0 && *ptr2 == 0;
-}
-
-void StringCopy(const char* source, const char* destination, uint64_t length, uint64_t pos)
-{
-    char* src = (char*)source;
-    char* dest = (char*)(destination + pos);
-    for (size_t i = 0; i < length; ++i)
-    {
-        *dest++ = *src++;
-    }
 }
 
 uint64_t StringToUInt(const char* string)

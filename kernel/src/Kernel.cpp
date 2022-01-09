@@ -1,4 +1,15 @@
 #include "KernelUtilities.h"
+#include "Stivale2Interface.h"
+#include "IDT.h"
+#include "PageFrameAllocator.h"
+#include "APIC.h"
+#include "PIC.h"
+#include "SMP.h"
+#include "VFS.h"
+#include "Vector.h"
+#include "StringUtilities.h"
+#include "Ext2.h"
+#include "Serial.h"
 
 PagingManager kernelPagingManager;
 
@@ -24,10 +35,15 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     for (uint64_t i = 0; i < modulesStruct->module_count; ++i)
     {
         stivale2_module module = modulesStruct->modules[i];
-        if (StringEquals(module.string, "boot:///initrd.tar"))
+//        if (StringEquals(module.string, "boot:///initrd.tar"))
+//        {
+//            Serial::Print("Initializing RAM filesystem...");
+//            InitializeRAMFS(module.begin, module.end);
+//        }
+        if (StringEquals(module.string, "boot:///ext2-ramdisk-image"))
         {
-            Serial::Print("Initializing RAM filesystem...");
-            InitializeRAMFS(module.begin, module.end);
+            Serial::Print("Initializing ext2 ramdisk file system...");
+            InitializeExt2(module.begin, module.end);
         }
     }
 

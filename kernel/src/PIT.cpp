@@ -1,4 +1,5 @@
 #include "PIT.h"
+#include "IO.h"
 
 const uint16_t PIT_MODE_COMMAND = 0x43;
 const uint16_t PIT_CHANNEL0_DATA = 0x40;

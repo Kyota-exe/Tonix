@@ -1,4 +1,8 @@
 #include "PageFrameAllocator.h"
+#include "Serial.h"
+#include "Stivale2Interface.h"
+#include "Bitmap.h"
+#include "Memory.h"
 
 static Bitmap pageFrameBitmap;
 
@@ -46,7 +50,7 @@ void InitializePageFrameAllocator()
     pageFrameBitmap.size = bitmapSize;
 
     Serial::Print("Finding first usable memory section large enough to insert the page frame bitmap...");
-    uint8_t* bitmapBuffer = NULL;
+    uint8_t* bitmapBuffer = 0;
     for (uint64_t entryIndex = 0; entryIndex < memoryMapStruct->entries; ++entryIndex)
     {
         stivale2_mmap_entry memoryMapEntry = memoryMapStruct->memmap[entryIndex];
@@ -58,7 +62,7 @@ void InitializePageFrameAllocator()
         }
     }
 
-    if (bitmapBuffer == NULL)
+    if (bitmapBuffer == 0)
     {
         Serial::Print("Could not find usable memory section large enough to insert page frame bitmap.");
         Serial::Print("Hanging...");

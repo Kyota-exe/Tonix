@@ -1,4 +1,9 @@
 #include "IDT.h"
+#include <stdint.h>
+#include "APIC.h"
+#include "PIC.h"
+#include "Serial.h"
+#include "cpuid.h"
 
 struct IDTGateDescriptor
 {

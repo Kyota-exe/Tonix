@@ -12,9 +12,9 @@ uint8_t inb(uint16_t port)
     return value;
 }
 
-void outb(uint16_t port, uint8_t* values, size_t size)
+void outb(uint16_t port, uint8_t* values, uint64_t size)
 {
-    for (size_t i = 0; i < size; ++i)
+    for (uint64_t i = 0; i < size; ++i)
     {
         outb(port, *values++);
     }

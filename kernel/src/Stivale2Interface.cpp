@@ -1,12 +1,13 @@
 #include "Stivale2Interface.h"
 #include "Serial.h"
+#include "StringUtilities.h"
 
 // Uninitialized static (stored in .bss) uint8_t array will act as stack to pass to stivale2
 static uint8_t stack[8192];
 
 stivale2_struct* stivale2Struct;
 
-static void (*terminalWrite)(const char* string, size_t size);
+static void (*terminalWrite)(const char* string, uint64_t size);
 
 void* GetStivale2Tag(uint64_t id)
 {
@@ -33,7 +34,7 @@ void InitializeStivale2Interface(stivale2_struct* _stivale2Struct)
     stivale2Struct = _stivale2Struct;
 
     stivale2_struct_tag_terminal* terminalTag = (stivale2_struct_tag_terminal*)GetStivale2Tag(STIVALE2_STRUCT_TAG_TERMINAL_ID);
-    terminalWrite = (void(*)(const char*, size_t))terminalTag->term_write;
+    terminalWrite = (void(*)(const char*, uint64_t))terminalTag->term_write;
 }
 
 void Stivale2TerminalWrite(const char* string, const char* end)

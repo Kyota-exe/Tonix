@@ -2,7 +2,6 @@
 #define MISKOS_PIC_H
 
 #include "IO.h"
-#include "Serial.h"
 
 void InitializePIC();
 void PICSendEIO(int irq);

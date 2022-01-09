@@ -2,9 +2,6 @@
 #define MISKOS_PAGING_H
 
 #include <stdint.h>
-#include "PageFrameAllocator.h"
-#include "Memory.h"
-#include "Stivale2Interface.h"
 
 enum PagingFlag
 {
