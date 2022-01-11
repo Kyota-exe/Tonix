@@ -1,4 +1,5 @@
 #include "StringUtilities.h"
+#include "Serial.h"
 
 static char bufferToString[32];
 
@@ -119,6 +120,36 @@ const char* FormatString(const char* string, int64_t value)
     *bufferPtr = 0;
 
     return bufferFormatString;
+}
+
+char bufferStringSplit[128];
+const char* StringSplit(const char* string, char splitCharacter, uint64_t substringIndex)
+{
+    const char* ptr = string;
+    const char* substringPtr = ptr;
+    unsigned int currentSubstringIndex = 0;
+    uint64_t stringLength = StringLength(string);
+    while ((uint64_t)(ptr - string) < stringLength + 1)
+    {
+        if (*ptr == splitCharacter || *ptr == 0)
+        {
+            ptr++;
+            if (currentSubstringIndex == substringIndex)
+            {
+                char* bufferPtr = bufferStringSplit;
+                while (*substringPtr != splitCharacter && *substringPtr != 0)
+                {
+                    *bufferPtr++ = *substringPtr++;
+                }
+                *bufferPtr = 0;
+                return bufferStringSplit;
+            }
+            currentSubstringIndex++;
+            substringPtr = ptr;
+        }
+        ptr++;
+    }
+    return 0;
 }
 
 bool StringEquals(const char* s1, const char* s2)

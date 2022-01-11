@@ -10,6 +10,7 @@
 #include "StringUtilities.h"
 #include "Ext2.h"
 #include "Serial.h"
+#include "ELFLoader.h"
 
 PagingManager kernelPagingManager;
 
@@ -28,22 +29,21 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     asm volatile("sti");
 
     uint64_t lapicTimerFreq = CalibrateLAPICTimer();
-    Serial::Printf("Local APIC timer frequency: %d Hz", lapicTimerFreq, "\n\n");
+    Serial::Printf("BSP Local APIC timer frequency: %d Hz", lapicTimerFreq, "\n\n");
 
     stivale2_struct_tag_modules* modulesStruct = (stivale2_struct_tag_modules*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MODULES_ID);
     Serial::Printf("Module Count: %d", modulesStruct->module_count);
     for (uint64_t i = 0; i < modulesStruct->module_count; ++i)
     {
         stivale2_module module = modulesStruct->modules[i];
-//        if (StringEquals(module.string, "boot:///initrd.tar"))
-//        {
-//            Serial::Print("Initializing RAM filesystem...");
-//            InitializeRAMFS(module.begin, module.end);
-//        }
-        if (StringEquals(module.string, "boot:///ext2-ramdisk-image"))
+
+        if (StringEquals(module.string, "boot:///ext2-ramdisk-image.ext2"))
         {
-            Serial::Print("Initializing ext2 ramdisk file system...");
             InitializeExt2(module.begin, module.end);
+        }
+        else if (StringEquals(module.string, "boot:///proc.elf"))
+        {
+            LoadELF(module.begin);
         }
     }
 

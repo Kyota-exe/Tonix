@@ -23,7 +23,7 @@ $(ISO_IMAGE): limine kernel
 	mkdir -p iso_root
 	cp kernel/bin/kernel.elf \
 		limine.cfg limine/limine.sys limine/limine-cd.bin limine/limine-eltorito-efi.bin iso_root/
-	cp ext2-ramdisk-image iso_root/
+	cp ext2-ramdisk-image.ext2 proc.elf iso_root/
 	xorriso -as mkisofs -b limine-cd.bin \
 		-no-emul-boot -boot-load-size 4 -boot-info-table \
 		--efi-boot limine-eltorito-efi.bin \

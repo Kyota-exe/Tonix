@@ -3,30 +3,16 @@
 
 #include "Vector.h"
 
-struct Inode
-{
-    uint64_t inodeNumber;
-};
-
-struct TNode
+struct VNode
 {
     char* name;
-    Inode* inode;
-    TNode(const char* _name, Inode* _inode);
-    TNode(const TNode &original);
-    TNode& operator=(const TNode newValue);
-    ~TNode();
-};
+    uint32_t inodeNum;
+    Vector<VNode> children;
 
-struct DirectoryInode : Inode
-{
-    Vector<TNode> fileTNodes;
-    Vector<TNode> subdirectoryTNodes;
-};
-
-struct FileInode : Inode
-{
-    uint64_t fileSize;
+    VNode(const char* _name, uint32_t _inodeNum);
+    VNode(const VNode &original);
+    VNode& operator=(const VNode newValue);
+    ~VNode();
 };
 
 #endif

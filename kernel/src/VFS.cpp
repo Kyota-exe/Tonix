@@ -1,34 +1,30 @@
 #include "VFS.h"
-#include "Heap.h"
-#include "Memory.h"
 #include "StringUtilities.h"
 
-TNode::TNode(const char* _name, Inode* _inode)
+VNode::VNode(const char* _name, uint32_t _inodeNum) : inodeNum(_inodeNum)
 {
     uint64_t nameLength = StringLength(_name);
     name = (char*)KMalloc(nameLength + 1);
     MemCopy(name, (void*)_name, nameLength);
     name[nameLength] = 0;
 
-    inode = _inode;
+    children = Vector<VNode>();
 }
 
-TNode::TNode(const TNode &original)
+VNode::VNode(const VNode &original) : inodeNum(original.inodeNum), children(original.children)
 {
     uint64_t nameLength = StringLength(original.name);
     name = (char*)KMalloc(nameLength + 1);
     MemCopy(name, original.name, nameLength);
     name[nameLength] = 0;
-
-    inode = original.inode;
 }
 
-TNode::~TNode()
+VNode::~VNode()
 {
     KFree(name);
 }
 
-TNode& TNode::operator=(const TNode newValue)
+VNode& VNode::operator=(const VNode newValue)
 {
     KFree(name);
     uint64_t nameLength = StringLength(newValue.name);
@@ -36,6 +32,5 @@ TNode& TNode::operator=(const TNode newValue)
     MemCopy(name, newValue.name, nameLength);
     name[nameLength] = 0;
 
-    inode = newValue.inode;
     return *this;
 }

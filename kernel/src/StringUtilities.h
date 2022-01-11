@@ -8,5 +8,6 @@ const char* FormatString(const char* string, int64_t value);
 bool StringEquals(const char* s1, const char* s2);
 uint64_t StringToUInt(const char* string);
 uint64_t StringOctalToUInt(const char* string);
+const char* StringSplit(const char* string, char splitCharacter, uint64_t substringIndex);
 
 #endif

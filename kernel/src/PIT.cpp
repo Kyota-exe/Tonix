@@ -25,7 +25,7 @@ void PITSetReloadValue(uint16_t reloadValue)
 void PITSetFrequency(uint64_t frequency)
 {
     uint64_t reloadValue = PIT_BASE_FREQUENCY / frequency;
-    // Round up if the mantissa is greater than 0.5
+    // Round up if the fractional part is greater than 0.5
     if (PIT_BASE_FREQUENCY % frequency > frequency / 2) reloadValue++;
     PITSetReloadValue(reloadValue);
 }
