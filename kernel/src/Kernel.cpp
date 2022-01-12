@@ -23,6 +23,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     LoadIDT();
     InitializePageFrameAllocator();
     kernelPagingManager.InitializePaging();
+    InitializeKernelHeap();
     InitializePIC();
     ActivateLAPIC();
     ActivatePICKeyboardInterrupts();
