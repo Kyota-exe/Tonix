@@ -11,6 +11,7 @@
 #include "Ext2.h"
 #include "Serial.h"
 #include "ELFLoader.h"
+#include "GDT.h"
 
 PagingManager kernelPagingManager;
 
@@ -20,6 +21,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
 
     Serial::Print("\nKernel ELF successfully loaded", "\n\n");
 
+    InitializeGDT();
     LoadIDT();
     InitializePageFrameAllocator();
     kernelPagingManager.InitializePaging();

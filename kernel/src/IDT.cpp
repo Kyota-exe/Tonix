@@ -214,7 +214,7 @@ void LoadIDT()
     Serial::Printf("IDT contains %d initialized Interrupt Handlers (ISRs).", initializedInterruptHandlersCount);
 
     Serial::Print("Loading IDT...");
-    asm("lidt %0" : : "m"(idtr));
+    asm volatile("lidt %0" : : "m"(idtr));
 
     Serial::Print("Completed loading of IDT.", "\n\n");
 }
@@ -230,8 +230,8 @@ void IDT::SetInterruptHandler(int interrupt, uint64_t handler)
     // Bits 0..1: Ring Privilege Level
     // Bit 2: If this is set, this segment is for an LDT. If not, this segment is for a GDT.
     // Bits 3..15: Index of the descriptor in the GDT or LDT.
-    // This segment selector describes a segment in Ring 0 that has its descriptor in index 5 of the GDT.
-    idtGateDescriptor->segmentSelector = 0b101'0'00;
+    // This segment selector represents the kernel code segment.
+    idtGateDescriptor->segmentSelector = 0b1'0'00;
 
     // Bits 0..3: Gate Type. 0xe for 64-bit Interrupt Gate and 0xf for 64-bit Trap Gate.
     // Bit 4: Reserved.

@@ -3,7 +3,7 @@ section .text
 
 extern ISRHandler
 
-KERNEL_DS equ 0b110000;
+KERNEL_DS equ 0b10000;
 
 %macro ISRWrapperContents 0
     push rax
