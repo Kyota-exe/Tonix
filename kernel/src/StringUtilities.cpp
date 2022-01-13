@@ -24,7 +24,7 @@ const char* ToString(int64_t n)
 
     for (uint8_t i = size + isNegative; i > isNegative; --i)
     {
-        bufferToString[i - 1] = n % 10 + '0';
+        bufferToString[i - 1] = (char)(n % 10 + '0');
         n /= 10;
     }
     bufferToString[size + isNegative] = 0;
@@ -149,7 +149,7 @@ const char* StringSplit(const char* string, char splitCharacter, uint64_t substr
         }
         ptr++;
     }
-    return 0;
+    return nullptr;
 }
 
 bool StringEquals(const char* s1, const char* s2)

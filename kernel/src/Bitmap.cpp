@@ -1,7 +1,7 @@
 #include "Bitmap.h"
 #include "Serial.h"
 
-bool Bitmap::GetBit(uint64_t index)
+bool Bitmap::GetBit(uint64_t index) const
 {
     uint64_t byteIndex = index / 8;
 
@@ -15,7 +15,7 @@ bool Bitmap::GetBit(uint64_t index)
     return (buffer[byteIndex] & (1 << bitIndex));
 }
 
-void Bitmap::SetBit(uint64_t index, bool value)
+void Bitmap::SetBit(uint64_t index, bool value) const
 {
     uint64_t byteIndex = index / 8;
 

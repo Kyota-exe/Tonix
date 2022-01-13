@@ -12,6 +12,7 @@
 #include "Serial.h"
 #include "ELFLoader.h"
 #include "GDT.h"
+#include "TSS.h"
 
 PagingManager kernelPagingManager;
 
@@ -26,6 +27,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     InitializePageFrameAllocator();
     kernelPagingManager.InitializePaging();
     InitializeKernelHeap();
+    InitializeTSS();
     InitializePIC();
     ActivateLAPIC();
     ActivatePICKeyboardInterrupts();
@@ -34,7 +36,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     uint64_t lapicTimerFreq = CalibrateLAPICTimer();
     Serial::Printf("BSP Local APIC timer frequency: %d Hz", lapicTimerFreq, "\n\n");
 
-    stivale2_struct_tag_modules* modulesStruct = (stivale2_struct_tag_modules*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MODULES_ID);
+    auto modulesStruct = (stivale2_struct_tag_modules*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MODULES_ID);
     Serial::Printf("Module Count: %d", modulesStruct->module_count);
     for (uint64_t i = 0; i < modulesStruct->module_count; ++i)
     {

@@ -18,9 +18,9 @@ struct PagingStructureEntry
 {
     uint64_t value;
     void SetFlag(PagingFlag flag, bool value);
-    bool GetFlag(PagingFlag flag);
+    bool GetFlag(PagingFlag flag) const;
     void SetPhysicalAddress(uint64_t physAddr);
-    uint64_t GetPhysicalAddress();
+    uint64_t GetPhysicalAddress() const;
     // void SetProtectionKey(uint8_t value);
 };
 

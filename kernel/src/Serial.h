@@ -2,11 +2,17 @@
 #define MISKOS_QEMUSERIAL_H
 
 #include <stdint.h>
+#include "StringUtilities.h"
 
 namespace Serial
 {
     void Print(const char* string, const char* end = "\n");
-    void Printf(const char* string, int64_t value, const char* end = "\n");
+
+    template <typename T>
+    void Printf(const char* string, T value, const char* end = "\n")
+    {
+        Print(FormatString(string, (uint64_t)value), end);
+    }
 }
 
 #endif

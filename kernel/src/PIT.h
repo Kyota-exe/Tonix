@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 uint16_t PITGetTick();
-void PITSetFrequency(uint64_t frequency);
 void PITSetReloadValue(uint16_t reloadValue);
+void PITSetFrequency(uint64_t frequency);
 
 extern const uint64_t PIT_BASE_FREQUENCY;
 

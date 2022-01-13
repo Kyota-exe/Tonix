@@ -24,7 +24,7 @@ VNode::~VNode()
     KFree(name);
 }
 
-VNode& VNode::operator=(const VNode newValue)
+VNode& VNode::operator=(const VNode& newValue)
 {
     KFree(name);
     uint64_t nameLength = StringLength(newValue.name);

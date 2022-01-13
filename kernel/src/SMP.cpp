@@ -17,7 +17,7 @@ static void InitializeCore(stivale2_smp_info* smpInfoPtr)
 void StartNonBSPCores()
 {
     Serial::Print("Starting non-BSP cores...");
-    stivale2_struct_tag_smp* smpStruct = (stivale2_struct_tag_smp*)GetStivale2Tag(STIVALE2_STRUCT_TAG_SMP_ID);
+    auto smpStruct = (stivale2_struct_tag_smp*)GetStivale2Tag(STIVALE2_STRUCT_TAG_SMP_ID);
     if (smpStruct->cpu_count > 1)
     {
         Serial::Printf("CPU cores: %d", smpStruct->cpu_count);

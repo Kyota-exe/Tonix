@@ -46,7 +46,7 @@ struct ProgramHeader
 void LoadELF(uint64_t ramDiskBegin)
 {
     // TODO: read from disk
-    ELFHeader* elfHeader = (ELFHeader*)ramDiskBegin;
+    auto elfHeader = (ELFHeader*)ramDiskBegin;
 
     if (elfHeader->eIdentMagic[0] != 0x7f || elfHeader->eIdentMagic[1] != 0x45 || elfHeader->eIdentMagic[2] != 0x4c || elfHeader->eIdentMagic[3] != 0x46)
     {
@@ -62,7 +62,7 @@ void LoadELF(uint64_t ramDiskBegin)
     }
 
     // TODO: read from disk
-    ProgramHeader* programHeaderTable = (ProgramHeader*)(ramDiskBegin + elfHeader->programHeaderTableOffset);
+    auto programHeaderTable = (ProgramHeader*)(ramDiskBegin + elfHeader->programHeaderTableOffset);
 
     for (uint16_t i = 0; i < elfHeader->programHeaderTableEntryCount; ++i)
     {
@@ -88,6 +88,6 @@ void LoadELF(uint64_t ramDiskBegin)
     }
 
     Serial::Print("Loaded ELF. Jumping...");
-    void (*ProcessStart)(char, uint64_t) = reinterpret_cast<void(*)(char, uint64_t)>(elfHeader->entry);
+    auto *ProcessStart = reinterpret_cast<void(*)(char, uint64_t)>(elfHeader->entry);
     ProcessStart('A', reinterpret_cast<uint64_t>(Serial::Print));
 }

@@ -106,7 +106,7 @@ VNode ConstructVNode(Ext2DirectoryEntry* directoryEntry)
         Serial::Printf("is different from name length in directory entry (%d).", directoryEntry->nameLength);
     }
 
-    return VNode(name, directoryEntry->inodeNum);
+    return {name, directoryEntry->inodeNum};
 }
 
 // TODO: Support directories other than root
@@ -131,7 +131,7 @@ Vector<VNode> GetDirectoryListing(Ext2Inode* directoryInode)
         }
 
         // TODO: If loading Ext2 from disk, read from disk
-        Ext2DirectoryEntry* directoryEntry = (Ext2DirectoryEntry*)(diskAddr + ramDiskAddr);
+        auto directoryEntry = (Ext2DirectoryEntry*)(diskAddr + ramDiskAddr);
 
         if (directoryEntry->inodeNum != 0)
         {

@@ -13,13 +13,15 @@ class Slab
 private:
     uint64_t slotSize;
     FreeSlot* head;
-    Slab(const Slab& original);
+
 public:
     uint64_t slabBase;
     void InitializeSlab(uint64_t _slotSize);
     void* Alloc();
     void Free(void* ptr);
-    Slab();
+
+    Slab() = default;
+    Slab(const Slab& original) = delete;
 };
 
 const uint64_t SLABS_COUNT = 10;
@@ -31,18 +33,16 @@ struct SlabsPool
 
 SlabsPool slabsPool;
 
-Slab::Slab() { }
-
 void Slab::InitializeSlab(uint64_t _slotSize)
 {
     slotSize = _slotSize;
     slabBase = (uint64_t)RequestPageFrame() + 0xffff'8000'0000'0000;
 
     uint64_t slotCount = 0x1000 / slotSize;
-    FreeSlot* previous = 0;
-    for (int slotIndex = slotCount - 1; slotIndex >= 0; --slotIndex)
+    FreeSlot* previous = nullptr;
+    for (int slotIndex = (int)slotCount - 1; slotIndex >= 0; --slotIndex)
     {
-        FreeSlot* freeSlot = (FreeSlot*)(slabBase + slotIndex * slotSize);
+        auto freeSlot = (FreeSlot*)(slabBase + slotIndex * slotSize);
         freeSlot->next = previous;
         previous = freeSlot;
     }
@@ -54,7 +54,7 @@ void* Slab::Alloc()
 {
     void* addr = head;
 
-    if (addr == 0)
+    if (addr == nullptr)
     {
         Serial::Printf("No more %d byte slots left in heap slab.", slotSize);
         Serial::Print("Hanging...");
@@ -87,12 +87,11 @@ void* KMalloc(uint64_t size)
 
 void KFree(void* ptr)
 {
-    for (uint64_t slabIndex = 0; slabIndex < SLABS_COUNT; ++slabIndex)
+    for (auto& slab : slabsPool.slabs)
     {
-        Slab* slab = &slabsPool.slabs[slabIndex];
-        if (slab->slabBase <= (uint64_t)ptr && (uint64_t)ptr < slab->slabBase + 0x1000)
+        if (slab.slabBase <= (uint64_t)ptr && (uint64_t)ptr < slab.slabBase + 0x1000)
         {
-            slab->Free(ptr);
+            slab.Free(ptr);
         }
     }
 }

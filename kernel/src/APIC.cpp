@@ -38,8 +38,8 @@ uint64_t CalibrateLAPICTimer()
 
     // Initialize variables and pointers here to make instructions as fast as possible while calibrating.
     uint64_t lapicTicksCount = 0xfffff;
-    volatile uint32_t* currentCountRegister = (volatile uint32_t*)(apicRegisterBase + APIC_CURRENT_COUNT);
-    volatile uint32_t* initialCountRegister = (volatile uint32_t*)(apicRegisterBase + APIC_INITIAL_COUNT);
+    auto currentCountRegister = (volatile uint32_t*)(apicRegisterBase + APIC_CURRENT_COUNT);
+    auto initialCountRegister = (volatile uint32_t*)(apicRegisterBase + APIC_INITIAL_COUNT);
 
     // Interrupt gate 48 in the IDT, masked, one-shot
     *(volatile uint32_t*)(apicRegisterBase + APIC_LVT_TIMER) = 0b00'1'000'0'0000'00110000;

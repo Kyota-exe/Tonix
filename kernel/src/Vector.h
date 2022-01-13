@@ -2,6 +2,8 @@
 #define MISKOS_VECTOR_H
 
 #include <stdint.h>
+#include "Heap.h"
+#include "Memory.h"
 
 template <typename T> class Vector
 {
@@ -15,14 +17,11 @@ public:
     void Remove(uint64_t index);
     uint64_t GetLength();
     T& operator[](uint64_t index);
-    Vector<T>& operator=(const Vector<T>& newValue);
+    Vector<T>& operator=(const Vector<T>& newVector);
     Vector();
     Vector(const Vector<T>& original);
     ~Vector();
 };
-
-#include "Heap.h"
-#include "Memory.h"
 
 const uint64_t VECTOR_DEFAULT_CAPACITY = 4;
 
@@ -91,10 +90,13 @@ T& Vector<T>::operator[](uint64_t index)
 template<typename T>
 Vector<T>& Vector<T>::operator=(const Vector<T>& newVector)
 {
-    KFree(buffer);
-    length = newVector.length;
-    capacity = newVector.capacity;
-    MemCopy(buffer, newVector.buffer, length);
+    if (&newVector != this)
+    {
+        KFree(buffer);
+        length = newVector.length;
+        capacity = newVector.capacity;
+        MemCopy(buffer, newVector.buffer, length);
+    }
     return *this;
 }
 

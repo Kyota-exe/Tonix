@@ -32,8 +32,8 @@ struct Ext2Inode
     uint16_t groupId1; // Customizable
     uint32_t reserved2; // Customizable
     uint32_t GetBlock(uint32_t currentBlock, uint32_t blockSize);
-    void SetSize(uint64_t size);
-    uint64_t GetSize();
+    //void SetSize(uint64_t size);
+    //uint64_t GetSize();
 } __attribute__((packed));
 
 #endif

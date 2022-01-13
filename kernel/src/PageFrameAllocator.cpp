@@ -12,7 +12,7 @@ void InitializePageFrameAllocator()
 {
     Serial::Print("Initializing bitmap page frame allocator (physical memory allocator)...");
 
-    stivale2_struct_tag_memmap* memoryMapStruct = (stivale2_struct_tag_memmap*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MEMMAP_ID);
+    auto memoryMapStruct = (stivale2_struct_tag_memmap*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MEMMAP_ID);
     Serial::Printf("Memory Map provided by stivale2 contains %d entries.", memoryMapStruct->entries);
 
     stivale2_mmap_entry lastMemoryMapEntry = memoryMapStruct->memmap[memoryMapStruct->entries - 1];

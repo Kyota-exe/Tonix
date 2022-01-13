@@ -24,9 +24,9 @@ uint64_t CeilLog2(uint64_t value)
     uint64_t output = (((value & (value - 1)) == 0) ? 0 : 1);
 
     uint8_t j = 32;
-    for (uint8_t i = 0; i < 6; i++)
+    for (uint64_t i : t)
     {
-        int k = (((value & t[i]) == 0) ? 0 : j);
+        int k = (((value & i) == 0) ? 0 : j);
         output += k;
         value >>= k;
         j >>= 1;

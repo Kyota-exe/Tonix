@@ -11,7 +11,7 @@ struct VNode
 
     VNode(const char* _name, uint32_t _inodeNum);
     VNode(const VNode &original);
-    VNode& operator=(const VNode newValue);
+    VNode& operator=(const VNode& newValue);
     ~VNode();
 };
 

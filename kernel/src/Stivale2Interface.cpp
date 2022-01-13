@@ -12,12 +12,12 @@ static void (*terminalWrite)(const char* string, uint64_t size);
 void* GetStivale2Tag(uint64_t id)
 {
     // Loop through each tag supplied by stivale2 and compare its identifier to the identifier of the tag we want.
-    struct stivale2_tag* currentTag = (stivale2_tag*)stivale2Struct->tags;
+    auto currentTag = (stivale2_tag*)stivale2Struct->tags;
     while (true)
     {
-        if (currentTag == 0)
+        if (currentTag == nullptr)
         {
-            return 0;
+            return nullptr;
         }
 
         if (currentTag->identifier == id)
@@ -33,13 +33,13 @@ void InitializeStivale2Interface(stivale2_struct* _stivale2Struct)
 {
     stivale2Struct = _stivale2Struct;
 
-    stivale2_struct_tag_terminal* terminalTag = (stivale2_struct_tag_terminal*)GetStivale2Tag(STIVALE2_STRUCT_TAG_TERMINAL_ID);
+    auto terminalTag = (stivale2_struct_tag_terminal*)GetStivale2Tag(STIVALE2_STRUCT_TAG_TERMINAL_ID);
     terminalWrite = (void(*)(const char*, uint64_t))terminalTag->term_write;
 }
 
 void Stivale2TerminalWrite(const char* string, const char* end)
 {
-    if (terminalWrite == 0) while (true) asm("hlt");
+    if (terminalWrite == nullptr) while (true) asm("hlt");
     terminalWrite(string, StringLength(string));
     terminalWrite(end, StringLength(end));
 }

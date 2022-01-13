@@ -9,7 +9,7 @@ struct IDTGateDescriptor
 {
     uint16_t offset0;
     uint16_t segmentSelector;
-    uint8_t reserved0;
+    uint8_t ist;
     uint8_t typeAttributes;
     uint16_t offset1;
     uint32_t offset2;
@@ -19,7 +19,7 @@ struct IDTGateDescriptor
 struct IDT
 {
     IDTGateDescriptor entries[256];
-    void SetInterruptHandler(int interrupt, uint64_t handler);
+    void SetInterruptHandler(int interrupt, uint64_t handler, uint8_t ist = 0);
 } __attribute__((packed));
 
 struct IDTR
@@ -150,14 +150,14 @@ void InitializeInterruptHandlers()
 {
     // Exceptions
     idt.SetInterruptHandler(0, reinterpret_cast<uint64_t>(ISRWrapper0));
-    idt.SetInterruptHandler(1, reinterpret_cast<uint64_t>(ISRWrapper1));
-    idt.SetInterruptHandler(2, reinterpret_cast<uint64_t>(ISRWrapper2));
+    idt.SetInterruptHandler(1, reinterpret_cast<uint64_t>(ISRWrapper1), 4); // Debug
+    idt.SetInterruptHandler(2, reinterpret_cast<uint64_t>(ISRWrapper2), 2); // Non-maskable Interrupt
     idt.SetInterruptHandler(3, reinterpret_cast<uint64_t>(ISRWrapper3));
     idt.SetInterruptHandler(4, reinterpret_cast<uint64_t>(ISRWrapper4));
     idt.SetInterruptHandler(5, reinterpret_cast<uint64_t>(ISRWrapper5));
     idt.SetInterruptHandler(6, reinterpret_cast<uint64_t>(ISRWrapper6));
     idt.SetInterruptHandler(7, reinterpret_cast<uint64_t>(ISRWrapper7));
-    idt.SetInterruptHandler(8, reinterpret_cast<uint64_t>(ISRWrapper8));
+    idt.SetInterruptHandler(8, reinterpret_cast<uint64_t>(ISRWrapper8), 1); // Double Fault
     idt.SetInterruptHandler(9, reinterpret_cast<uint64_t>(ISRWrapper9));
     idt.SetInterruptHandler(10, reinterpret_cast<uint64_t>(ISRWrapper10));
     idt.SetInterruptHandler(11, reinterpret_cast<uint64_t>(ISRWrapper11));
@@ -219,13 +219,15 @@ void LoadIDT()
     Serial::Print("Completed loading of IDT.", "\n\n");
 }
 
-void IDT::SetInterruptHandler(int interrupt, uint64_t handler)
+void IDT::SetInterruptHandler(int interrupt, uint64_t handler, uint8_t ist)
 {
-    IDTGateDescriptor* idtGateDescriptor = &idt.entries[interrupt];
+    IDTGateDescriptor* idtGateDescriptor = &entries[interrupt];
 
     idtGateDescriptor->offset0 = handler; // 0..15
     idtGateDescriptor->offset1 = handler >> 16; // 16..31
     idtGateDescriptor->offset2 = handler >> 32; // 32..63
+
+    idtGateDescriptor->ist = ist;
 
     // Bits 0..1: Ring Privilege Level
     // Bit 2: If this is set, this segment is for an LDT. If not, this segment is for a GDT.
