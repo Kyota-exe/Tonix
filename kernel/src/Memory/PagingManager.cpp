@@ -1,6 +1,6 @@
-#include "PagingManager.h"
-#include "PageFrameAllocator.h"
-#include "Memory.h"
+#include "Memory/Memory.h"
+#include "Memory/PageFrameAllocator.h"
+#include "Memory/PagingManager.h"
 #include "Stivale2Interface.h"
 #include "Serial.h"
 

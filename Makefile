@@ -40,4 +40,3 @@ clean:
 .PHONY: distclean
 distclean: clean
 	rm -rf limine
-	$(MAKE) -C kernel distclean

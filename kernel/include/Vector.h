@@ -2,8 +2,8 @@
 #define MISKOS_VECTOR_H
 
 #include <stdint.h>
+#include "Memory/Memory.h"
 #include "Heap.h"
-#include "Memory.h"
 
 template <typename T> class Vector
 {

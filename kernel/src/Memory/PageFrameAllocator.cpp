@@ -1,8 +1,8 @@
-#include "PageFrameAllocator.h"
+#include "Memory/Memory.h"
+#include "Memory/PageFrameAllocator.h"
 #include "Serial.h"
 #include "Stivale2Interface.h"
 #include "Bitmap.h"
-#include "Memory.h"
 
 static Bitmap pageFrameBitmap;
 

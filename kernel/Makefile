@@ -7,7 +7,7 @@ LDFLAGS ?=
 ASMFLAGS ?= -f elf64 -gdwarf
 
 INTERNALCFLAGS :=        \
-	-I.                  \
+	-Iinclude/           \
 	-ffreestanding       \
 	-fno-stack-protector \
 	-fno-pic             \
@@ -32,19 +32,18 @@ SRC := $(shell find src -type f -name '*.cpp')
 ASMSRC := $(shell find src -type f -name '*.asm')
 OBJ = $(patsubst src/%, obj/%, $(SRC:.cpp=.o))
 OBJ += $(patsubst src/%, obj/%, $(ASMSRC:.asm=.o))
-HEADER_DEPS := $(OBJ:.o=.d)
+OBJSUBDIRS := $(sort $(shell dirname $(OBJ)))
 
 .PHONY: all
 all: $(KERNEL)
 
-src/stivale2.h:
-	curl https://raw.githubusercontent.com/stivale/stivale/master/stivale2.h -o $@
-
-$(KERNEL): $(OBJ)
+$(KERNEL): $(OBJSUBDIRS) $(OBJ)
 	$(LD) $(OBJ) $(LDFLAGS) $(INTERNALLDFLAGS) -o $@
 
--include $(HEADER_DEPS)
-obj/%.o: src/%.cpp src/stivale2.h
+$(OBJSUBDIRS):
+	mkdir -p $@
+
+obj/%.o: src/%.cpp
 	$(CC) $(CFLAGS) $(INTERNALCFLAGS) -g -c $< -o $@
 
 obj/%.o: src/%.asm
@@ -52,9 +51,5 @@ obj/%.o: src/%.asm
 
 .PHONY: clean
 clean:
-	rm -rf $(KERNEL) $(OBJ) $(HEADER_DEPS)
-	find ./obj/ -type f -delete
-
-.PHONY: distclean
-distclean: clean
-	rm -f src/stivale2.h
+	rm -r obj/* || true
+	rm -rf $(KERNEL) $(OBJ)

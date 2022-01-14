@@ -1,8 +1,8 @@
+#include "Memory/Memory.h"
+#include "Memory/PageFrameAllocator.h"
+#include "Memory/PagingManager.h"
 #include "ELFLoader.h"
 #include "Serial.h"
-#include "PageFrameAllocator.h"
-#include "PagingManager.h"
-#include "Memory.h"
 #include "KernelUtilities.h"
 
 const uint32_t PT_LOAD = 1;

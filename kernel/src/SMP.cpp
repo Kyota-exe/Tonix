@@ -1,7 +1,7 @@
+#include "Memory/PageFrameAllocator.h"
 #include "SMP.h"
 #include "Serial.h"
 #include "Stivale2Interface.h"
-#include "PageFrameAllocator.h"
 #include "APIC.h"
 #include "KernelUtilities.h"
 

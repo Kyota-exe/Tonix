@@ -1,3 +1,4 @@
+#include "Memory/Memory.h"
 #include "VFS.h"
 #include "StringUtilities.h"
 

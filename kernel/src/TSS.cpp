@@ -1,10 +1,10 @@
+#include "Memory/Memory.h"
+#include "Memory/PageFrameAllocator.h"
 #include "TSS.h"
 #include "Heap.h"
-#include "PageFrameAllocator.h"
 #include "GDT.h"
 #include <stdint.h>
 #include "Serial.h"
-#include "Memory.h"
 
 struct TSS
 {

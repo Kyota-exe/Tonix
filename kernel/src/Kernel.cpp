@@ -1,7 +1,7 @@
-#include "KernelUtilities.h"
+#include "Memory/PageFrameAllocator.h"
+#include "Memory/PagingManager.h"
 #include "Stivale2Interface.h"
 #include "IDT.h"
-#include "PageFrameAllocator.h"
 #include "APIC.h"
 #include "PIC.h"
 #include "SMP.h"
@@ -13,6 +13,7 @@
 #include "ELFLoader.h"
 #include "GDT.h"
 #include "TSS.h"
+#include "KernelUtilities.h"
 
 PagingManager kernelPagingManager;
 
