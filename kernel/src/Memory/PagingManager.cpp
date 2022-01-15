@@ -24,9 +24,6 @@ void PagingManager::InitializePaging()
     Serial::Print("Mapping kernel to PMR...");
     auto kernelBaseAddrStruct = (stivale2_struct_tag_kernel_base_address*)GetStivale2Tag(STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID);
     auto pmrsStruct = (stivale2_struct_tag_pmrs*)GetStivale2Tag(STIVALE2_STRUCT_TAG_PMRS_ID);
-    Serial::Printf("PMR count: %d", pmrsStruct->entries);
-    Serial::Printf("Kernel physical base: %x", kernelBaseAddrStruct->physical_base_address);
-    Serial::Printf("Kernel virtual base: %x", kernelBaseAddrStruct->virtual_base_address);
     for (uint64_t pmrIndex = 0; pmrIndex < pmrsStruct->entries; ++pmrIndex)
     {
         stivale2_pmr pmr = pmrsStruct->pmrs[pmrIndex];
@@ -36,11 +33,11 @@ void PagingManager::InitializePaging()
             MapMemory((void*)pmrVirtAddr, (void*)(kernelBaseAddrStruct->physical_base_address + offset));
         }
     }
+}
 
-    Serial::Printf("Moving the PML4's physical address into CR3...", pml4PhysAddr);
+void PagingManager::SetCR3()
+{
     asm volatile("mov %0, %%cr3" : : "r" (pml4PhysAddr));
-
-    Serial::Print("Paging initialized.", "\n\n");
 }
 
 void PagingManager::MapMemory(void* virtAddr, void* physAddr)

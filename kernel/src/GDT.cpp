@@ -18,26 +18,26 @@ const uint8_t LIMIT1_ATTRIBUTES = 0b0'01'00000;
 
 void InitializeGDT()
 {
-    // Kernel Code Segment
-    gdt.entries[1].typeAttributes = KERNEL_CODE_TYPE_ATTRIBUTES;
+    // User Code Segment
+    gdt.entries[1].typeAttributes = USER_CODE_TYPE_ATTRIBUTES;
     gdt.entries[1].limit1Attributes = LIMIT1_ATTRIBUTES;
 
-    // Kernel Data Segment
-    gdt.entries[2].typeAttributes = KERNEL_DATA_TYPE_ATTRIBUTES;
+    // User Data Segment
+    gdt.entries[2].typeAttributes = USER_DATA_TYPE_ATTRIBUTES;
     gdt.entries[2].limit1Attributes = LIMIT1_ATTRIBUTES;
 
-    // User Code Segment
-    gdt.entries[3].typeAttributes = USER_CODE_TYPE_ATTRIBUTES;
-    gdt.entries[3].limit1Attributes = LIMIT1_ATTRIBUTES;
+    // Kernel Code Segment
+    gdt.entries[5].typeAttributes = KERNEL_CODE_TYPE_ATTRIBUTES;
+    gdt.entries[5].limit1Attributes = LIMIT1_ATTRIBUTES;
 
-    // User Data Segment
-    gdt.entries[4].typeAttributes = USER_DATA_TYPE_ATTRIBUTES;
-    gdt.entries[4].limit1Attributes = LIMIT1_ATTRIBUTES;
-    Serial::Printf("%x", (uint64_t*)&gdt.entries[6]);
-    *(uint64_t*)&gdt.entries[6] = (uint64_t)0x098234 >> 32;
+    // Kernel Data Segment
+    gdt.entries[6].typeAttributes = KERNEL_DATA_TYPE_ATTRIBUTES;
+    gdt.entries[6].limit1Attributes = LIMIT1_ATTRIBUTES;
 
     gdtr.base = (uint64_t)&gdt;
     gdtr.limit = sizeof(gdt) - 1;
 
     asm volatile("lgdt %0" : : "m"(gdtr));
+
+    // No need to reload segment registers, since we use the same GDT entry indexes as stivale2
 }

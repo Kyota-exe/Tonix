@@ -3,6 +3,7 @@
 #include "APIC.h"
 #include "PIC.h"
 #include "Serial.h"
+#include "Scheduler.h"
 #include "cpuid.h"
 
 struct IDTGateDescriptor
@@ -26,29 +27,6 @@ struct IDTR
 {
     uint16_t limit;
     uint64_t base;
-} __attribute__((packed));
-
-struct InterruptFrame
-{
-    uint64_t es;
-    uint64_t ds;
-    uint64_t r15;
-    uint64_t r14;
-    uint64_t r13;
-    uint64_t r12;
-    uint64_t r11;
-    uint64_t r10;
-    uint64_t r9;
-    uint64_t r8;
-    uint64_t rdi;
-    uint64_t rsi;
-    uint64_t rbp;
-    uint64_t rdx;
-    uint64_t rcx;
-    uint64_t rbx;
-    uint64_t rax;
-    uint64_t interruptNumber;
-    uint64_t errorCode;
 } __attribute__((packed));
 
 static IDTR idtr;
@@ -108,7 +86,7 @@ void ExceptionHandler(InterruptFrame* interruptFrame)
     Serial::Printf("Exception %x occurred.", interruptFrame->interruptNumber);
     Serial::Printf("Error code: %x", interruptFrame->errorCode);
     Serial::Print("Hanging...");
-    while (true) asm("hlt");
+    while (true) asm("cli\n hlt");
 }
 
 void KeyboardInterruptHandler()
@@ -117,12 +95,13 @@ void KeyboardInterruptHandler()
     PICSendEIO(1);
 }
 
-void LAPICTimerInterrupt()
+void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 {
-    uint32_t other;
-    uint32_t edx;
-    __cpuid(0xb0, other, other, other, edx);
-    Serial::Printf("%d", edx, "");
+    Serial::Print("Sup---------------------------------------");
+    Task nextTask = GetNextTask();
+    //*interruptFrame = nextTask.frame;
+    interruptFrame->rip = 0x401000;
+    Serial::Printf("RIP: %x", interruptFrame->rip);
     LAPICSendEOI();
 }
 
@@ -130,19 +109,19 @@ extern "C" void ISRHandler(InterruptFrame* interruptFrame)
 {
     switch (interruptFrame->interruptNumber)
     {
+        case 48:
+            LAPICTimerInterrupt(interruptFrame);
+            break;
         case 0 ... 31:
             ExceptionHandler(interruptFrame);
             break;
         case 32 + 1:
             KeyboardInterruptHandler();
             break;
-        case 48:
-            LAPICTimerInterrupt();
-            break;
         default:
             Serial::Printf("Could not find ISR for interrupt %x.", interruptFrame->interruptNumber);
             Serial::Print("Hanging...");
-            while (true) asm("hlt");
+            while (true) asm("cli\n hlt");
     }
 }
 
@@ -166,7 +145,7 @@ void InitializeInterruptHandlers()
     idt.SetInterruptHandler(14, reinterpret_cast<uint64_t>(ISRWrapper14));
     idt.SetInterruptHandler(16, reinterpret_cast<uint64_t>(ISRWrapper16));
     idt.SetInterruptHandler(17, reinterpret_cast<uint64_t>(ISRWrapper17));
-    idt.SetInterruptHandler(18, reinterpret_cast<uint64_t>(ISRWrapper18));
+    idt.SetInterruptHandler(18, reinterpret_cast<uint64_t>(ISRWrapper18), 3); // Machine Check
     idt.SetInterruptHandler(19, reinterpret_cast<uint64_t>(ISRWrapper19));
     idt.SetInterruptHandler(20, reinterpret_cast<uint64_t>(ISRWrapper20));
     idt.SetInterruptHandler(21, reinterpret_cast<uint64_t>(ISRWrapper21));
@@ -233,13 +212,13 @@ void IDT::SetInterruptHandler(int interrupt, uint64_t handler, uint8_t ist)
     // Bit 2: If this is set, this segment is for an LDT. If not, this segment is for a GDT.
     // Bits 3..15: Index of the descriptor in the GDT or LDT.
     // This segment selector represents the kernel code segment.
-    idtGateDescriptor->segmentSelector = 0b1'0'00;
+    idtGateDescriptor->segmentSelector = 0b101'0'00;
 
     // Bits 0..3: Gate Type. 0xe for 64-bit Interrupt Gate and 0xf for 64-bit Trap Gate.
     // Bit 4: Reserved.
     // Bits 5..6: Descriptor Privilege Level
     // Bit 7: Present (P) bit. This must be set for the descriptor to be valid.
-    idtGateDescriptor->typeAttributes = 0x8e;
+    idtGateDescriptor->typeAttributes = 0x8f;
 
     initializedInterruptHandlersCount++;
 }

@@ -31,7 +31,7 @@ INTERNALLDFLAGS :=         \
 SRC := $(shell find src -type f -name '*.cpp')
 ASMSRC := $(shell find src -type f -name '*.asm')
 OBJ = $(patsubst src/%, obj/%, $(SRC:.cpp=.o))
-OBJ += $(patsubst src/%, obj/%, $(ASMSRC:.asm=.o))
+OBJ += $(patsubst src/%, obj/%, $(ASMSRC:.asm=.asm.o))
 OBJSUBDIRS := $(sort $(shell dirname $(OBJ)))
 
 .PHONY: all
@@ -46,7 +46,7 @@ $(OBJSUBDIRS):
 obj/%.o: src/%.cpp
 	$(CC) $(CFLAGS) $(INTERNALCFLAGS) -g -c $< -o $@
 
-obj/%.o: src/%.asm
+obj/%.asm.o: src/%.asm
 	nasm $(ASMFLAGS) -g $< -o $@
 
 .PHONY: clean

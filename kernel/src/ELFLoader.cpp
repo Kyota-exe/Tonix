@@ -6,6 +6,7 @@
 #include "KernelUtilities.h"
 
 const uint32_t PT_LOAD = 1;
+extern const uint64_t STACK_BASE = 0x0000'8000'0000'0000 - 0x1000;
 
 struct ELFHeader
 {
@@ -43,7 +44,9 @@ struct ProgramHeader
     uint64_t align;
 };
 
-void LoadELF(uint64_t ramDiskBegin)
+extern "C" void SwitchToRing3(uint64_t entry, uint64_t stackBase, char in, uint64_t printAddr);
+
+uint64_t LoadELF(uint64_t ramDiskBegin)
 {
     // TODO: read from disk
     auto elfHeader = (ELFHeader*)ramDiskBegin;
@@ -87,7 +90,5 @@ void LoadELF(uint64_t ramDiskBegin)
         }
     }
 
-    Serial::Print("Loaded ELF. Jumping...");
-    auto *ProcessStart = reinterpret_cast<void(*)(char, uint64_t)>(elfHeader->entry);
-    ProcessStart('A', reinterpret_cast<uint64_t>(Serial::Print));
+    return elfHeader->entry;
 }

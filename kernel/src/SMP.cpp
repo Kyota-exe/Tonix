@@ -9,8 +9,6 @@ static void InitializeCore(stivale2_smp_info* smpInfoPtr)
 {
     asm volatile("mov %0, %%cr3" : : "r" (kernelPagingManager.pml4PhysAddr));
     ActivateLAPIC();
-    uint64_t lapicTimerFreq = CalibrateLAPICTimer();
-    Serial::Printf("%d Hz", lapicTimerFreq);
     while (true) asm("hlt");
 }
 

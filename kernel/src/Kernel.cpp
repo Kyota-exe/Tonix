@@ -2,17 +2,17 @@
 #include "Memory/PagingManager.h"
 #include "Stivale2Interface.h"
 #include "IDT.h"
-#include "APIC.h"
 #include "PIC.h"
 #include "SMP.h"
 #include "VFS.h"
 #include "Vector.h"
-#include "StringUtilities.h"
 #include "Ext2.h"
 #include "Serial.h"
 #include "ELFLoader.h"
 #include "GDT.h"
 #include "TSS.h"
+#include "Task.h"
+#include "Scheduler.h"
 #include "KernelUtilities.h"
 
 PagingManager kernelPagingManager;
@@ -27,15 +27,14 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     LoadIDT();
     InitializePageFrameAllocator();
     kernelPagingManager.InitializePaging();
+    kernelPagingManager.SetCR3();
     InitializeKernelHeap();
     InitializeTSS();
     InitializePIC();
-    ActivateLAPIC();
     ActivatePICKeyboardInterrupts();
     asm volatile("sti");
 
-    uint64_t lapicTimerFreq = CalibrateLAPICTimer();
-    Serial::Printf("BSP Local APIC timer frequency: %d Hz", lapicTimerFreq, "\n\n");
+    InitializeScheduler();
 
     auto modulesStruct = (stivale2_struct_tag_modules*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MODULES_ID);
     Serial::Printf("Module Count: %d", modulesStruct->module_count);
@@ -45,13 +44,17 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
 
         if (StringEquals(module.string, "boot:///ext2-ramdisk-image.ext2"))
         {
-            InitializeExt2(module.begin, module.end);
+            //InitializeExt2(module.begin, module.end);
         }
         else if (StringEquals(module.string, "boot:///proc.elf"))
         {
-            LoadELF(module.begin);
+            uint64_t entry = LoadELF(module.begin);
+            Serial::Printf("Entry: %x", entry);
+            CreateProcess(entry);
         }
     }
+
+    StartScheduler();
 
     //StartNonBSPCores();
 

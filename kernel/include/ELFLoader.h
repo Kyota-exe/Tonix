@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-void LoadELF(uint64_t ramDiskBegin);
+uint64_t LoadELF(uint64_t ramDiskBegin);
 
 #endif
