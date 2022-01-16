@@ -5,6 +5,7 @@
 #include "Serial.h"
 #include "Scheduler.h"
 #include "cpuid.h"
+#include "KernelUtilities.h"
 
 struct IDTGateDescriptor
 {
@@ -100,17 +101,21 @@ void KeyboardInterruptHandler()
 
 void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 {
-    Serial::Printf("\n------------------------------------------ OLD RIP: %x", interruptFrame->rip);
     Task nextTask = GetNextTask(*interruptFrame);
+
+    Serial::Printf("\n------------------------------------------ OLD RIP: %x", interruptFrame->rip);
+    Serial::Printf("Count: %d", taskList->GetLength());
+    Serial::Printf("------------------------------------------ NEW RIP: %x", nextTask.frame.rip);
+
     *interruptFrame = nextTask.frame;
     nextTask.pagingManager->SetCR3();
+
     LAPICSendEOI();
-    Serial::Printf("------------------------------------------ NEW RIP: %x", interruptFrame->rip);
 }
 
 void SystemCall(InterruptFrame* interruptFrame)
 {
-    Serial::Print((char*)interruptFrame->rdi, "");
+    //Serial::Print((char*)interruptFrame->rdi, "");
 }
 
 extern "C" void ISRHandler(InterruptFrame* interruptFrame)
@@ -190,26 +195,20 @@ void InitializeInterruptHandlers()
     idt.SetInterruptHandler(0x80, reinterpret_cast<uint64_t>(ISRWrapper128), 3);
 }
 
-void LoadIDT()
+void InitializeIDT()
 {
     Serial::Print("Initializing IDTR...");
+
     idtr.base = (uint64_t)&idt;
     idtr.limit = sizeof(idt) - 1;
-
-    Serial::Printf("IDT base: %x", idtr.base);
-    Serial::Printf("IDT limit: %x", idtr.limit);
-    Serial::Printf("IDT size: %x", idtr.limit + 1);
-    Serial::Printf("IDT contains %d entries ", sizeof(IDT) / sizeof(IDTGateDescriptor), "");
-    Serial::Printf("that are each %d bytes in size.", sizeof(IDTGateDescriptor));
-
-    Serial::Print("Initializing Interrupt Handlers (ISRs)...");
     InitializeInterruptHandlers();
+
     Serial::Printf("IDT contains %d initialized Interrupt Handlers (ISRs).", initializedInterruptHandlersCount);
+}
 
-    Serial::Print("Loading IDT...");
+void LoadIDT()
+{
     asm volatile("lidt %0" : : "m"(idtr));
-
-    Serial::Print("Completed loading of IDT.", "\n\n");
 }
 
 void IDT::SetInterruptHandler(int interrupt, uint64_t handler, uint8_t ring, uint8_t ist)

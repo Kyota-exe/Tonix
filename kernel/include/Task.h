@@ -34,6 +34,7 @@ struct InterruptFrame
 
 struct Task
 {
+    uint64_t pid;
     InterruptFrame frame;
     PagingManager* pagingManager;
 };

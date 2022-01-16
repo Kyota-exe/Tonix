@@ -2,6 +2,11 @@
 #include "VFS.h"
 #include "StringUtilities.h"
 
+int Open()
+{
+    return 0;
+}
+
 VNode::VNode(const char* _name, uint32_t _inodeNum) : inodeNum(_inodeNum)
 {
     uint64_t nameLength = StringLength(_name);
@@ -27,11 +32,14 @@ VNode::~VNode()
 
 VNode& VNode::operator=(const VNode& newValue)
 {
-    KFree(name);
-    uint64_t nameLength = StringLength(newValue.name);
-    name = (char*)KMalloc(nameLength + 1);
-    MemCopy(name, newValue.name, nameLength);
-    name[nameLength] = 0;
+    if (&newValue != this)
+    {
+        KFree(name);
+        uint64_t nameLength = StringLength(newValue.name);
+        name = (char*)KMalloc(nameLength + 1);
+        MemCopy(name, newValue.name, nameLength);
+        name[nameLength] = 0;
+    }
 
     return *this;
 }

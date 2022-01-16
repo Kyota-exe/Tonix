@@ -18,7 +18,7 @@ void PagingManager::InitializePaging()
     for (uint64_t pageFrameIndex = 0; pageFrameIndex < pageFrameCount; ++pageFrameIndex)
     {
         uint64_t physAddr = pageFrameIndex * 0x1000;
-        MapMemory((void*)(physAddr + 0xffff'8000'0000'0000), (void*)physAddr);
+        MapMemory((void*)(physAddr + 0xffff'8000'0000'0000), (void*)physAddr, false);
     }
 
     Serial::Print("Mapping kernel to PMR...");
@@ -29,8 +29,8 @@ void PagingManager::InitializePaging()
         stivale2_pmr pmr = pmrsStruct->pmrs[pmrIndex];
         for (uint64_t pmrVirtAddr = pmr.base; pmrVirtAddr < pmr.base + pmr.length; pmrVirtAddr += 0x1000)
         {
-            uint64_t offset = pmrVirtAddr - kernelBaseAddrStruct->virtual_base_address;
-            MapMemory((void*)pmrVirtAddr, (void*)(kernelBaseAddrStruct->physical_base_address + offset));
+            uint64_t physAddr = kernelBaseAddrStruct->physical_base_address + (pmrVirtAddr - kernelBaseAddrStruct->virtual_base_address);
+            MapMemory((void*)pmrVirtAddr, (void*)physAddr, false);
         }
     }
 }
@@ -40,7 +40,7 @@ void PagingManager::SetCR3() const
     asm volatile("mov %0, %%cr3" : : "r" (pml4PhysAddr));
 }
 
-void PagingManager::MapMemory(void* virtAddr, void* physAddr)
+void PagingManager::MapMemory(void* virtAddr, void* physAddr, bool user)
 {
     auto virtualAddress = (uint64_t)virtAddr;
     virtualAddress >>= 12;
@@ -64,7 +64,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
         // Flags
         pml4Entry->SetFlag(Present, true);
         pml4Entry->SetFlag(ReadWrite, true);
-        pml4Entry->SetFlag(UserAllowed, true);
+        pml4Entry->SetFlag(UserAllowed, user);
     }
     else
     {
@@ -83,7 +83,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
         // Flags
         pdptEntry->SetFlag(Present, true);
         pdptEntry->SetFlag(ReadWrite, true);
-        pdptEntry->SetFlag(UserAllowed, true);
+        pdptEntry->SetFlag(UserAllowed, user);
     }
     else
     {
@@ -102,7 +102,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
         // Flags
         pageDirectoryEntry->SetFlag(Present, true);
         pageDirectoryEntry->SetFlag(ReadWrite, true);
-        pageDirectoryEntry->SetFlag(UserAllowed, true);
+        pageDirectoryEntry->SetFlag(UserAllowed, user);
     }
     else
     {
@@ -113,7 +113,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
     pageTableEntry->SetPhysicalAddress((uint64_t)physAddr);
     pageTableEntry->SetFlag(Present, true);
     pageTableEntry->SetFlag(ReadWrite, true);
-    pageTableEntry->SetFlag(UserAllowed, true);
+    pageTableEntry->SetFlag(UserAllowed, user);
 }
 
 void PagingManager::UnmapMemory(void* virtAddr)
@@ -134,6 +134,34 @@ void PagingManager::UnmapMemory(void* virtAddr)
     pageTable->entries[pageIndex].SetFlag(Present, false);
 
     asm volatile("invlpg (%0)" : : "b"(virtAddr) : "memory");
+}
+
+uint8_t PagingManager::CheckIfPagePresent(void* virtAddr)
+{
+    auto virtualAddress = (uint64_t)virtAddr;
+    virtualAddress >>= 12;
+    uint16_t pageIndex = virtualAddress & 0b111'111'111;
+    virtualAddress >>= 9;
+    uint16_t pageTableIndex = virtualAddress & 0b111'111'111;
+    virtualAddress >>= 9;
+    uint16_t pageDirectoryIndex = virtualAddress & 0b111'111'111;
+    virtualAddress >>= 9;
+    uint16_t pdptIndex = virtualAddress & 0b111'111'111;
+
+    PagingStructureEntry* pml4Entry = &pml4->entries[pdptIndex];
+    if (!pml4Entry->GetFlag(Present)) return 4;
+
+    auto pdpt = (PagingStructure*)(pml4Entry->GetPhysicalAddress() + 0xffff'8000'0000'0000);
+    PagingStructureEntry* pdptEntry = &pdpt->entries[pageDirectoryIndex];
+    if (!pdptEntry->GetFlag(Present)) return 3;
+
+    auto pageDirectory = (PagingStructure*)(pdptEntry->GetPhysicalAddress() + 0xffff'8000'0000'0000);
+    PagingStructureEntry* pageDirectoryEntry = &pageDirectory->entries[pageTableIndex];
+    if (!pageDirectoryEntry->GetFlag(Present)) return 2;
+
+    auto pageTable = (PagingStructure*)(pageDirectoryEntry->GetPhysicalAddress() + 0xffff'8000'0000'0000);
+    PagingStructureEntry* pageTableEntry = &pageTable->entries[pageIndex];
+    return (!pageTableEntry->GetFlag(Present));
 }
 
 void PagingStructureEntry::SetFlag(PagingFlag flag, bool enable)

@@ -6,7 +6,7 @@
 
 extern Vector<Task>* taskList;
 
-void InitializeScheduler();
+void InitializeTaskList();
 void StartScheduler();
 Task GetNextTask(InterruptFrame currentTaskFrame);
 

@@ -19,15 +19,15 @@ void InitializePageFrameAllocator()
     uint64_t memorySize = lastMemoryMapEntry.base + lastMemoryMapEntry.length;
     Serial::Printf("Memory size: %x", memorySize);
 
-//    for (uint64_t entryIndex = 0; entryIndex < memoryMapTag->entries; ++entryIndex)
-//    {
-//        stivale2_mmap_entry memoryMapEntry = memoryMapTag->memmap[entryIndex];
-//        Serial::Print("---------------");
-//        Serial::Printf("Type: %x", memoryMapEntry.type);
-//        Serial::Printf("Base: %x", memoryMapEntry.base);
-//        Serial::Printf("Length: %x", memoryMapEntry.length);
-//        Serial::Print("---------------");
-//    }
+    for (uint64_t entryIndex = 0; entryIndex < memoryMapStruct->entries; ++entryIndex)
+    {
+        stivale2_mmap_entry memoryMapEntry = memoryMapStruct->memmap[entryIndex];
+        Serial::Print("---------------");
+        Serial::Printf("Type: %x", memoryMapEntry.type);
+        Serial::Printf("Base: %x", memoryMapEntry.base);
+        Serial::Printf("Length: %x", memoryMapEntry.length);
+        Serial::Print("---------------");
+    }
 
     if (memorySize % 0x1000 != 0)
     {
@@ -50,7 +50,7 @@ void InitializePageFrameAllocator()
     pageFrameBitmap.size = bitmapSize;
 
     Serial::Print("Finding first usable memory section large enough to insert the page frame bitmap...");
-    uint8_t* bitmapBuffer = 0;
+    uint8_t* bitmapBuffer = nullptr;
     for (uint64_t entryIndex = 0; entryIndex < memoryMapStruct->entries; ++entryIndex)
     {
         stivale2_mmap_entry memoryMapEntry = memoryMapStruct->memmap[entryIndex];
@@ -62,7 +62,7 @@ void InitializePageFrameAllocator()
         }
     }
 
-    if (bitmapBuffer == 0)
+    if (bitmapBuffer == nullptr)
     {
         Serial::Print("Could not find usable memory section large enough to insert page frame bitmap.");
         Serial::Print("Hanging...");

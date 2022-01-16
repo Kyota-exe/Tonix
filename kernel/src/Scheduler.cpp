@@ -1,49 +1,46 @@
 #include "Scheduler.h"
 #include "APIC.h"
-#include "ELFLoader.h"
 #include "Serial.h"
 
 const uint64_t QUANTUM_IN_TICKS = 1;
+const uint64_t TIMER_FREQUENCY = 10;
 
 Vector<Task>* taskList;
 uint64_t currentTaskIndex = 0;
 uint64_t currentTicks = 0;
+bool firstTask = true;
 
-void InitializeScheduler()
+void InitializeTaskList()
 {
     taskList = (Vector<Task>*)KMalloc(sizeof(Vector<Task>));
     *taskList = Vector<Task>();
 
-    Task nullProcess;
-    taskList->Push(nullProcess);
-
-    ActivateLAPIC();
-    CalibrateLAPICTimer();
+    //Task initProcess;
+    //taskList->Push(initProcess);
 }
 
 void StartScheduler()
 {
+    ActivateLAPIC();
+    CalibrateLAPICTimer();
     SetLAPICTimerMask(false);
     SetLAPICTimerMode(1);
-    SetLAPICTimerFrequency(2);
+    SetLAPICTimerFrequency(TIMER_FREQUENCY);
 }
 
 Task GetNextTask(InterruptFrame currentTaskFrame)
 {
-    // TODO: Add support for when taskList is empty
+    // TODO: Add scheduler spinlock
 
-    (*taskList)[currentTaskIndex].frame = currentTaskFrame;
+    if (firstTask) firstTask = false;
+    else (*taskList)[currentTaskIndex].frame = currentTaskFrame;
 
-    if (currentTaskIndex == 0)
-    {
-        currentTicks = QUANTUM_IN_TICKS;
-    }
-    else currentTicks++;
+    currentTicks++;
 
     if (currentTicks == QUANTUM_IN_TICKS)
     {
         currentTaskIndex++;
-        if (currentTaskIndex == taskList->GetLength()) currentTaskIndex = 1;
+        if (currentTaskIndex == taskList->GetLength()) currentTaskIndex = 0;
         currentTicks = 0;
     }
 

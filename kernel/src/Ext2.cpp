@@ -95,7 +95,7 @@ Ext2Inode* GetInode(uint32_t inodeNum)
 
 VNode ConstructVNode(Ext2DirectoryEntry* directoryEntry)
 {
-    // TODO: Add support for when file type byte for directory entries are not supported.
+    // TODO: Add support for when "file type byte for directory entries" are not supported.
     char name[directoryEntry->nameLength + 1];
     MemCopy(name, (char*)((uint64_t)directoryEntry + sizeof(Ext2DirectoryEntry)), directoryEntry->nameLength);
     name[directoryEntry->nameLength] = 0;

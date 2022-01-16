@@ -34,8 +34,9 @@ class PagingManager
 public:
     void InitializePaging();
     void SetCR3() const;
-    void MapMemory(void* virtAddr, void* physAddr);
+    void MapMemory(void* virtAddr, void* physAddr, bool user);
     void UnmapMemory(void* virtAddr);
+    uint8_t CheckIfPagePresent(void* virtAddr);
     uint64_t pml4PhysAddr;
 
 private:

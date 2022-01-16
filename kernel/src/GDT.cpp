@@ -16,6 +16,11 @@ const uint8_t USER_CODE_TYPE_ATTRIBUTES = 0b1'11'1'1010;
 const uint8_t USER_DATA_TYPE_ATTRIBUTES = 0b1'11'1'0010;
 const uint8_t LIMIT1_ATTRIBUTES = 0b0'01'00000;
 
+void LoadGDT()
+{
+    asm volatile("lgdt %0" : : "m"(gdtr));
+}
+
 void InitializeGDT()
 {
     // User Code Segment
@@ -36,8 +41,6 @@ void InitializeGDT()
 
     gdtr.base = (uint64_t)&gdt;
     gdtr.limit = sizeof(gdt) - 1;
-
-    asm volatile("lgdt %0" : : "m"(gdtr));
 
     // No need to reload segment registers, since we use the same GDT entry indexes as stivale2
 }

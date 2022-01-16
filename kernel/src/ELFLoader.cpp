@@ -76,7 +76,7 @@ uint64_t LoadELF(uint64_t ramDiskBegin, PagingManager* pagingManager)
                 void* physAddr = RequestPageFrame();
                 void* virtAddr = (void*)(programHeader.virtAddr + page * 0x1000);
 
-                pagingManager->MapMemory(virtAddr, physAddr);
+                pagingManager->MapMemory(virtAddr, physAddr, true);
 
                 // TODO: read from disk
                 void* upperHalfVirtAddr = (void*)((uint64_t)physAddr + 0xffff'8000'0000'0000);

@@ -18,6 +18,7 @@ struct GDT
     SegmentDescriptor entries[7];
 } __attribute__((packed));
 
+void LoadGDT();
 void InitializeGDT();
 
 extern GDT gdt;

@@ -25,7 +25,7 @@ void CreateProcess(uint64_t ramDiskBegin, char rdi)
     process.frame.es = USER_DATA_SEGMENT;
     process.frame.rflags = USER_INITIAL_RFLAGS;
 
-    pagingManager->MapMemory((void*)(USER_STACK_TOP - USER_STACK_SIZE), RequestPageFrame());
+    pagingManager->MapMemory((void*)(USER_STACK_TOP - USER_STACK_SIZE), RequestPageFrame(), true);
     process.frame.rsp = USER_STACK_TOP;
 
     process.pagingManager = pagingManager;
