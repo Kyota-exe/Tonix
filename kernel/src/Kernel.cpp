@@ -8,7 +8,6 @@
 #include "Vector.h"
 #include "Ext2.h"
 #include "Serial.h"
-#include "ELFLoader.h"
 #include "GDT.h"
 #include "TSS.h"
 #include "Task.h"
@@ -48,9 +47,9 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
         }
         else if (StringEquals(module.string, "boot:///proc.elf"))
         {
-            uint64_t entry = LoadELF(module.begin);
-            Serial::Printf("Entry: %x", entry);
-            CreateProcess(entry);
+            CreateProcess(module.begin, 'O');
+            CreateProcess(module.begin, 'X');
+            CreateProcess(module.begin, 'I');
         }
     }
 

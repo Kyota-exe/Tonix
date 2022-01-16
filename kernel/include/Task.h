@@ -2,6 +2,7 @@
 #define MISKOS_TASK_H
 
 #include <stdint.h>
+#include "Memory/PagingManager.h"
 
 struct InterruptFrame
 {
@@ -34,8 +35,9 @@ struct InterruptFrame
 struct Task
 {
     InterruptFrame frame;
+    PagingManager* pagingManager;
 };
 
-void CreateProcess(uint64_t entry);
+void CreateProcess(uint64_t ramDiskBegin, char rdi = 'A');
 
 #endif

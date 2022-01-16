@@ -29,6 +29,7 @@ void InitializeTSS()
 {
     auto tss = (TSS*)KMalloc(sizeof(TSS));
     Memset(tss, 0, sizeof(TSS));
+    tss->rsp0 = (uint64_t)RequestPageFrame() + 0xffff'8000'0000'0000;
     tss->ist1 = (uint64_t)RequestPageFrame() + 0xffff'8000'0000'0000; // Double Fault
     tss->ist2 = (uint64_t)RequestPageFrame() + 0xffff'8000'0000'0000; // Non-Maskable Interrupt
     tss->ist3 = (uint64_t)RequestPageFrame() + 0xffff'8000'0000'0000; // Machine Check

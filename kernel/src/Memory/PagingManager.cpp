@@ -35,7 +35,7 @@ void PagingManager::InitializePaging()
     }
 }
 
-void PagingManager::SetCR3()
+void PagingManager::SetCR3() const
 {
     asm volatile("mov %0, %%cr3" : : "r" (pml4PhysAddr));
 }
@@ -64,6 +64,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
         // Flags
         pml4Entry->SetFlag(Present, true);
         pml4Entry->SetFlag(ReadWrite, true);
+        pml4Entry->SetFlag(UserAllowed, true);
     }
     else
     {
@@ -82,7 +83,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
         // Flags
         pdptEntry->SetFlag(Present, true);
         pdptEntry->SetFlag(ReadWrite, true);
-        //pdptEntry->SetFlag(UserAllowed, true);
+        pdptEntry->SetFlag(UserAllowed, true);
     }
     else
     {
@@ -101,6 +102,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
         // Flags
         pageDirectoryEntry->SetFlag(Present, true);
         pageDirectoryEntry->SetFlag(ReadWrite, true);
+        pageDirectoryEntry->SetFlag(UserAllowed, true);
     }
     else
     {
@@ -111,6 +113,7 @@ void PagingManager::MapMemory(void* virtAddr, void* physAddr)
     pageTableEntry->SetPhysicalAddress((uint64_t)physAddr);
     pageTableEntry->SetFlag(Present, true);
     pageTableEntry->SetFlag(ReadWrite, true);
+    pageTableEntry->SetFlag(UserAllowed, true);
 }
 
 void PagingManager::UnmapMemory(void* virtAddr)

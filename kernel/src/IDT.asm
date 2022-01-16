@@ -129,3 +129,6 @@ ISRWrapperNoErrorCode 47
 ; Local APIC IRQs
 ISRWrapperNoErrorCode 48  ; Timer
 ISRWrapperNoErrorCode 255 ; Spurious Interrupt Vector
+
+; Miscellaneous
+ISRWrapperNoErrorCode 128 ; System Call

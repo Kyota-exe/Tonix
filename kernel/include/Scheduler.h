@@ -8,6 +8,6 @@ extern Vector<Task>* taskList;
 
 void InitializeScheduler();
 void StartScheduler();
-Task GetNextTask();
+Task GetNextTask(InterruptFrame currentTaskFrame);
 
 #endif

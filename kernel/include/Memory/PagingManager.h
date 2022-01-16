@@ -33,7 +33,7 @@ class PagingManager
 {
 public:
     void InitializePaging();
-    void SetCR3();
+    void SetCR3() const;
     void MapMemory(void* virtAddr, void* physAddr);
     void UnmapMemory(void* virtAddr);
     uint64_t pml4PhysAddr;

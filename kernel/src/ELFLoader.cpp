@@ -3,10 +3,8 @@
 #include "Memory/PagingManager.h"
 #include "ELFLoader.h"
 #include "Serial.h"
-#include "KernelUtilities.h"
 
 const uint32_t PT_LOAD = 1;
-extern const uint64_t STACK_BASE = 0x0000'8000'0000'0000 - 0x1000;
 
 struct ELFHeader
 {
@@ -46,7 +44,7 @@ struct ProgramHeader
 
 extern "C" void SwitchToRing3(uint64_t entry, uint64_t stackBase, char in, uint64_t printAddr);
 
-uint64_t LoadELF(uint64_t ramDiskBegin)
+uint64_t LoadELF(uint64_t ramDiskBegin, PagingManager* pagingManager)
 {
     // TODO: read from disk
     auto elfHeader = (ELFHeader*)ramDiskBegin;
@@ -78,11 +76,11 @@ uint64_t LoadELF(uint64_t ramDiskBegin)
                 void* physAddr = RequestPageFrame();
                 void* virtAddr = (void*)(programHeader.virtAddr + page * 0x1000);
 
-                // TODO: Create paging map for user process instead of using the kernel's
-                kernelPagingManager.MapMemory(virtAddr, physAddr);
+                pagingManager->MapMemory(virtAddr, physAddr);
 
                 // TODO: read from disk
-                MemCopy(virtAddr, (void*)(ramDiskBegin + programHeader.offsetInFile), programHeader.segmentSizeInFile);
+                void* upperHalfVirtAddr = (void*)((uint64_t)physAddr + 0xffff'8000'0000'0000);
+                MemCopy(upperHalfVirtAddr, (void*)(ramDiskBegin + programHeader.offsetInFile), programHeader.segmentSizeInFile);
 
                 uint64_t paddingSize = programHeader.segmentSizeInMemory - programHeader.segmentSizeInFile;
                 Memset((void*)((uint64_t)virtAddr + programHeader.segmentSizeInFile), 0, paddingSize);
