@@ -11,7 +11,7 @@ namespace Serial
     template <typename T>
     void Printf(const char* string, T value, const char* end = "\n")
     {
-        Print(FormatString(string, (uint64_t)value), end);
+        Print(String::Format(string, (uint64_t)value), end);
     }
 }
 

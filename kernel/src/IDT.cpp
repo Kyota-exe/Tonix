@@ -4,7 +4,7 @@
 #include "PIC.h"
 #include "Serial.h"
 #include "Scheduler.h"
-#include "cpuid.h"
+#include "VFS.h"
 #include "KernelUtilities.h"
 
 struct IDTGateDescriptor
@@ -115,7 +115,9 @@ void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 
 void SystemCall(InterruptFrame* interruptFrame)
 {
-    //Serial::Print((char*)interruptFrame->rdi, "");
+    const char* path = "/subdirectory-bravo/bar.txt";
+    VFS::Open(path);
+    Serial::Print((char*)interruptFrame->rdi, "");
 }
 
 extern "C" void ISRHandler(InterruptFrame* interruptFrame)

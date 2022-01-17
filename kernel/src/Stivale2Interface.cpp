@@ -40,8 +40,8 @@ void InitializeStivale2Interface(stivale2_struct* _stivale2Struct)
 void Stivale2TerminalWrite(const char* string, const char* end)
 {
     if (terminalWrite == nullptr) while (true) asm("hlt");
-    terminalWrite(string, StringLength(string));
-    terminalWrite(end, StringLength(end));
+    terminalWrite(string, String::Length(string));
+    terminalWrite(end, String::Length(end));
 }
 
 // Last node of linked list of stivale2 tags.

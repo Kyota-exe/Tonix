@@ -3,16 +3,21 @@
 
 #include "Vector.h"
 
-struct VNode
+namespace VFS
 {
-    char* name;
-    uint32_t inodeNum;
-    Vector<VNode> children;
+    int Open(const char* path);
 
-    VNode(const char* _name, uint32_t _inodeNum);
-    VNode(const VNode &original);
-    VNode& operator=(const VNode& newValue);
-    ~VNode();
-};
+    struct VNode
+    {
+        char* name;
+        uint32_t inodeNum;
+        Vector<VNode> children;
+
+        VNode(const char* _name, uint32_t _inodeNum);
+        VNode(const VNode &original);
+        VNode& operator=(const VNode& newValue);
+        ~VNode();
+    };
+}
 
 #endif

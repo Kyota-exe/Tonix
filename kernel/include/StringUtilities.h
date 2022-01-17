@@ -3,11 +3,15 @@
 
 #include <stdint.h>
 
-uint64_t StringLength(const char* string, uint64_t max = 0);
-const char* FormatString(const char* string, int64_t value);
-bool StringEquals(const char* s1, const char* s2);
-uint64_t StringToUInt(const char* string);
-uint64_t StringOctalToUInt(const char* string);
-const char* StringSplit(const char* string, char splitCharacter, uint64_t substringIndex);
+namespace String
+{
+    uint64_t Length(const char* string, uint64_t max = 0);
+    const char* Format(const char* string, int64_t value);
+    bool Equals(const char* s1, const char* s2);
+    uint64_t Count(const char* string, char character);
+    uint64_t ToUInt(const char* string);
+    uint64_t OctalToUInt(const char* string);
+    const char* Split(const char* string, uint64_t substringIndex, char splitCharacter = ' ');
+}
 
 #endif

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "Memory/PagingManager.h"
+#include "VFS.h"
 
 struct InterruptFrame
 {
@@ -32,9 +33,15 @@ struct InterruptFrame
     uint64_t ss;
 } __attribute__((packed));
 
+struct FileDescriptor
+{
+    VFS::VNode* vNode;
+};
+
 struct Task
 {
-    uint64_t pid;
+    Vector<FileDescriptor> fileDescriptors;
+
     InterruptFrame frame;
     PagingManager* pagingManager;
 };

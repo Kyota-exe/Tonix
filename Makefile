@@ -1,9 +1,9 @@
 ISO_IMAGE = bin/disk.iso
 
-.DEFAULT_GOAL := default
+.DEFAULT_GOAL := cleanbuild
 
-.PHONY: default
-default:
+.PHONY: cleanbuild
+cleanbuild:
 	make clean
 	make all
 

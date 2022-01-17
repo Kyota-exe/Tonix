@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "Memory/Memory.h"
 #include "Heap.h"
+#include "Serial.h"
 
 template <typename T> class Vector
 {
@@ -11,13 +12,20 @@ private:
     T* buffer;
     uint64_t capacity;
     uint64_t length;
+    bool initialized = false;
 
 public:
     void Push(T value);
     void Remove(uint64_t index);
     uint64_t GetLength();
+
+    typedef T* iterator;
+    iterator begin();
+    iterator end();
+
     T& operator[](uint64_t index);
     Vector<T>& operator=(const Vector<T>& newVector);
+
     Vector();
     Vector(const Vector<T>& original);
     ~Vector();
@@ -31,6 +39,8 @@ Vector<T>::Vector()
     buffer = (T*)KMalloc(VECTOR_DEFAULT_CAPACITY * sizeof(T));
     capacity = VECTOR_DEFAULT_CAPACITY;
     length = 0;
+
+    initialized = true;
 }
 
 template<typename T>
@@ -40,6 +50,8 @@ Vector<T>::Vector(const Vector<T> &original)
     length = original.length;
     buffer = (T*)KMalloc(length * sizeof(T));
     MemCopy(buffer, original.buffer, length);
+
+    initialized = true;
 }
 
 template<typename T>
@@ -82,6 +94,18 @@ uint64_t Vector<T>::GetLength()
 }
 
 template<typename T>
+typename Vector<T>::iterator Vector<T>::begin()
+{
+    return buffer;
+}
+
+template<typename T>
+typename Vector<T>::iterator Vector<T>::end()
+{
+    return buffer + GetLength();
+}
+
+template<typename T>
 T& Vector<T>::operator[](uint64_t index)
 {
     return buffer[index];
@@ -92,7 +116,7 @@ Vector<T>& Vector<T>::operator=(const Vector<T>& newVector)
 {
     if (&newVector != this)
     {
-        KFree(buffer);
+        if (initialized) KFree(buffer);
         length = newVector.length;
         capacity = newVector.capacity;
         MemCopy(buffer, newVector.buffer, length);

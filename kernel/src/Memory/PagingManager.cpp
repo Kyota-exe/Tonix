@@ -6,22 +6,18 @@
 
 void PagingManager::InitializePaging()
 {
-    Serial::Print("Initializing paging...");
-
-    Serial::Print("Allocating memory for PML4...");
     pml4PhysAddr = (uint64_t)RequestPageFrame();
     pml4 = (PagingStructure*)(pml4PhysAddr + 0xffff'8000'0000'0000);
     Memset(pml4, 0, 0x1000);
     Serial::Printf("PML4 Physical Address: %x", pml4PhysAddr);
 
-    Serial::Print("Mapping all physical addresses to the virtual higher-half...");
     for (uint64_t pageFrameIndex = 0; pageFrameIndex < pageFrameCount; ++pageFrameIndex)
     {
         uint64_t physAddr = pageFrameIndex * 0x1000;
         MapMemory((void*)(physAddr + 0xffff'8000'0000'0000), (void*)physAddr, false);
     }
+    Serial::Print("Mapped all physical addresses to the virtual higher-half.");
 
-    Serial::Print("Mapping kernel to PMR...");
     auto kernelBaseAddrStruct = (stivale2_struct_tag_kernel_base_address*)GetStivale2Tag(STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID);
     auto pmrsStruct = (stivale2_struct_tag_pmrs*)GetStivale2Tag(STIVALE2_STRUCT_TAG_PMRS_ID);
     for (uint64_t pmrIndex = 0; pmrIndex < pmrsStruct->entries; ++pmrIndex)
@@ -33,6 +29,8 @@ void PagingManager::InitializePaging()
             MapMemory((void*)pmrVirtAddr, (void*)physAddr, false);
         }
     }
+
+    Serial::Print("Initialized paging.");
 }
 
 void PagingManager::SetCR3() const

@@ -5,6 +5,7 @@
 #include "Vector.h"
 
 extern Vector<Task>* taskList;
+extern uint64_t currentTaskIndex;
 
 void InitializeTaskList();
 void StartScheduler();

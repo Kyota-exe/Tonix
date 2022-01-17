@@ -4,7 +4,17 @@
 #include "VFS.h"
 #include "Ext2Inode.h"
 
-Vector<VNode> GetDirectoryListing(Ext2Inode* directoryInode);
-void InitializeExt2(uint64_t ramDiskBegin, uint64_t ramDiskEnd);
+using namespace VFS;
+
+namespace Ext2
+{
+    extern Ext2Inode* rootDirInode;
+    extern uint64_t blockSize;
+    extern uint64_t ramDiskAddr;
+
+    Ext2Inode* GetInode(uint32_t inodeNum);
+    Vector<VNode> GetDirectoryListing(Ext2Inode* directoryInode);
+    void Initialize(uint64_t ramDiskBegin, uint64_t ramDiskEnd);
+}
 
 #endif
