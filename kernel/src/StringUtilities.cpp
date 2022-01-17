@@ -123,34 +123,19 @@ namespace String
         return bufferFormatString;
     }
 
-    char bufferStringSplit[128];
-    const char* Split(const char* string, uint64_t substringIndex, char splitCharacter)
+    // Behaves like strtok_r
+    char* Split(char* string, char splitCharacter, char** stringPtr)
     {
-        const char* ptr = string;
-        const char* substringPtr = ptr;
-        unsigned int currentSubstringIndex = 0;
-        uint64_t stringLength = String::Length(string);
-        while ((uint64_t)(ptr - string) < stringLength + 1)
+        char *end = string;
+        while (*end != splitCharacter && *end != 0) end++;
+        if (*end == 0)
         {
-            if (*ptr == splitCharacter || *ptr == 0)
-            {
-                ptr++;
-                if (currentSubstringIndex == substringIndex)
-                {
-                    char* bufferPtr = bufferStringSplit;
-                    while (*substringPtr != splitCharacter && *substringPtr != 0)
-                    {
-                        *bufferPtr++ = *substringPtr++;
-                    }
-                    *bufferPtr = 0;
-                    return bufferStringSplit;
-                }
-                currentSubstringIndex++;
-                substringPtr = ptr;
-            }
-            ptr++;
+            *stringPtr = end;
+            return string;
         }
-        return nullptr;
+        *end = 0;
+        *stringPtr = end + 1;
+        return string;
     }
 
     bool Equals(const char* s1, const char* s2)

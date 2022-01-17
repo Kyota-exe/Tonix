@@ -2,6 +2,10 @@
 #include "Heap.h"
 #include "Serial.h"
 #include "Math.h"
+#include "Panic.h"
+
+uint64_t masterIndex = 0;
+uint64_t allocTable[1024];
 
 struct FreeSlot
 {
@@ -40,7 +44,7 @@ void Slab::InitializeSlab(uint64_t _slotSize)
 
     uint64_t slotCount = 0x1000 / slotSize;
     FreeSlot* previous = nullptr;
-    for (int slotIndex = (int)slotCount - 1; slotIndex >= 0; --slotIndex)
+    for (int slotIndex = (int)(slotCount - 1); slotIndex >= 0; --slotIndex)
     {
         auto freeSlot = (FreeSlot*)(slabBase + slotIndex * slotSize);
         freeSlot->next = previous;
@@ -50,6 +54,7 @@ void Slab::InitializeSlab(uint64_t _slotSize)
     head = previous;
 }
 
+static uint64_t allocCount = 0;
 void* Slab::Alloc()
 {
     void* addr = head;
@@ -61,7 +66,18 @@ void* Slab::Alloc()
         while (true) asm("hlt");
     }
 
+//    Serial::Printf("ALLOC -------------------------------------------------------> %x", (uint64_t)addr, "");
+//    Serial::Printf(" - %d", slotSize);
+//    Serial::Print("==============================================");
+//    Serial::Printf("Allocations prior to this: %d", allocCount);
+//    Serial::Printf("Alloc return addr    %x", (uint64_t)addr);
+//    Serial::Printf("New head             %x", (uint64_t)head->next);
+//    Serial::Printf("New head->next       %x", (uint64_t)head->next->next);
+//    Serial::Print("==============================================");
+    allocTable[masterIndex++] = (uint64_t)addr;
+
     head = head->next;
+    allocCount++;
     return addr;
 }
 
@@ -70,18 +86,40 @@ void Slab::Free(void* ptr)
     FreeSlot* previousHead = head;
     head = (FreeSlot*)ptr;
     head->next = previousHead;
+
+    allocCount--;
+
+//    Serial::Printf("FREE --------------------------------------------------------> %x", (uint64_t)ptr, "");
+//    Serial::Printf("\nRemaining: %d", allocCount);
+//    Serial::Printf(" - %d", slotSize);
+//    Serial::Print("==============================================");
+//    Serial::Printf("Freed addr:                 %x", (uint64_t)ptr);
+//    Serial::Printf("New head:                   %x", (uint64_t)head);
+//    Serial::Printf("(prev head) New head->next: %x", (uint64_t)previousHead);
+//    Serial::Print("==============================================");
+    bool foundAddr = false;
+    for (uint64_t i = 0; i < masterIndex + 1; ++i)
+    {
+        if (allocTable[i] == (uint64_t)ptr)
+        {
+            allocTable[i] = 0;
+            foundAddr = true;
+            break;
+        }
+    }
+    if (!foundAddr)
+    {
+        Serial::Printf("DF addr: %x", (uint64_t)ptr);
+        Serial::Printf("DF Slot size: %d", (uint64_t)slotSize);
+        Panic("Double free");
+    }
 }
 
 void* KMalloc(uint64_t size)
 {
     if (size < 8) size = 8;
     uint64_t slabIndex = CeilLog2(size) - 3;
-    if (slabIndex >= SLABS_COUNT)
-    {
-        Serial::Printf("KMalloc does not support allocations of size %d.", size);
-        Serial::Print("Hanging...");
-        while (true) asm("hlt");
-    }
+    KAssert(slabIndex < SLABS_COUNT, "KMalloc does not support allocations of size %d.", size);
     return slabsPool.slabs[slabIndex].Alloc();
 }
 
@@ -109,3 +147,12 @@ void InitializeKernelHeap()
     slabsPool.slabs[8].InitializeSlab(2048);
     slabsPool.slabs[9].InitializeSlab(4096);
 }
+
+void* operator new(uint64_t, void* ptr) { return ptr; }
+void* operator new[](uint64_t, void* ptr) { return ptr; }
+void* operator new(uint64_t size) { return KMalloc(size); }
+void* operator new[](uint64_t size) { return KMalloc(size); }
+void operator delete(void* ptr) { KFree(ptr); }
+void operator delete(void* ptr, uint64_t) { KFree(ptr); }
+void operator delete[](void* ptr) { KFree(ptr); }
+void operator delete[](void* ptr, uint64_t) { KFree(ptr); }

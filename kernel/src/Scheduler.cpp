@@ -12,8 +12,7 @@ bool firstTask = true;
 
 void InitializeTaskList()
 {
-    taskList = (Vector<Task>*)KMalloc(sizeof(Vector<Task>));
-    *taskList = Vector<Task>();
+    taskList = new Vector<Task>();
 
     //Task initProcess;
     //taskList->Push(initProcess);
@@ -26,6 +25,7 @@ void StartScheduler()
     SetLAPICTimerMask(false);
     SetLAPICTimerMode(1);
     SetLAPICTimerFrequency(TIMER_FREQUENCY);
+    asm volatile("sti");
 }
 
 Task GetNextTask(InterruptFrame currentTaskFrame)

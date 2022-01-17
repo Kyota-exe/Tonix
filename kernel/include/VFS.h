@@ -5,15 +5,15 @@
 
 namespace VFS
 {
-    int Open(const char* path);
+    int Open(char* path);
+    uint64_t Read(int descriptor, void* buffer, uint64_t count);
 
     struct VNode
     {
         char* name;
         uint32_t inodeNum;
-        Vector<VNode> children;
 
-        VNode(const char* _name, uint32_t _inodeNum);
+        VNode(const char* _name = "", uint32_t _inodeNum = 0);
         VNode(const VNode &original);
         VNode& operator=(const VNode& newValue);
         ~VNode();

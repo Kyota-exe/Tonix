@@ -14,7 +14,6 @@ static void InitializeCore(stivale2_smp_info* smpInfoPtr)
     LoadIDT();
     kernelPagingManager.SetCR3();
     InitializeTSS();
-    asm volatile("sti");
 
     // The address of the smpInfoPtr stivale2 passes us is physical, so we convert it to virtual here so that we can access it.
     smpInfoPtr = (stivale2_smp_info*)((uint64_t)smpInfoPtr + 0xffff'8000'0000'0000);

@@ -12,7 +12,7 @@ const uint64_t USER_STACK_SIZE = 0x1000;
 
 void CreateProcess(uint64_t ramDiskBegin, char rdi)
 {
-    auto pagingManager = (PagingManager*)KMalloc(sizeof(PagingManager));
+    auto pagingManager = new PagingManager();
     pagingManager->InitializePaging();
 
     uint64_t entry = LoadELF(ramDiskBegin, pagingManager);

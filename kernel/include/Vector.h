@@ -2,7 +2,6 @@
 #define MISKOS_VECTOR_H
 
 #include <stdint.h>
-#include "Memory/Memory.h"
 #include "Heap.h"
 #include "Serial.h"
 
@@ -12,10 +11,9 @@ private:
     T* buffer;
     uint64_t capacity;
     uint64_t length;
-    bool initialized = false;
 
 public:
-    void Push(T value);
+    void Push(const T& value);
     void Remove(uint64_t index);
     uint64_t GetLength();
 
@@ -36,11 +34,9 @@ const uint64_t VECTOR_DEFAULT_CAPACITY = 4;
 template<typename T>
 Vector<T>::Vector()
 {
-    buffer = (T*)KMalloc(VECTOR_DEFAULT_CAPACITY * sizeof(T));
+    buffer = new T[VECTOR_DEFAULT_CAPACITY];
     capacity = VECTOR_DEFAULT_CAPACITY;
     length = 0;
-
-    initialized = true;
 }
 
 template<typename T>
@@ -48,28 +44,34 @@ Vector<T>::Vector(const Vector<T> &original)
 {
     capacity = original.capacity;
     length = original.length;
-    buffer = (T*)KMalloc(length * sizeof(T));
-    MemCopy(buffer, original.buffer, length);
+    buffer = new T[length];
 
-    initialized = true;
+    for (uint64_t i = 0; i < length; ++i)
+    {
+        buffer[i] = original.buffer[i];
+    }
 }
 
 template<typename T>
 Vector<T>::~Vector()
 {
-    KFree(buffer);
+    delete[] buffer;
 }
 
 template<typename T>
-void Vector<T>::Push(T value)
+void Vector<T>::Push(const T& value)
 {
     if (length == capacity)
     {
         capacity *= 2;
-        T* newBuffer = (T*)KMalloc(capacity * sizeof(T));
-        MemCopy(newBuffer, buffer, length * sizeof(T));
-        KFree(buffer);
+        T* newBuffer = new T[capacity];
 
+        for (uint64_t i = 0; i < length; ++i)
+        {
+            newBuffer[i] = buffer[i];
+        }
+
+        delete[] buffer;
         buffer = newBuffer;
     }
 
@@ -116,10 +118,14 @@ Vector<T>& Vector<T>::operator=(const Vector<T>& newVector)
 {
     if (&newVector != this)
     {
-        if (initialized) KFree(buffer);
+        delete[] buffer;
         length = newVector.length;
         capacity = newVector.capacity;
-        MemCopy(buffer, newVector.buffer, length);
+        buffer = new T[capacity];
+        for (uint64_t i = 0; i < length; ++i)
+        {
+            buffer[i] = newVector.buffer[i];
+        }
     }
     return *this;
 }

@@ -11,7 +11,7 @@ namespace String
     uint64_t Count(const char* string, char character);
     uint64_t ToUInt(const char* string);
     uint64_t OctalToUInt(const char* string);
-    const char* Split(const char* string, uint64_t substringIndex, char splitCharacter = ' ');
+    char* Split(char* string, char splitCharacter, char** stringPtr);
 }
 
 #endif

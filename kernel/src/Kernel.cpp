@@ -3,10 +3,9 @@
 #include "Stivale2Interface.h"
 #include "IDT.h"
 #include "PIC.h"
-#include "Vector.h"
 #include "Ext2.h"
 #include "Serial.h"
-#include "SMP.h"
+#include "Heap.h"
 #include "GDT.h"
 #include "TSS.h"
 #include "Task.h"
@@ -18,12 +17,13 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
 {
     InitializeStivale2Interface(stivale2Struct);
 
-    Serial::Print("\nKernel ELF successfully loaded", "\n\n");
+    Serial::Print("Kernel ELF successfully loaded");
 
     InitializeGDT();
     LoadGDT();
     InitializeIDT();
     LoadIDT();
+    // TODO: Does the "pre-init-process" kernel even need custom paging? Seems like a lot of wasted page frames to me.
     InitializePageFrameAllocator();
     kernelPagingManager.InitializePaging();
     kernelPagingManager.SetCR3();
@@ -31,8 +31,6 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     InitializeTSS();
     InitializePIC();
     ActivatePICKeyboardInterrupts();
-    asm volatile("sti");
-
     InitializeTaskList();
 
     auto modulesStruct = (stivale2_struct_tag_modules*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MODULES_ID);
@@ -47,7 +45,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
         }
         else if (String::Equals(module.string, "boot:///proc.elf"))
         {
-            //CreateProcess(module.begin, 'O');
+            CreateProcess(module.begin, 'O');
             //CreateProcess(module.begin, 'X');
             //CreateProcess(module.begin, 'I');
         }

@@ -2,21 +2,18 @@
 #include "Memory/PageFrameAllocator.h"
 #include "Memory/PagingManager.h"
 #include "Stivale2Interface.h"
-#include "Serial.h"
 
 void PagingManager::InitializePaging()
 {
     pml4PhysAddr = (uint64_t)RequestPageFrame();
     pml4 = (PagingStructure*)(pml4PhysAddr + 0xffff'8000'0000'0000);
     Memset(pml4, 0, 0x1000);
-    Serial::Printf("PML4 Physical Address: %x", pml4PhysAddr);
 
     for (uint64_t pageFrameIndex = 0; pageFrameIndex < pageFrameCount; ++pageFrameIndex)
     {
         uint64_t physAddr = pageFrameIndex * 0x1000;
         MapMemory((void*)(physAddr + 0xffff'8000'0000'0000), (void*)physAddr, false);
     }
-    Serial::Print("Mapped all physical addresses to the virtual higher-half.");
 
     auto kernelBaseAddrStruct = (stivale2_struct_tag_kernel_base_address*)GetStivale2Tag(STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID);
     auto pmrsStruct = (stivale2_struct_tag_pmrs*)GetStivale2Tag(STIVALE2_STRUCT_TAG_PMRS_ID);
@@ -29,8 +26,6 @@ void PagingManager::InitializePaging()
             MapMemory((void*)pmrVirtAddr, (void*)physAddr, false);
         }
     }
-
-    Serial::Print("Initialized paging.");
 }
 
 void PagingManager::SetCR3() const

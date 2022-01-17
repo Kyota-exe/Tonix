@@ -90,5 +90,4 @@ void CalibrateLAPICTimer()
     *initialCountRegister = 0;
 
     lapicTimerBaseFrequency = (lapicTicksCount / (initialPITTick - endPITTick)) * PIT_BASE_FREQUENCY;
-    Serial::Printf("Base: iahsdflikash %d", lapicTimerBaseFrequency);
 }

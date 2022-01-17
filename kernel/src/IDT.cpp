@@ -115,8 +115,19 @@ void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 
 void SystemCall(InterruptFrame* interruptFrame)
 {
-    const char* path = "/subdirectory-bravo/bar.txt";
-    VFS::Open(path);
+    static int step = 0;
+    if (step == 0)
+    {
+        char* path = (char*)"/subdirectory-bravo/bar.txt";
+        VFS::Open(path);
+        step++;
+    }
+    else if (step == 1)
+    {
+        Serial::Print("LSKDJF");
+        while (true) asm volatile("cli\n hlt\n");
+    }
+
     Serial::Print((char*)interruptFrame->rdi, "");
 }
 
@@ -199,8 +210,6 @@ void InitializeInterruptHandlers()
 
 void InitializeIDT()
 {
-    Serial::Print("Initializing IDTR...");
-
     idtr.base = (uint64_t)&idt;
     idtr.limit = sizeof(idt) - 1;
     InitializeInterruptHandlers();

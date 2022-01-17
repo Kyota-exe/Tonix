@@ -3,8 +3,6 @@
 
 void InitializePIC()
 {
-    Serial::Print("Initializing the 8259 PIC...");
-
     // ICW1
     // 0x01 bit: ICW4 has to be read
     // 0x10 bit: Initialize PIC
@@ -28,7 +26,7 @@ void InitializePIC()
     outb(0x21, 0xff);
     outb(0xa1, 0xff);
 
-    Serial::Print("Completed initialization of the 8259 PIC.", "\n\n");
+    Serial::Print("Initialized the 8259 PIC.");
 }
 
 void PICSendEIO(int irq)

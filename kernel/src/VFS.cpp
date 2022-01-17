@@ -4,36 +4,25 @@
 #include "Ext2.h"
 #include "StringUtilities.h"
 #include "Serial.h"
+#include "Panic.h"
 
 namespace VFS
 {
-    VNode TraversePath(const char* path)
+    VNode TraversePath(char* absolutePath)
     {
-        uint64_t deepestDepth = String::Count(path, '/');
-        uint64_t currentDepth = 0;
-        Ext2::Ext2Inode* currentInode = Ext2::rootDirInode;
-        while (true)
+        /*Ext2::Ext2Inode* currentInode = Ext2::rootDirInode;
+        char* currentElement = nullptr;
+        while
         {
-            const char* currentElement = String::Split(path, currentDepth, '/');
-            if (currentElement == nullptr)
-            {
-                Serial::Print("Invalid path");
-                Serial::Print("Hanging...");
-                while (true) asm("hlt");
-            }
+            currentElement = String::Split(absolutePath, '/', &absolutePath);
+            Serial::Print(currentElement);
 
             for (const VNode& nodeInDirectory : GetDirectoryListing(currentInode))
             {
                 if (String::Equals(nodeInDirectory.name, currentElement))
                 {
                     currentInode = Ext2::GetInode(nodeInDirectory.inodeNum);
-                    currentDepth++;
-
-                    if (deepestDepth == currentDepth)
-                    {
-                        return {nodeInDirectory.name, nodeInDirectory.inodeNum};
-                    }
-                    continue;
+                    break;
                 }
 
                 // If the entry in the directory could not be found
@@ -41,17 +30,47 @@ namespace VFS
                 Serial::Print("Hanging...");
                 while (true) asm("hlt");
             }
+        }*/
+
+        Ext2::Ext2Inode* currentInode = Ext2::rootDirInode;
+        VNode* lastVNode = new VNode();
+
+        char* currentElement = String::Split(absolutePath, '/', &absolutePath);
+        KAssert(*currentElement == 0, "Absolute path does not begin at root.");
+
+        Serial::Print("absolute: ", "");
+        Serial::Print(absolutePath);
+        while (*(currentElement = String::Split(absolutePath, '/', &absolutePath)) != 0)
+        {
+            Serial::Print(currentElement);
+            for (VNode nodeInDirectory : Ext2::GetDirectoryListing(currentInode))
+            {
+                Serial::Print("--------------------- fond: ", "");
+                Serial::Print(nodeInDirectory.name);
+                if (String::Equals(nodeInDirectory.name, currentElement))
+                {
+                    *lastVNode = nodeInDirectory;
+                    currentInode = Ext2::GetInode(nodeInDirectory.inodeNum);
+                    break;
+                }
+            }
+
+            // If the entry in the directory could not be found
+            Panic("Directory entry could not be found while traversing path.");
         }
+
+        return {lastVNode->name, lastVNode->inodeNum};
     }
 
-    int Open(const char* path)
+    int Open(char* path)
     {
         Task* currentTask = &(*taskList)[currentTaskIndex];
 
         // The VNode* in the descriptor will never be a dangling pointer since VNodes
         // stay in memory for the duration their file descriptor is alive.
+        // TODO: Can't this memory stuff just be managed in the FileDescriptor constructor/destructor?
         FileDescriptor descriptor;
-        descriptor.vNode = (VNode*)KMalloc(sizeof(VNode));
+        descriptor.vNode = new VNode();
         *descriptor.vNode = TraversePath(path);
         int descriptorIndex = (int)currentTask->fileDescriptors.GetLength();
         currentTask->fileDescriptors.Push(descriptor);
@@ -68,38 +87,35 @@ namespace VFS
     VNode::VNode(const char* _name, uint32_t _inodeNum) : inodeNum(_inodeNum)
     {
         uint64_t nameLength = String::Length(_name);
-        name = (char*)KMalloc(nameLength + 1);
+        name = new char[nameLength + 1];
         MemCopy(name, (void*)_name, nameLength);
         name[nameLength] = 0;
-
-        children = Vector<VNode>();
     }
 
-    VFS::VNode::VNode(const VNode &original) : inodeNum(original.inodeNum), children(original.children)
+    VNode::VNode(const VNode &original) : inodeNum(original.inodeNum)
     {
         uint64_t nameLength = String::Length(original.name);
-        name = (char*)KMalloc(nameLength + 1);
+        name = new char[nameLength + 1];
         MemCopy(name, original.name, nameLength);
         name[nameLength] = 0;
     }
 
     VNode::~VNode()
     {
-        KFree(name);
+        delete[] name;
     }
 
     VNode& VNode::operator=(const VNode& newValue)
     {
         if (&newValue != this)
         {
-            KFree(name);
+            delete[] name;
             uint64_t nameLength = String::Length(newValue.name);
-            name = (char*)KMalloc(nameLength + 1);
+            name = new char[nameLength + 1];
             MemCopy(name, newValue.name, nameLength);
             name[nameLength] = 0;
 
             inodeNum = newValue.inodeNum;
-            children = newValue.children;
         }
 
         return *this;

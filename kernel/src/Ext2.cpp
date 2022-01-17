@@ -1,7 +1,9 @@
 #include "Ext2.h"
 #include <stdint.h>
+#include "Memory/Memory.h"
 #include "Serial.h"
 #include "StringUtilities.h"
+#include "Panic.h"
 
 namespace Ext2
 {
@@ -130,12 +132,13 @@ namespace Ext2
             if (directoryEntry->inodeNum != 0)
             {
                 VNode newVnode = ConstructVNode(directoryEntry);
+                Serial::Print(newVnode.name);
                 vNodes.Push(newVnode);
             }
 
             parsedLength += directoryEntry->entrySize;
 
-            KFree(directoryEntry);
+            delete directoryEntry;
         }
 
         return vNodes;
@@ -152,19 +155,8 @@ namespace Ext2
         // TODO: If loading Ext2 from disk, read from disk and allocate 1024B for it on the heap
         superblock = (Ext2Superblock*)(ramDiskAddr + 1024);
 
-        if (superblock->ext2Signature != 0xef53)
-        {
-            Serial::Print("Invalid ext2 signature!");
-            Serial::Print("Hanging...");
-            while (true) asm("hlt");
-        }
-
-        if (superblock->fileSystemState != 1)
-        {
-            Serial::Print("File system state is not clean.");
-            Serial::Print("Hanging...");
-            while (true) asm("hlt");
-        }
+        KAssert(superblock->ext2Signature == 0xef53, "Invalid ext2 signature!");
+        KAssert(superblock->fileSystemState == 1, "File system state is not clean.");
 
         // Parse from superblock
         blockSize = 1024 << superblock->blockSizeLog2Minus10;
@@ -186,15 +178,9 @@ namespace Ext2
         uint32_t blockGroupsCountCheck = superblock->inodesCount / superblock->inodesPerBlockGroup +
                                          (superblock->inodesCount % superblock->inodesPerBlockGroup > 0 ? 1 : 0);
 
-        if (blockGroupsCount != blockGroupsCountCheck)
-        {
-            Serial::Print("Block group count could not be calculated.");
-            Serial::Print("Hanging...");
-            while (true) asm("hlt");
-        }
+        KAssert(blockGroupsCount == blockGroupsCountCheck, "Block group count could not be calculated.");
 
         Serial::Printf("Block group count: %d", blockGroupsCount);
-
         Serial::Printf("Required features: %x", superblock->requiredFeatures);
         Serial::Printf("Read-only features: %x", superblock->readOnlyFeatures);
 
@@ -231,7 +217,7 @@ namespace Ext2
         }
 
         Ext2Inode* barInode = GetInode(barInodeNum);
-        auto textContents = (char*)KMalloc(sizeof(char) * barInode->size0);
+        char* textContents = new char[barInode->size0];
         barInode->Read(textContents, barInode->size0);
         Serial::Print("\n/subdirectory-bravo/bar.txt contents:");
         Serial::Print(textContents);
