@@ -5,7 +5,7 @@
 #include "Serial.h"
 #include "Scheduler.h"
 #include "VFS.h"
-#include "KernelUtilities.h"
+#include "Panic.h"
 
 struct IDTGateDescriptor
 {
@@ -101,7 +101,7 @@ void KeyboardInterruptHandler()
 
 void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 {
-    Task nextTask = GetNextTask(*interruptFrame);
+    Process nextTask = GetNextTask(*interruptFrame);
 
     Serial::Printf("\n------------------------------------------ OLD RIP: %x", interruptFrame->rip);
     Serial::Printf("Count: %d", taskList->GetLength());
@@ -116,19 +116,33 @@ void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 void SystemCall(InterruptFrame* interruptFrame)
 {
     static int step = 0;
-    if (step == 0)
-    {
-        char* path = (char*)"/subdirectory-bravo/bar.txt";
-        VFS::Open(path);
-        step++;
-    }
-    else if (step == 1)
-    {
-        Serial::Print("LSKDJF");
-        while (true) asm volatile("cli\n hlt\n");
-    }
+    static int desc;
 
-    Serial::Print((char*)interruptFrame->rdi, "");
+    switch (step)
+    {
+        case 0:
+        {
+            char* path = (char*)"/subdirectory-bravo/bar.txt";
+            desc = Open(path, &(*taskList)[currentTaskIndex]);
+            break;
+        }
+        case 1:
+        {
+            char* contents = new char[100];
+            uint64_t readCount = Read(desc, (void*)contents, 100, &(*taskList)[currentTaskIndex]);
+            Serial::Printf("Read count: %d", readCount);
+            contents[readCount] = 0;
+            Serial::Print(contents);
+            break;
+        }
+        default:
+        {
+            Panic("Fell into step: %d", step);
+        }
+    }
+    step++;
+
+    Serial::Print((char*)interruptFrame->rdi);
 }
 
 extern "C" void ISRHandler(InterruptFrame* interruptFrame)

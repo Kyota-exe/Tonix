@@ -4,11 +4,11 @@
 #include "Task.h"
 #include "Vector.h"
 
-extern Vector<Task>* taskList;
+extern Vector<Process>* taskList;
 extern uint64_t currentTaskIndex;
 
 void InitializeTaskList();
 void StartScheduler();
-Task GetNextTask(InterruptFrame currentTaskFrame);
+Process GetNextTask(InterruptFrame currentTaskFrame);
 
 #endif

@@ -1,5 +1,4 @@
 #include "StringUtilities.h"
-#include "Serial.h"
 
 namespace String
 {

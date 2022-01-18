@@ -52,7 +52,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     }
 
     //StartSchedulerOnNonBSPCores();
-    //StartScheduler();
+    StartScheduler();
 
     while (true) asm("hlt");
 }

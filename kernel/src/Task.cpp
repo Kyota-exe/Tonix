@@ -1,5 +1,5 @@
-#include "Memory/PageFrameAllocator.h"
 #include "Task.h"
+#include "Memory/PageFrameAllocator.h"
 #include "Scheduler.h"
 #include "ELFLoader.h"
 #include "Serial.h"
@@ -17,7 +17,7 @@ void CreateProcess(uint64_t ramDiskBegin, char rdi)
 
     uint64_t entry = LoadELF(ramDiskBegin, pagingManager);
 
-    Task process;
+    Process process;
     process.frame.rip = entry;
     process.frame.cs = USER_CODE_SEGMENT;
     process.frame.ss = USER_DATA_SEGMENT;

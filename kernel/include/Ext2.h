@@ -3,8 +3,7 @@
 
 #include "VFS.h"
 #include "Ext2Inode.h"
-
-using namespace VFS;
+#include "Vector.h"
 
 namespace Ext2
 {

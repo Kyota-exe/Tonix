@@ -110,7 +110,7 @@ namespace Ext2
             Serial::Printf("is different from name length in directory entry (%d).", directoryEntry->nameLength);
         }
 
-        return {name, directoryEntry->inodeNum};
+        return VNode(name, directoryEntry->inodeNum);
     }
 
     // TODO: Support directories other than root
@@ -132,7 +132,6 @@ namespace Ext2
             if (directoryEntry->inodeNum != 0)
             {
                 VNode newVnode = ConstructVNode(directoryEntry);
-                Serial::Print(newVnode.name);
                 vNodes.Push(newVnode);
             }
 

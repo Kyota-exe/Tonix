@@ -5,16 +5,16 @@
 const uint64_t QUANTUM_IN_TICKS = 1;
 const uint64_t TIMER_FREQUENCY = 10;
 
-Vector<Task>* taskList = nullptr;
+Vector<Process>* taskList = nullptr;
 uint64_t currentTaskIndex = 0;
 uint64_t currentTicks = 0;
 bool firstTask = true;
 
 void InitializeTaskList()
 {
-    taskList = new Vector<Task>();
+    taskList = new Vector<Process>();
 
-    //Task initProcess;
+    //Process initProcess;
     //taskList->Push(initProcess);
 }
 
@@ -28,7 +28,7 @@ void StartScheduler()
     asm volatile("sti");
 }
 
-Task GetNextTask(InterruptFrame currentTaskFrame)
+Process GetNextTask(InterruptFrame currentTaskFrame)
 {
     // TODO: Add scheduler spinlock
 

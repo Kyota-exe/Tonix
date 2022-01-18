@@ -1,8 +1,11 @@
 #ifndef MISKOS_TASK_H
 #define MISKOS_TASK_H
 
+struct Process;
+
 #include <stdint.h>
 #include "Memory/PagingManager.h"
+#include "Vector.h"
 #include "VFS.h"
 
 struct InterruptFrame
@@ -35,10 +38,10 @@ struct InterruptFrame
 
 struct FileDescriptor
 {
-    VFS::VNode* vNode;
+    VNode* vNode;
 };
 
-struct Task
+struct Process
 {
     Vector<FileDescriptor> fileDescriptors;
 
