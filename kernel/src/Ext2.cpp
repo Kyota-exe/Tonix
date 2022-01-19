@@ -7,65 +7,6 @@
 
 namespace Ext2
 {
-    struct Ext2Superblock
-    {
-        uint32_t inodesCount;
-        uint32_t blocksCount;
-        uint32_t superuserReservedBlocksCount;
-        uint32_t unallocatedBlocksCount;
-        uint32_t unallocatedInodesCount;
-        uint32_t superblockBlock; // Block containing the superblock
-        uint32_t blockSizeLog2Minus10; // 1024 << n = block size
-        uint32_t fragmentSizeLog2Minus10; // 1024 << n = fragment size
-        uint32_t blocksPerBlockGroup;
-        uint32_t fragmentsPerBlockGroup;
-        uint32_t inodesPerBlockGroup;
-        uint32_t lastMountTime; // in POSIX time
-        uint32_t lastWrittenTime; // in POSIX time
-        uint16_t volumeMountedCount; // Number of times the volume has been mounted since its last consistency check
-        uint16_t mountsAllowedBeforeConsistencyCheck; // Number of mounts allowed before a consistency check must be done
-        uint16_t ext2Signature;
-        uint16_t fileSystemState;
-        uint16_t errorHandlingMethod;
-        uint16_t minorVersion; // Version fractional part
-        uint32_t lastConsistencyCheckTime; // in POSIX time
-        uint32_t forcedConsistencyChecksInterval; // in POSIX time
-        uint32_t originOperatingSystemId; // Operating system ID from which the filesystem on this volume was created
-        uint32_t majorVersion; // Version integer part
-        uint16_t reservedBlocksUserId;
-        uint16_t reservedBlocksGroupId;
-
-        // Extended superblock fields
-        uint32_t firstNonReservedInode; // Inode numbers start at 1
-        uint16_t inodeSize;
-        uint16_t superblockBlockGroup; // Block group that this superblock is part of if this is a backup superblock
-        uint32_t optionalFeatures;
-        uint32_t requiredFeatures;
-        uint32_t readOnlyFeatures; // Features that if not supported, the volume must be mounted read-only
-        uint8_t fileSystemId[16];
-        char volumeName[16]; // Null-terminated volume name
-        char lastMountedPath[64]; // Null-terminated name of path the volume was last mounted to
-        uint32_t compressionAlgorithm;
-        uint8_t preallocFilesBlocksCount; // Number of blocks to preallocate for files
-        uint8_t preallocDirectoriesBlocksCount; // Number of blocks to preallocate for directories
-        uint16_t unused;
-        uint8_t journalId[16];
-        uint32_t journalInode;
-        uint32_t journalDevice;
-        uint32_t orphanInodeListHead;
-    };
-
-    struct Ext2BlockGroupDescriptor
-    {
-        uint32_t blockUsageBitmapBlock;
-        uint32_t inodeUsageBitmapBlock;
-        uint32_t inodeTableStartBlock;
-        uint16_t unallocatedBlocksCount;
-        uint16_t unallocatedInodesCount;
-        uint16_t directoriesCount;
-        uint8_t unused[14];
-    } __attribute__((packed));
-
     struct Ext2DirectoryEntry
     {
         uint32_t inodeNum;
@@ -82,7 +23,6 @@ namespace Ext2
     Ext2BlockGroupDescriptor* blockGroupDescTable;
     Ext2Inode* rootDirInode;
 
-    // TODO: Get rid of this when loading Ext2 from disk is implemented
     uint64_t ramDiskAddr;
 
     Ext2Inode* GetInode(uint32_t inodeNum)
@@ -93,7 +33,6 @@ namespace Ext2
 
         uint64_t diskAddr = blockGroupDescTable[blockGroupIndex].inodeTableStartBlock * blockSize + inodeIndex * superblock->inodeSize;
 
-        // TODO: If loading Ext2 from disk, read from disk and allocate space for it on the heap
         return (Ext2Inode*)(diskAddr + ramDiskAddr);
     }
 
@@ -113,7 +52,6 @@ namespace Ext2
         return VNode(name, directoryEntry->inodeNum);
     }
 
-    // TODO: Support directories other than root
     Vector<VNode> GetDirectoryListing(Ext2Inode* directoryInode)
     {
         Vector<VNode> vNodes;
@@ -147,11 +85,9 @@ namespace Ext2
     {
         Serial::Print("Initializing Ext2 file system...");
 
-        // TODO: Eventually switch from RAM disk to real disk
         Serial::Printf("Ext2 RAM disk size: %x", ramDiskEnd - ramDiskBegin);
         ramDiskAddr = ramDiskBegin;
 
-        // TODO: If loading Ext2 from disk, read from disk and allocate 1024B for it on the heap
         superblock = (Ext2Superblock*)(ramDiskAddr + 1024);
 
         KAssert(superblock->ext2Signature == 0xef53, "Invalid ext2 signature!");
@@ -161,6 +97,7 @@ namespace Ext2
         blockSize = 1024 << superblock->blockSizeLog2Minus10;
 
         Serial::Printf("Inodes count: %d", superblock->inodesCount);
+        Serial::Printf("Inode size: %d", superblock->inodeSize);
         Serial::Printf("Blocks count: %d", superblock->blocksCount);
         Serial::Printf("Block size: %d", blockSize);
         Serial::Printf("Blocks per block group: %d", superblock->blocksPerBlockGroup);
@@ -169,7 +106,8 @@ namespace Ext2
         Serial::Printf("Version: %d.", superblock->majorVersion, "");
         Serial::Printf("%d", superblock->minorVersion);
 
-        // TODO: If loading Ext2 from disk, free superblock allocate on the heap
+        Serial::Print("Volume name: ", "");
+        Serial::Print(superblock->volumeName);
 
         blockGroupsCount = superblock->blocksCount / superblock->blocksPerBlockGroup +
                            (superblock->blocksCount % superblock->blocksPerBlockGroup > 0 ? 1 : 0);
@@ -180,10 +118,16 @@ namespace Ext2
         KAssert(blockGroupsCount == blockGroupsCountCheck, "Block group count could not be calculated.");
 
         Serial::Printf("Block group count: %d", blockGroupsCount);
+
+        Serial::Printf("First non-reserved inode in file system: %d", superblock->firstNonReservedInode);
+
+        Serial::Printf("Optional features: %x", superblock->optionalFeatures);
         Serial::Printf("Required features: %x", superblock->requiredFeatures);
         Serial::Printf("Read-only features: %x", superblock->readOnlyFeatures);
 
-        // TODO: If loading Ext2 from disk, allocate space for it on the heap
+        Serial::Printf("Number of blocks to preallocate for files: %d", superblock->preallocFilesBlocksCount);
+        Serial::Printf("Number of blocks to preallocate for directories: %d", superblock->preallocDirectoriesBlocksCount);
+
         uint32_t blockGroupDescTableDiskAddr = blockSize * (blockSize == 1024 ? 2 : 1);
         blockGroupDescTable = (Ext2BlockGroupDescriptor*)(ramDiskBegin + blockGroupDescTableDiskAddr);
 
@@ -217,7 +161,7 @@ namespace Ext2
 
         Ext2Inode* barInode = GetInode(barInodeNum);
         char* textContents = new char[barInode->size0];
-        barInode->Read(textContents, barInode->size0);
+        barInode->Read(textContents, barInode->size0, 0);
         Serial::Print("\n/subdirectory-bravo/bar.txt contents:");
         Serial::Print(textContents);
     }

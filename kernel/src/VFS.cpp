@@ -6,22 +6,23 @@
 #include "Vector.h"
 #include "Serial.h"
 
-VNode TraversePath(char* absolutePath)
+VNode TraversePath(char* absolutePath, bool& exists, char*& pathToken)
 {
     Ext2::Ext2Inode* currentInode = Ext2::rootDirInode;
     VNode lastVNode;
 
-    char* currentElement = String::Split(absolutePath, '/', &absolutePath);
-    KAssert(*currentElement == 0, "Absolute path does not begin at root.");
+    pathToken = String::Split(absolutePath, '/', &absolutePath);
+    KAssert(*pathToken == 0, "Absolute path does not begin at root.");
 
     uint64_t remainingPathDepth = String::Count(absolutePath, '/') + 1;
+    bool foundNextInode = false;
     while (remainingPathDepth > 0)
     {
-        currentElement = String::Split(absolutePath, '/', &absolutePath);
-        bool foundNextInode = false;
+        foundNextInode = false;
+        pathToken = String::Split(absolutePath, '/', &absolutePath);
         for (const VNode& nodeInDirectory : Ext2::GetDirectoryListing(currentInode))
         {
-            if (String::Equals(nodeInDirectory.name, currentElement))
+            if (String::Equals(nodeInDirectory.name, pathToken))
             {
                 foundNextInode = true;
                 lastVNode = nodeInDirectory;
@@ -32,20 +33,36 @@ VNode TraversePath(char* absolutePath)
         remainingPathDepth--;
 
         // If the entry in the directory could not be found
-        KAssert(foundNextInode, "Directory entry could not be found while traversing path.");
+        KAssert(foundNextInode || remainingPathDepth == 0, "Directory entry could not be found while traversing path.");
     }
 
+    exists = foundNextInode;
     return VNode(lastVNode.name, lastVNode.inodeNum);
 }
 
-int Open(char* path, Process* process)
+VNode Create(char* name, VNode* directory)
+{
+    uint32_t inodeNum = Ext2::GetInode(directory->inodeNum)->Create(name);
+    return VNode(name, inodeNum);
+}
+
+int Open(char* path, int flags, Process* process)
 {
     // The VNode* in the descriptor will never be a dangling pointer since VNodes
     // stay in memory for the duration their file descriptor is alive.
     // TODO: Can't this memory stuff just be managed in the FileDescriptor constructor/destructor?
     FileDescriptor descriptor;
-    descriptor.vNode = new VNode();
-    *descriptor.vNode = TraversePath(path);
+
+    bool exists = false;
+    char* filename = nullptr;
+    descriptor.vNode = new VNode(TraversePath(path, exists, filename));
+    if (!exists && (flags) & VFSFlag::OCreate)
+    {
+        Serial::Print("FILENAME: ");
+        Serial::Print(filename);
+        *descriptor.vNode = Create(filename, descriptor.vNode);
+    }
+
     int descriptorIndex = (int)process->fileDescriptors.GetLength();
     process->fileDescriptors.Push(descriptor);
     Serial::Print(descriptor.vNode->name);
@@ -55,8 +72,24 @@ int Open(char* path, Process* process)
 
 uint64_t Read(int descriptor, void* buffer, uint64_t count, Process* process)
 {
-    uint32_t inodeNum = process->fileDescriptors[descriptor].vNode->inodeNum;
-    return Ext2::GetInode(inodeNum)->Read(buffer, count);
+    FileDescriptor* fileDescriptor = &process->fileDescriptors[descriptor];
+    uint32_t inodeNum = fileDescriptor->vNode->inodeNum;
+
+    uint64_t readCount = Ext2::GetInode(inodeNum)->Read(buffer, count, fileDescriptor->offset);
+    fileDescriptor->offset += readCount;
+
+    return readCount;
+}
+
+uint64_t Write(int descriptor, void* buffer, uint64_t count, Process* process)
+{
+    FileDescriptor* fileDescriptor = &process->fileDescriptors[descriptor];
+    uint32_t inodeNum = fileDescriptor->vNode->inodeNum;
+
+    uint64_t wroteCount = Ext2::GetInode(inodeNum)->Write(buffer, count, fileDescriptor->offset);
+    fileDescriptor->offset += wroteCount;
+
+    return wroteCount;
 }
 
 VNode::VNode(const char* _name, uint32_t _inodeNum) : inodeNum(_inodeNum)

@@ -116,23 +116,68 @@ void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 void SystemCall(InterruptFrame* interruptFrame)
 {
     static int step = 0;
-    static int desc;
+    static int desc0;
+    static int desc2;
+    static int desc3;
 
+    Process* process = &(*taskList)[currentTaskIndex];
+
+    Serial::Print("==============================================================================");
     switch (step)
     {
         case 0:
         {
             char* path = (char*)"/subdirectory-bravo/bar.txt";
-            desc = Open(path, &(*taskList)[currentTaskIndex]);
+            desc0 = Open(path, 0, process);
+            Serial::Printf("Descriptor: %d", desc0);
+
+            char* contents = new char[12];
+            uint64_t readCount = Read(desc0, (void*)contents, 17, process);
+            Serial::Printf("Read count: %d", readCount);
+            contents[readCount] = 0;
+
+            Serial::Print(contents);
+
             break;
         }
         case 1:
         {
             char* contents = new char[100];
-            uint64_t readCount = Read(desc, (void*)contents, 100, &(*taskList)[currentTaskIndex]);
+            uint64_t readCount = Read(desc0, contents, 100, process);
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
+
             Serial::Print(contents);
+
+            break;
+        }
+        case 2:
+        {
+            char* path = (char*)"/foo.txt";
+            desc2 = Open(path, 0, process);
+            Serial::Printf("Descriptor: %d", desc2);
+
+            char* appendContent = (char*)"appending new content!";
+            uint64_t stringLength = String::Length(appendContent);
+            uint64_t wroteCount = Write(desc2, appendContent, stringLength, process);
+            Serial::Printf("Write count: %d", wroteCount);
+
+            Serial::Print("Updated result:");
+            char* contents = new char[100];
+            uint64_t readCount = Read(desc2, contents, 100, process);
+            Serial::Printf("Read count: %d", readCount);
+            contents[readCount] = 0;
+
+            Serial::Print(contents);
+
+            break;
+        }
+        case -1:
+        {
+            char* path = (char*)"/subdirectory-bravo/some.txt";
+            desc3 = Open(path, VFSFlag::OCreate, process);
+            Serial::Printf("Descriptor: %d", desc3);
+
             break;
         }
         default:

@@ -33,7 +33,11 @@ namespace Ext2
         uint16_t userId1; // Customizable
         uint16_t groupId1; // Customizable
         uint32_t reserved2; // Customizable
-        uint64_t Read(void* buffer, uint64_t count, uint64_t readPos = 0);
+        uint64_t Read(void* buffer, uint64_t count, uint64_t readPos);
+        uint64_t Write(void* buffer, uint64_t count, uint64_t writePos);
+        uint32_t Create(char* name);
+
+    private:
         uint32_t GetBlockAddr(uint32_t currentBlock);
     } __attribute__((packed));
 }

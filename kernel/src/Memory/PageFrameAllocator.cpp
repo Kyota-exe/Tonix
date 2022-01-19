@@ -8,6 +8,7 @@
 static Bitmap pageFrameBitmap;
 
 uint64_t pageFrameCount = 0;
+uint64_t latestAllocatedPageFrame = 0;
 
 void InitializePageFrameAllocator()
 {
@@ -78,12 +79,12 @@ void InitializePageFrameAllocator()
 void* RequestPageFrame()
 {
     // Find first free page frame, starting from page frame with the lowest physical address (0)
-    for (uint64_t pageFrame = 0; pageFrame < pageFrameBitmap.size * 8; ++pageFrame)
+    for (; latestAllocatedPageFrame < pageFrameBitmap.size * 8; ++latestAllocatedPageFrame)
     {
-        if (!pageFrameBitmap.GetBit(pageFrame))
+        if (!pageFrameBitmap.GetBit(latestAllocatedPageFrame))
         {
-            pageFrameBitmap.SetBit(pageFrame, true);
-            return (void*)(pageFrame * 0x1000);
+            pageFrameBitmap.SetBit(latestAllocatedPageFrame, true);
+            return (void*)(latestAllocatedPageFrame * 0x1000);
         }
     }
 

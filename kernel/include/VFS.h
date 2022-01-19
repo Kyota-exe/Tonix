@@ -6,8 +6,14 @@ struct VNode;
 #include <stdint.h>
 #include "Task.h"
 
-int Open(char* path, Process* process);
+enum VFSFlag
+{
+    OCreate = 0x200
+};
+
+int Open(char* path, int flags, Process* process);
 uint64_t Read(int descriptor, void* buffer, uint64_t count, Process* process);
+uint64_t Write(int descriptor, void* buffer, uint64_t count, Process* process);
 
 struct VNode
 {
