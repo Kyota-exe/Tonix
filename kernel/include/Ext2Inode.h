@@ -2,6 +2,8 @@
 #define MISKOS_EXT2INODE_H
 
 #include <stdint.h>
+#include "Vector.h"
+#include "VFS.h"
 
 namespace Ext2
 {
@@ -35,10 +37,12 @@ namespace Ext2
         uint32_t reserved2; // Customizable
         uint64_t Read(void* buffer, uint64_t count, uint64_t readPos);
         uint64_t Write(void* buffer, uint64_t count, uint64_t writePos);
+        uint64_t Write(uint64_t value, uint64_t count, uint64_t writePos, bool updateFileSize);
         uint32_t Create(char* name);
+        Vector<VNode> GetDirectoryListing();
 
     private:
-        uint32_t GetBlockAddr(uint32_t currentBlock);
+        uint32_t GetBlockAddr(uint32_t requestedBlockIndex, bool allocateMissingBlock);
     } __attribute__((packed));
 }
 

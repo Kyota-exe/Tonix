@@ -66,6 +66,14 @@ namespace Ext2
         uint8_t unused[14];
     } __attribute__((packed));
 
+    struct Ext2DirectoryEntry
+    {
+        uint32_t inodeNum;
+        uint16_t entrySize;
+        uint8_t nameLength; // Name length least-significant 8 bits
+        uint8_t typeIndicator; // Name length most-significant 8 bits if feature "directory entries have file type byte" is not set
+    } __attribute__((packed));
+
     extern Ext2Inode* rootDirInode;
     extern uint32_t blockGroupsCount;
     extern uint64_t blockSize;

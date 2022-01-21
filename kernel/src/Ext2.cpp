@@ -7,14 +7,6 @@
 
 namespace Ext2
 {
-    struct Ext2DirectoryEntry
-    {
-        uint32_t inodeNum;
-        uint16_t entrySize;
-        uint8_t nameLength; // Name length least-significant 8 bits
-        uint8_t typeIndicator; // Name length most-significant 8 bits if feature "directory entries have file type byte" is not set
-    } __attribute__((packed));
-
     const uint32_t INODE_ROOT_DIR = 2;
 
     uint32_t blockGroupsCount;
@@ -34,51 +26,6 @@ namespace Ext2
         uint64_t diskAddr = blockGroupDescTable[blockGroupIndex].inodeTableStartBlock * blockSize + inodeIndex * superblock->inodeSize;
 
         return (Ext2Inode*)(diskAddr + ramDiskAddr);
-    }
-
-    VNode ConstructVNode(Ext2DirectoryEntry* directoryEntry)
-    {
-        // TODO: Add support for when "file type byte for directory entries" are not supported.
-        char name[directoryEntry->nameLength + 1];
-        MemCopy(name, (char*)((uint64_t)directoryEntry + sizeof(Ext2DirectoryEntry)), directoryEntry->nameLength);
-        name[directoryEntry->nameLength] = 0;
-
-        if (String::Length(name) != directoryEntry->nameLength)
-        {
-            Serial::Printf("Directory entry name length computed (%d) ", String::Length(name), "");
-            Serial::Printf("is different from name length in directory entry (%d).", directoryEntry->nameLength);
-        }
-
-        return VNode(name, directoryEntry->inodeNum);
-    }
-
-    Vector<VNode> GetDirectoryListing(Ext2Inode* directoryInode)
-    {
-        Vector<VNode> vNodes;
-
-        uint64_t parsedLength = 0;
-        while (parsedLength < directoryInode->size0)
-        {
-            // TODO: Add support for when the byte at index 7 of the directory entry is the most-significant 8 bits of the name length
-            uint8_t nameLengthLowByte;
-            directoryInode->Read(&nameLengthLowByte, 1, parsedLength + 6);
-            uint32_t trueEntrySize = 8 + nameLengthLowByte;
-
-            auto directoryEntry = (Ext2DirectoryEntry*)KMalloc(trueEntrySize);
-            directoryInode->Read(directoryEntry, trueEntrySize, parsedLength);
-
-            if (directoryEntry->inodeNum != 0)
-            {
-                VNode newVnode = ConstructVNode(directoryEntry);
-                vNodes.Push(newVnode);
-            }
-
-            parsedLength += directoryEntry->entrySize;
-
-            delete directoryEntry;
-        }
-
-        return vNodes;
     }
 
     void Initialize(uint64_t ramDiskBegin, uint64_t ramDiskEnd)
@@ -132,37 +79,5 @@ namespace Ext2
         blockGroupDescTable = (Ext2BlockGroupDescriptor*)(ramDiskBegin + blockGroupDescTableDiskAddr);
 
         rootDirInode = GetInode(INODE_ROOT_DIR);
-
-        Vector<VNode> rootDirContents = GetDirectoryListing(rootDirInode);
-        Serial::Print("\n/ contents:");
-        uint32_t subDirInodeNum = 0;
-        for (uint64_t i = 0; i < rootDirContents.GetLength(); ++i)
-        {
-            Serial::Printf("%d - ", rootDirContents[i].inodeNum, "");
-            Serial::Print(rootDirContents[i].name);
-            if (String::Equals(rootDirContents[i].name, "subdirectory-bravo"))
-            {
-                subDirInodeNum = rootDirContents[i].inodeNum;
-            }
-        }
-
-        Vector<VNode> subDirContents = GetDirectoryListing(GetInode(subDirInodeNum));
-        Serial::Print("\n/subdirectory-bravo/ contents:");
-        uint64_t barInodeNum = 0;
-        for (uint64_t i = 0; i < subDirContents.GetLength(); ++i)
-        {
-            Serial::Printf("%d - ", subDirContents[i].inodeNum, "");
-            Serial::Print(subDirContents[i].name);
-            if (String::Equals(subDirContents[i].name, "bar.txt"))
-            {
-                barInodeNum = subDirContents[i].inodeNum;
-            }
-        }
-
-        Ext2Inode* barInode = GetInode(barInodeNum);
-        char* textContents = new char[barInode->size0];
-        barInode->Read(textContents, barInode->size0, 0);
-        Serial::Print("\n/subdirectory-bravo/bar.txt contents:");
-        Serial::Print(textContents);
     }
 }

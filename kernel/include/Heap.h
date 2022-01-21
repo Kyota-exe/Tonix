@@ -4,8 +4,6 @@
 #include <stdint.h>
 
 void InitializeKernelHeap();
-void* KMalloc(uint64_t size);
-void KFree(void* ptr);
 
 void* operator new(uint64_t, void* ptr);
 void* operator new[](uint64_t, void* ptr);

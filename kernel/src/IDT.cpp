@@ -123,6 +123,7 @@ void SystemCall(InterruptFrame* interruptFrame)
     Process* process = &(*taskList)[currentTaskIndex];
 
     Serial::Print("==============================================================================");
+    Serial::Printf("STEP %d:", step);
     switch (step)
     {
         case 0:
@@ -131,57 +132,82 @@ void SystemCall(InterruptFrame* interruptFrame)
             desc0 = Open(path, 0, process);
             Serial::Printf("Descriptor: %d", desc0);
 
-            char* contents = new char[12];
+            char* contents = new char[18];
             uint64_t readCount = Read(desc0, (void*)contents, 17, process);
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
+            Serial::Print("------------------------------------------------------------------------------------------");
             Serial::Print(contents);
+            Serial::Print("------------------------------------------------------------------------------------------");
 
             break;
         }
         case 1:
         {
             char* contents = new char[100];
-            uint64_t readCount = Read(desc0, contents, 100, process);
+            uint64_t readCount = Read(desc0, contents, 99, process);
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
+            Serial::Print("------------------------------------------------------------------------------------------");
             Serial::Print(contents);
+            Serial::Print("------------------------------------------------------------------------------------------");
 
             break;
         }
         case 2:
         {
             char* path = (char*)"/foo.txt";
-            desc2 = Open(path, 0, process);
+            desc2 = Open(path, VFSOpenFlag::OAppend, process);
             Serial::Printf("Descriptor: %d", desc2);
 
-            char* appendContent = (char*)"appending new content!";
+            char* appendContent = (char*)"New content!\n";
             uint64_t stringLength = String::Length(appendContent);
+            Serial::Print("New content: ", "");
+            Serial::Print(appendContent);
             uint64_t wroteCount = Write(desc2, appendContent, stringLength, process);
-            Serial::Printf("Write count: %d", wroteCount);
+            Serial::Printf("Wrote count: %d", wroteCount);
 
-            Serial::Print("Updated result:");
+            RepositionOffset(desc2, 0, VFSSeekType::SeekSet, process);
             char* contents = new char[100];
-            uint64_t readCount = Read(desc2, contents, 100, process);
+            uint64_t readCount = Read(desc2, contents, 99, process);
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
+            Serial::Print("------------------------------------------------------------------------------------------");
             Serial::Print(contents);
+            Serial::Print("------------------------------------------------------------------------------------------");
 
             break;
         }
-        case -1:
+        case 3:
         {
-            char* path = (char*)"/subdirectory-bravo/some.txt";
-            desc3 = Open(path, VFSFlag::OCreate, process);
+            char* path = (char*)"/some.txt";
+            desc3 = Open(path, VFSOpenFlag::OCreate, process);
             Serial::Printf("Descriptor: %d", desc3);
+
+            char* fileContents = (char*)"some.txt contents!\n";
+            uint64_t stringLength = String::Length(fileContents);
+            Serial::Print("Content: ", "");
+            Serial::Print(fileContents);
+            uint64_t wroteCount = Write(desc3, fileContents, stringLength, process);
+            Serial::Printf("Wrote count: %d", wroteCount);
+
+            RepositionOffset(desc3, 0, VFSSeekType::SeekSet, process);
+            char* contents = new char[100];
+            uint64_t readCount = Read(desc3, contents, 99, process);
+            contents[readCount] = 0;
+
+            Serial::Print("------------------------------------------------------------------------------------------");
+            Serial::Print(contents);
+            Serial::Print("------------------------------------------------------------------------------------------");
 
             break;
         }
         default:
         {
+
             Panic("Fell into step: %d", step);
         }
     }
