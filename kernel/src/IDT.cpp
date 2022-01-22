@@ -117,9 +117,6 @@ void SystemCall(InterruptFrame* interruptFrame)
 {
     static int step = 0;
     static int desc0;
-    static int desc2;
-    static int desc3;
-    static int desc4;
 
     Process* process = &(*taskList)[currentTaskIndex];
 
@@ -137,10 +134,9 @@ void SystemCall(InterruptFrame* interruptFrame)
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
-            Serial::Print("------------------------------------------------------------------------------------------");
             Serial::Print(contents);
-            Serial::Print("------------------------------------------------------------------------------------------");
 
+            delete[] contents;
             break;
         }
         case 1:
@@ -150,26 +146,16 @@ void SystemCall(InterruptFrame* interruptFrame)
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
-            Serial::Print("------------------------------------------------------------------------------------------");
             Serial::Print(contents);
-            Serial::Print("------------------------------------------------------------------------------------------");
 
+            delete[] contents;
+            Close(desc0, process);
             break;
         }
         case 2:
         {
-            desc2 = Open("/foo.txt", VFSOpenFlag::OAppend, process);
+            int desc2 = Open("/foo.txt", VFSOpenFlag::OAppend, process);
             Serial::Printf("Descriptor: %d", desc2);
-
-            RepositionOffset(desc2, 0, VFSSeekType::SeekSet, process);
-            char* contentsA = new char[100];
-            uint64_t readCountA = Read(desc2, contentsA, 99, process);
-            Serial::Printf("Read count: %d", readCountA);
-            contentsA[readCountA] = 0;
-
-            Serial::Print("------------------------------------------------------------------------------------------");
-            Serial::Print(contentsA);
-            Serial::Print("------------------------------------------------------------------------------------------");
 
             const char* appendContent = "New content!\n";
             uint64_t stringLength = String::Length(appendContent);
@@ -184,18 +170,17 @@ void SystemCall(InterruptFrame* interruptFrame)
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
-            Serial::Print("------------------------------------------------------------------------------------------");
             Serial::Print(contents);
-            Serial::Print("------------------------------------------------------------------------------------------");
 
+            delete[] contents;
+            Close(desc2, process);
             break;
         }
         case 3:
         {
-            desc3 = Open("/some.txt", VFSOpenFlag::OCreate, process);
-            Serial::Printf("Descriptor: %d", desc3);
+            int desc3 = Open("/subdirectory-bravo/.mock", VFSOpenFlag::OCreate, process);
 
-            char* fileContents = (char*)"some.txt contents!\n";
+            char* fileContents = (char*)".mock contents!\nAre really cool!\n";
             uint64_t stringLength = String::Length(fileContents);
             Serial::Print("Content: ", "");
             Serial::Print(fileContents);
@@ -208,17 +193,15 @@ void SystemCall(InterruptFrame* interruptFrame)
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
-            Serial::Print("------------------------------------------------------------------------------------------");
             Serial::Print(contents);
-            Serial::Print("------------------------------------------------------------------------------------------");
 
+            delete[] contents;
             Close(desc3, process);
-
             break;
         }
         case 4:
         {
-            desc4 = Open("/some.txt", 0, process);
+            int desc4 = Open("/subdirectory-bravo/.mock", 0, process);
             Serial::Printf("Descriptor: %d", desc4);
 
             char* contents = new char[100];
@@ -226,10 +209,26 @@ void SystemCall(InterruptFrame* interruptFrame)
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
-            Serial::Print("------------------------------------------------------------------------------------------");
             Serial::Print(contents);
-            Serial::Print("------------------------------------------------------------------------------------------");
 
+            delete[] contents;
+            Close(desc4, process);
+            break;
+        }
+        case 5:
+        {
+            int desc5 = Open("/foo.txt", VFSOpenFlag::OTruncate, process);
+            Serial::Printf("Descriptor: %d", desc5);
+
+            char* contents = new char[100];
+            uint64_t readCount = Read(desc5, contents, 99, process);
+            Serial::Printf("Read count: %d", readCount);
+            contents[readCount] = 0;
+
+            Serial::Print(contents);
+
+            delete[] contents;
+            Close(desc5, process);
             break;
         }
         default:
