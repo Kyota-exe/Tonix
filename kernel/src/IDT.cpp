@@ -119,6 +119,7 @@ void SystemCall(InterruptFrame* interruptFrame)
     static int desc0;
     static int desc2;
     static int desc3;
+    static int desc4;
 
     Process* process = &(*taskList)[currentTaskIndex];
 
@@ -128,8 +129,7 @@ void SystemCall(InterruptFrame* interruptFrame)
     {
         case 0:
         {
-            char* path = (char*)"/subdirectory-bravo/bar.txt";
-            desc0 = Open(path, 0, process);
+            desc0 = Open("/subdirectory-bravo/bar.txt", 0, process);
             Serial::Printf("Descriptor: %d", desc0);
 
             char* contents = new char[18];
@@ -158,11 +158,20 @@ void SystemCall(InterruptFrame* interruptFrame)
         }
         case 2:
         {
-            char* path = (char*)"/foo.txt";
-            desc2 = Open(path, VFSOpenFlag::OAppend, process);
+            desc2 = Open("/foo.txt", VFSOpenFlag::OAppend, process);
             Serial::Printf("Descriptor: %d", desc2);
 
-            char* appendContent = (char*)"New content!\n";
+            RepositionOffset(desc2, 0, VFSSeekType::SeekSet, process);
+            char* contentsA = new char[100];
+            uint64_t readCountA = Read(desc2, contentsA, 99, process);
+            Serial::Printf("Read count: %d", readCountA);
+            contentsA[readCountA] = 0;
+
+            Serial::Print("------------------------------------------------------------------------------------------");
+            Serial::Print(contentsA);
+            Serial::Print("------------------------------------------------------------------------------------------");
+
+            const char* appendContent = "New content!\n";
             uint64_t stringLength = String::Length(appendContent);
             Serial::Print("New content: ", "");
             Serial::Print(appendContent);
@@ -183,8 +192,7 @@ void SystemCall(InterruptFrame* interruptFrame)
         }
         case 3:
         {
-            char* path = (char*)"/some.txt";
-            desc3 = Open(path, VFSOpenFlag::OCreate, process);
+            desc3 = Open("/some.txt", VFSOpenFlag::OCreate, process);
             Serial::Printf("Descriptor: %d", desc3);
 
             char* fileContents = (char*)"some.txt contents!\n";
@@ -197,6 +205,25 @@ void SystemCall(InterruptFrame* interruptFrame)
             RepositionOffset(desc3, 0, VFSSeekType::SeekSet, process);
             char* contents = new char[100];
             uint64_t readCount = Read(desc3, contents, 99, process);
+            Serial::Printf("Read count: %d", readCount);
+            contents[readCount] = 0;
+
+            Serial::Print("------------------------------------------------------------------------------------------");
+            Serial::Print(contents);
+            Serial::Print("------------------------------------------------------------------------------------------");
+
+            Close(desc3, process);
+
+            break;
+        }
+        case 4:
+        {
+            desc4 = Open("/some.txt", 0, process);
+            Serial::Printf("Descriptor: %d", desc4);
+
+            char* contents = new char[100];
+            uint64_t readCount = Read(desc4, contents, 99, process);
+            Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
             Serial::Print("------------------------------------------------------------------------------------------");
@@ -207,7 +234,6 @@ void SystemCall(InterruptFrame* interruptFrame)
         }
         default:
         {
-
             Panic("Fell into step: %d", step);
         }
     }

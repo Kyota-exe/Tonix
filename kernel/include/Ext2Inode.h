@@ -7,6 +7,35 @@
 
 namespace Ext2
 {
+    enum InodeTypePermissions
+    {
+        // Types
+        FIFO = 0x1000,
+        CharacterDevice = 0x2000,
+        Directory = 0x4000,
+        BlockDevice = 0x6000,
+        RegularFile = 0x8000,
+        SymbolicLink = 0xa000,
+        UnixSocket = 0xc000,
+
+        // Permissions
+        UserRead = 0x100,
+        UserWrite = 0x080,
+        UserExec = 0x040,
+
+        GroupRead = 0x020,
+        GroupWrite = 0x010,
+        GroupExec = 0x008,
+
+        OtherRead = 0x004,
+        OtherWrite = 0x002,
+        OtherExec = 0x001,
+
+        SetUserID = 0x800,
+        SetGroupID = 0x400,
+        StickyBit = 0x200
+    };
+
     struct Ext2Inode
     {
         uint16_t typePermissions;
@@ -36,9 +65,9 @@ namespace Ext2
         uint16_t groupId1; // Customizable
         uint32_t reserved2; // Customizable
         uint64_t Read(void* buffer, uint64_t count, uint64_t readPos);
-        uint64_t Write(void* buffer, uint64_t count, uint64_t writePos);
+        uint64_t Write(const void* buffer, uint64_t count, uint64_t writePos);
         uint64_t Write(uint64_t value, uint64_t count, uint64_t writePos, bool updateFileSize);
-        uint32_t Create(char* name);
+        uint32_t Create(const char* name);
         Vector<VNode> GetDirectoryListing();
 
     private:

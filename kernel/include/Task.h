@@ -38,6 +38,7 @@ struct InterruptFrame
 
 struct FileDescriptor
 {
+    bool present = false;
     uint64_t offset = 0;
     VNode* vNode;
 };

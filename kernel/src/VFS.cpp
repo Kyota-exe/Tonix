@@ -5,21 +5,28 @@
 #include "Panic.h"
 #include "Vector.h"
 #include "Serial.h"
+#include "Ext2Inode.h"
 
-VNode TraversePath(char* absolutePath, bool& exists, char*& pathToken)
+VNode TraversePath(const char* absolutePath, bool& exists, char*& finalPathToken)
 {
+    uint64_t pathStringLength = String::Length(absolutePath);
+    char* path = new char[pathStringLength + 1];
+    MemCopy(path, absolutePath, pathStringLength + 1);
+    path[pathStringLength] = 0;
+    char* remainingPath = path;
+
     Ext2::Ext2Inode* currentInode = Ext2::rootDirInode;
     VNode lastVNode = VNode("", 2);
 
-    pathToken = String::Split(absolutePath, '/', &absolutePath);
+    char* pathToken = String::Split(remainingPath, '/', &remainingPath);
     KAssert(*pathToken == 0, "Absolute path does not begin at root.");
 
-    uint64_t remainingPathDepth = String::Count(absolutePath, '/') + 1;
+    uint64_t remainingPathDepth = String::Count(remainingPath, '/') + 1;
     bool foundNextInode = false;
     while (remainingPathDepth > 0)
     {
         foundNextInode = false;
-        pathToken = String::Split(absolutePath, '/', &absolutePath);
+        pathToken = String::Split(remainingPath, '/', &remainingPath);
         for (const VNode& nodeInDirectory : currentInode->GetDirectoryListing())
         {
             if (String::Equals(nodeInDirectory.name, pathToken))
@@ -37,6 +44,13 @@ VNode TraversePath(char* absolutePath, bool& exists, char*& pathToken)
     }
 
     exists = foundNextInode;
+
+    uint64_t finalPathTokenStringSize = String::Length(pathToken);
+    finalPathToken = new char[finalPathTokenStringSize + 1];
+    MemCopy(finalPathToken, pathToken, finalPathTokenStringSize);
+    finalPathToken[finalPathTokenStringSize] = 0;
+
+    delete[] path;
     return VNode(lastVNode.name, lastVNode.inodeNum);
 }
 
@@ -63,42 +77,76 @@ uint64_t RepositionOffset(FileDescriptor* fileDescriptor, Ext2::Ext2Inode* inode
     return fileDescriptor->offset;
 }
 
-VNode Create(char* name, VNode* directory)
+uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType, Process* process)
 {
-    uint32_t inodeNum = Ext2::GetInode(directory->inodeNum)->Create(name);
+    // TODO: Support files larger than 2^32 bytes
+    FileDescriptor* fileDescriptor = &process->fileDescriptors[descriptor];
+    Ext2::Ext2Inode* inode = Ext2::GetInode(fileDescriptor->vNode->inodeNum);
+    return RepositionOffset(fileDescriptor, inode, offset, seekType);
+}
+
+VNode Create(const char* name, Ext2::Ext2Inode* directoryInode)
+{
+    uint32_t inodeNum = directoryInode->Create(name);
     return VNode(name, inodeNum);
 }
 
-int Open(char* path, int flags, Process* process)
+void Close(int descriptor, Process* process)
+{
+    FileDescriptor* fileDescriptor = &process->fileDescriptors[descriptor];
+    fileDescriptor->present = false;
+    fileDescriptor->offset = 0;
+}
+
+int Open(const char* path, int flags, Process* process)
 {
     // The VNode* in the descriptor will never be a dangling pointer since VNodes
     // stay in memory for the duration their file descriptor is alive.
     // TODO: Can't this memory stuff just be managed in the FileDescriptor constructor/destructor?
-    FileDescriptor descriptor;
-    int descriptorIndex = (int)process->fileDescriptors.GetLength();
+
+    FileDescriptor* descriptor;
+
+    // Find descriptor int
+    int descriptorIndex = -1;
+    for (int i = 0; (uint64_t)i < process->fileDescriptors.GetLength(); ++i)
+    {
+        if (!process->fileDescriptors[i].present)
+        {
+            process->fileDescriptors[i].present = true;
+            descriptorIndex = i;
+        }
+    }
+    if (descriptorIndex == -1)
+    {
+        descriptorIndex = (int)process->fileDescriptors.GetLength();
+        process->fileDescriptors.Push({true, 0, nullptr});
+    }
+
+    descriptor = &process->fileDescriptors[descriptorIndex];
 
     // Find file in ext2
     bool exists = false;
     char* filename = nullptr;
-    descriptor.vNode = new VNode(TraversePath(path, exists, filename));
+    descriptor->vNode = new VNode(TraversePath(path, exists, filename));
 
-    Ext2::Ext2Inode* inode = Ext2::GetInode(descriptor.vNode->inodeNum);
+    Ext2::Ext2Inode* inode = Ext2::GetInode(descriptor->vNode->inodeNum);
 
     if ((flags & VFSOpenFlag::OCreate) && !exists)
     {
-        Serial::Print("FILENAME: ");
-        Serial::Print(filename);
-        *descriptor.vNode = Create(filename, descriptor.vNode);
+        *descriptor->vNode = Create(filename, inode);
+    }
+
+    if ((flags & VFSOpenFlag::OTruncate) && (inode->typePermissions & Ext2::InodeTypePermissions::RegularFile))
+    {
+        inode->size0 = 0;
     }
 
     if ((flags & VFSOpenFlag::OAppend))
     {
-        RepositionOffset(&descriptor, inode, 0, VFSSeekType::SeekEnd);
+        RepositionOffset(descriptor, inode, 0, VFSSeekType::SeekEnd);
     }
 
-    process->fileDescriptors.Push(descriptor);
-    Serial::Print(descriptor.vNode->name);
-
+    delete[] filename;
     return descriptorIndex;
 }
 
@@ -113,7 +161,7 @@ uint64_t Read(int descriptor, void* buffer, uint64_t count, Process* process)
     return readCount;
 }
 
-uint64_t Write(int descriptor, void* buffer, uint64_t count, Process* process)
+uint64_t Write(int descriptor, const void* buffer, uint64_t count, Process* process)
 {
     FileDescriptor* fileDescriptor = &process->fileDescriptors[descriptor];
     Ext2::Ext2Inode* inode = Ext2::GetInode(fileDescriptor->vNode->inodeNum);
@@ -122,15 +170,6 @@ uint64_t Write(int descriptor, void* buffer, uint64_t count, Process* process)
     RepositionOffset(fileDescriptor, inode, wroteCount, VFSSeekType::SeekCursor);
 
     return wroteCount;
-}
-
-
-uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType, Process* process)
-{
-    // TODO: Support files larger than 2^32 bytes
-    FileDescriptor* fileDescriptor = &process->fileDescriptors[descriptor];
-    Ext2::Ext2Inode* inode = Ext2::GetInode(fileDescriptor->vNode->inodeNum);
-    return RepositionOffset(fileDescriptor, inode, offset, seekType);
 }
 
 VNode::VNode(const char* _name, uint32_t _inodeNum) : inodeNum(_inodeNum)

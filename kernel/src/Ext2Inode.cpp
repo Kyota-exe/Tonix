@@ -7,35 +7,6 @@
 
 namespace Ext2
 {
-    enum InodeTypePermissions
-    {
-        // Types
-        FIFO = 0x1000,
-        CharacterDevice = 0x2000,
-        Directory = 0x4000,
-        BlockDevice = 0x6000,
-        RegularFile = 0x8000,
-        SymbolicLink = 0xa000,
-        UnixSocket = 0xc000,
-
-        // Permissions
-        UserRead = 0x100,
-        UserWrite = 0x080,
-        UserExec = 0x040,
-
-        GroupRead = 0x020,
-        GroupWrite = 0x010,
-        GroupExec = 0x008,
-
-        OtherRead = 0x004,
-        OtherWrite = 0x002,
-        OtherExec = 0x001,
-
-        SetUserID = 0x800,
-        SetGroupID = 0x400,
-        StickyBit = 0x200
-    };
-
     enum DirectoryEntryType
     {
         DEntryUnknown = 0,
@@ -77,7 +48,7 @@ namespace Ext2
         return parsedCount;
     }
 
-    uint64_t Ext2Inode::Write(void* buffer, uint64_t count, uint64_t writePos)
+    uint64_t Ext2Inode::Write(const void* buffer, uint64_t count, uint64_t writePos)
     {
         // TODO: DRY
         uint64_t currentWritePos = writePos;
@@ -123,7 +94,7 @@ namespace Ext2
         return wroteCount;
     }
 
-    uint32_t Ext2Inode::Create(char* name)
+    uint32_t Ext2Inode::Create(const char* name)
     {
         KAssert(typePermissions & 0x4000, "Inode must be a directory to create files in it.");
 
@@ -166,16 +137,22 @@ namespace Ext2
         // TODO: Support permissions, file ACL and other fields in ext2 inode
         inode->typePermissions = DEFAULT_FILE_TYPE_PERMISSIONS;
         inode->hardLinksCount = 1;
+        inode->size0 = 0;
 
         uint8_t nameLength = String::Length(name);
+        uint8_t nameLengthPadding = 4 - (nameLength % 4);
+
         Ext2DirectoryEntry directoryEntry
         {
-            inodeNum,sizeof(Ext2DirectoryEntry),
+            inodeNum, (uint16_t)(sizeof(Ext2DirectoryEntry) + nameLength + nameLengthPadding),
             nameLength,DirectoryEntryType::DEntryRegularFile
         };
-        Write(&directoryEntry, sizeof(DirectoryEntryType), size0);
+
+        Write(&directoryEntry, sizeof(Ext2DirectoryEntry), size0);
+
+        // Directory entry name field must be padded so that it's size is a multiple of 4
         Write(name, nameLength, size0);
-        Write(0, 4 - (nameLength % 4), size0, true);
+        Write(0, nameLengthPadding, size0, true);
 
         return inodeNum;
     }
