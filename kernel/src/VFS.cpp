@@ -1,60 +1,99 @@
 #include "VFS.h"
-#include "Memory/Memory.h"
 #include "Ext2.h"
 #include "StringUtilities.h"
 #include "Panic.h"
 #include "Vector.h"
 #include "Serial.h"
-#include "Ext2Inode.h"
+#include "Scheduler.h"
 
-VNode TraversePath(const char* absolutePath, bool& exists, char*& finalPathToken)
+VNode* root;
+VNode* currentInCache = nullptr;
+
+void InitializeVFS(void* ext2RamDisk)
 {
-    uint64_t pathStringLength = String::Length(absolutePath);
-    char* path = new char[pathStringLength + 1];
-    MemCopy(path, absolutePath, pathStringLength + 1);
-    path[pathStringLength] = 0;
-    char* remainingPath = path;
+    FileSystem* ext2FileSystem;
+    ext2FileSystem = (FileSystem*)new Ext2(ext2RamDisk);
 
-    Ext2::Ext2Inode* currentInode = Ext2::rootDirInode;
-    VNode lastVNode = VNode("", 2);
+    root = new VNode();
+    currentInCache = root;
 
-    char* pathToken = String::Split(remainingPath, '/', &remainingPath);
-    KAssert(*pathToken == 0, "Absolute path does not begin at root.");
-
-    uint64_t remainingPathDepth = String::Count(remainingPath, '/') + 1;
-    bool foundNextInode = false;
-    while (remainingPathDepth > 0)
-    {
-        foundNextInode = false;
-        pathToken = String::Split(remainingPath, '/', &remainingPath);
-        for (const VNode& nodeInDirectory : currentInode->GetDirectoryListing())
-        {
-            if (String::Equals(nodeInDirectory.name, pathToken))
-            {
-                foundNextInode = true;
-                lastVNode = nodeInDirectory;
-                currentInode = Ext2::GetInode(nodeInDirectory.inodeNum);
-                break;
-            }
-        }
-        remainingPathDepth--;
-
-        // If the entry in the directory could not be found
-        KAssert(foundNextInode || remainingPathDepth == 0, "Directory entry could not be found while traversing path.");
-    }
-
-    exists = foundNextInode;
-
-    uint64_t finalPathTokenStringSize = String::Length(pathToken);
-    finalPathToken = new char[finalPathTokenStringSize + 1];
-    MemCopy(finalPathToken, pathToken, finalPathTokenStringSize);
-    finalPathToken[finalPathTokenStringSize] = 0;
-
-    delete[] path;
-    return VNode(lastVNode.name, lastVNode.inodeNum);
+    ext2FileSystem->Mount(root);
 }
 
-uint64_t RepositionOffset(FileDescriptor* fileDescriptor, Ext2::Ext2Inode* inode, uint64_t offset, VFSSeekType seekType)
+void CacheVNode(VNode* vNode)
+{
+    currentInCache->nextInCache = vNode;
+    currentInCache = vNode;
+}
+
+VNode* TraversePath(String path)
+{
+    VNode* directory = nullptr;
+
+    if (path.Split('/', 0).IsEmpty())
+    {
+        directory = root;
+        path = path.Substring(1, path.GetLength() - 1);
+    }
+    else Panic("Traversing using relative path is not supported.");
+
+    unsigned int pathDepth = path.Count('/') + 1;
+
+    String pathToken;
+    for (unsigned int currentDepth = 0; currentDepth < pathDepth; ++currentDepth)
+    {
+        pathToken = path.Split('/', currentDepth);
+        Vector<VNode*> mounts;
+
+        Serial::Print("PATH TOKEN: ", "");
+        Serial::Print(pathToken.begin());
+
+        do
+        {
+            mounts.Push(directory);
+            directory = directory->mountedVNode;
+        } while (directory != nullptr);
+
+        do
+        {
+            directory = mounts.Pop();
+
+            if (directory->fileSystem == nullptr)
+            {
+                directory = nullptr;
+                continue;
+            }
+
+            directory = directory->fileSystem->FindInDirectory(directory, pathToken);
+
+        } while (directory == nullptr && mounts.GetLength() > 0);
+
+        KAssert(directory != nullptr, "Could not find directory.");
+    }
+
+    return directory;
+}
+
+VNode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem)
+{
+    // VFS root is always first in cache
+    VNode* current = root;
+
+    while (current->nextInCache != nullptr)
+    {
+        if (current->inodeNum == inodeNum && current->fileSystem == fileSystem)
+        {
+            return current;
+        }
+
+        current = current->nextInCache;
+    }
+
+    return nullptr;
+}
+
+/*
+uint64_t RepositionOffset(FileDescriptor* fileDescriptor, Ext2Driver::Ext2Inode* inode, uint64_t offset, VFSSeekType seekType)
 {
     switch (seekType)
     {
@@ -77,66 +116,59 @@ uint64_t RepositionOffset(FileDescriptor* fileDescriptor, Ext2::Ext2Inode* inode
     return fileDescriptor->offset;
 }
 
-uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType, Process* process)
+uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType)
 {
     // TODO: Support files larger than 2^32 bytes
     FileDescriptor* fileDescriptor = &process->fileDescriptors[descriptor];
-    Ext2::Ext2Inode* inode = Ext2::GetInode(fileDescriptor->vNode->inodeNum);
+    Ext2Driver::Ext2Inode* inode = Ext2Driver::GetInode(fileDescriptor->vNode->inodeNum);
     return RepositionOffset(fileDescriptor, inode, offset, seekType);
 }
 
-VNode Create(const char* name, Ext2::Ext2Inode* directoryInode)
+VNode Create(const char* name, Ext2Driver::Ext2Inode* directoryInode)
 {
     uint32_t inodeNum = directoryInode->Create(name);
     return VNode(name, inodeNum);
 }
 
-void Close(int descriptor, Process* process)
+void Close(int descriptor)
 {
-    FileDescriptor* fileDescriptor = &process->fileDescriptors[descriptor];
+    FileDescriptor* fileDescriptor = &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
     fileDescriptor->present = false;
     fileDescriptor->offset = 0;
 }
+*/
 
-int Open(const char* path, int flags, Process* process)
+int Open(const String& path, int flags)
 {
-    // The VNode* in the descriptor will never be a dangling pointer since VNodes
-    // stay in memory for the duration their file descriptor is alive.
-    // TODO: Can't this memory stuff just be managed in the FileDescriptor constructor/destructor?
-
-    FileDescriptor* descriptor;
+    Vector<FileDescriptor>* fileDescriptors = &(*taskList)[currentTaskIndex].fileDescriptors;
 
     // Find descriptor int
     int descriptorIndex = -1;
-    for (int i = 0; (uint64_t)i < process->fileDescriptors.GetLength(); ++i)
+    for (int i = 0; (uint64_t)i < fileDescriptors->GetLength(); ++i)
     {
-        if (!process->fileDescriptors[i].present)
+        if (!fileDescriptors->Get(i).present)
         {
-            process->fileDescriptors[i].present = true;
+            fileDescriptors->Get(i).present = true;
             descriptorIndex = i;
         }
     }
     if (descriptorIndex == -1)
     {
-        descriptorIndex = (int)process->fileDescriptors.GetLength();
-        process->fileDescriptors.Push({true, 0, nullptr});
+        descriptorIndex = (int)fileDescriptors->GetLength();
+        fileDescriptors->Push({true, 0, nullptr});
     }
 
-    descriptor = &process->fileDescriptors[descriptorIndex];
+    fileDescriptors->Get(descriptorIndex).vNode = TraversePath(path);
+    Serial::Printf("FOUND!!!!! --> %x", (uint64_t)fileDescriptors->Get(descriptorIndex).vNode);
 
-    // Find file in ext2
-    bool exists = false;
-    char* filename = nullptr;
-    descriptor->vNode = new VNode(TraversePath(path, exists, filename));
-
-    Ext2::Ext2Inode* inode = Ext2::GetInode(descriptor->vNode->inodeNum);
+    /*Ext2Driver::Ext2Inode* inode = Ext2Driver::GetInode(descriptor->vNode->inodeNum);
 
     if ((flags & VFSOpenFlag::OCreate) && !exists)
     {
         *descriptor->vNode = Create(filename, inode);
     }
 
-    if ((flags & VFSOpenFlag::OTruncate) && (inode->typePermissions & Ext2::InodeTypePermissions::RegularFile))
+    if ((flags & VFSOpenFlag::OTruncate) && (inode->typePermissions & Ext2Driver::InodeTypePermissions::RegularFile))
     {
         inode->size0 = 0;
     }
@@ -144,67 +176,33 @@ int Open(const char* path, int flags, Process* process)
     if ((flags & VFSOpenFlag::OAppend))
     {
         RepositionOffset(descriptor, inode, 0, VFSSeekType::SeekEnd);
-    }
+    }*/
 
-    delete[] filename;
     return descriptorIndex;
 }
 
-uint64_t Read(int descriptor, void* buffer, uint64_t count, Process* process)
+uint64_t Read(int descriptor, void* buffer, uint64_t count)
 {
-    FileDescriptor* fileDescriptor = &process->fileDescriptors[descriptor];
-    Ext2::Ext2Inode* inode = Ext2::GetInode(fileDescriptor->vNode->inodeNum);
+    FileDescriptor* fileDescriptor =  &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
+    VNode* vNode = fileDescriptor->vNode;
 
-    uint64_t readCount = inode->Read(buffer, count, fileDescriptor->offset);
-    RepositionOffset(fileDescriptor, inode, readCount, VFSSeekType::SeekCursor);
+    uint64_t readCount = vNode->fileSystem->Read(vNode, buffer, count, fileDescriptor->offset);
+    fileDescriptor->offset += readCount;
 
     return readCount;
 }
 
-uint64_t Write(int descriptor, const void* buffer, uint64_t count, Process* process)
+uint64_t Write(int descriptor, const void* buffer, uint64_t count)
 {
-    FileDescriptor* fileDescriptor = &process->fileDescriptors[descriptor];
-    Ext2::Ext2Inode* inode = Ext2::GetInode(fileDescriptor->vNode->inodeNum);
+    FileDescriptor* fileDescriptor = &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
+    VNode* vNode = fileDescriptor->vNode;
 
-    uint64_t wroteCount = inode->Write(buffer, count, fileDescriptor->offset);
-    RepositionOffset(fileDescriptor, inode, wroteCount, VFSSeekType::SeekCursor);
+    auto inode = (Ext2Inode*)(vNode->context);
+    fileDescriptor->offset = inode->size0;
+
+    uint64_t wroteCount = vNode->fileSystem->Write(vNode, buffer, count, fileDescriptor->offset);
+
+    fileDescriptor->offset = 0;
 
     return wroteCount;
-}
-
-VNode::VNode(const char* _name, uint32_t _inodeNum) : inodeNum(_inodeNum)
-{
-    uint64_t nameLength = String::Length(_name);
-    name = new char[nameLength + 1];
-    MemCopy(name, (void*)_name, nameLength);
-    name[nameLength] = 0;
-}
-
-VNode::VNode(const VNode &original) : inodeNum(original.inodeNum)
-{
-    uint64_t nameLength = String::Length(original.name);
-    name = new char[nameLength + 1];
-    MemCopy(name, original.name, nameLength);
-    name[nameLength] = 0;
-}
-
-VNode::~VNode()
-{
-    delete[] name;
-}
-
-VNode& VNode::operator=(const VNode& newValue)
-{
-    if (&newValue != this)
-    {
-        delete[] name;
-        uint64_t nameLength = String::Length(newValue.name);
-        name = new char[nameLength + 1];
-        MemCopy(name, newValue.name, nameLength);
-        name[nameLength] = 0;
-
-        inodeNum = newValue.inodeNum;
-    }
-
-    return *this;
 }

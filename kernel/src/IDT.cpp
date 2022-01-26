@@ -118,70 +118,58 @@ void SystemCall(InterruptFrame* interruptFrame)
     static int step = 0;
     static int desc0;
 
-    Process* process = &(*taskList)[currentTaskIndex];
-
     Serial::Print("==============================================================================");
     Serial::Printf("STEP %d:", step);
     switch (step)
     {
         case 0:
         {
-            desc0 = Open("/subdirectory-bravo/bar.txt", 0, process);
+            desc0 = Open(String("/subdirectory-bravo/bar.txt"), 0);
             Serial::Printf("Descriptor: %d", desc0);
 
-            char* contents = new char[18];
-            uint64_t readCount = Read(desc0, (void*)contents, 17, process);
-            Serial::Printf("Read count: %d", readCount);
-            contents[readCount] = 0;
-
-            Serial::Print(contents);
-
-            delete[] contents;
             break;
         }
         case 1:
         {
             char* contents = new char[100];
-            uint64_t readCount = Read(desc0, contents, 99, process);
+            uint64_t readCount = Read(desc0, contents, 99);
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
             Serial::Print(contents);
 
             delete[] contents;
-            Close(desc0, process);
+            //Close(desc0);
             break;
         }
         case 2:
         {
-            int desc2 = Open("/foo.txt", VFSOpenFlag::OAppend, process);
+            int desc2 = Open(String("/foo.txt"), VFSOpenFlag::OAppend);
             Serial::Printf("Descriptor: %d", desc2);
 
-            const char* appendContent = "New content!\n";
-            uint64_t stringLength = String::Length(appendContent);
+            String appendContent = String("New content!\n");;
             Serial::Print("New content: ", "");
-            Serial::Print(appendContent);
-            uint64_t wroteCount = Write(desc2, appendContent, stringLength, process);
+            Serial::Print(appendContent.begin());
+            uint64_t wroteCount = Write(desc2, appendContent.begin(), appendContent.GetLength());
             Serial::Printf("Wrote count: %d", wroteCount);
 
-            RepositionOffset(desc2, 0, VFSSeekType::SeekSet, process);
             char* contents = new char[100];
-            uint64_t readCount = Read(desc2, contents, 99, process);
+            uint64_t readCount = Read(desc2, contents, 99);
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
             Serial::Print(contents);
 
             delete[] contents;
-            Close(desc2, process);
+            //Close(desc2);
             break;
-        }
+        }/*
         case 3:
         {
             int desc3 = Open("/subdirectory-bravo/.mock", VFSOpenFlag::OCreate, process);
 
             char* fileContents = (char*)".mock contents!\nAre really cool!\n";
-            uint64_t stringLength = String::Length(fileContents);
+            uint64_t stringLength = StringUtils::Length(fileContents);
             Serial::Print("Content: ", "");
             Serial::Print(fileContents);
             uint64_t wroteCount = Write(desc3, fileContents, stringLength, process);
@@ -230,7 +218,7 @@ void SystemCall(InterruptFrame* interruptFrame)
             delete[] contents;
             Close(desc5, process);
             break;
-        }
+        }*/
         default:
         {
             Panic("Fell into step: %d", step);

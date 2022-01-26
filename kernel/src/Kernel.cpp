@@ -8,7 +8,6 @@
 #include "Heap.h"
 #include "GDT.h"
 #include "TSS.h"
-#include "Task.h"
 #include "Scheduler.h"
 
 PagingManager kernelPagingManager;
@@ -39,11 +38,11 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     {
         stivale2_module module = modulesStruct->modules[i];
 
-        if (String::Equals(module.string, "boot:///ext2-ramdisk-image.ext2"))
+        if (StringUtils::Equals(module.string, "boot:///ext2-ramdisk-image.ext2"))
         {
-            Ext2::Initialize(module.begin, module.end);
+            InitializeVFS((void*)module.begin);
         }
-        else if (String::Equals(module.string, "boot:///proc.elf"))
+        else if (StringUtils::Equals(module.string, "boot:///proc.elf"))
         {
             CreateProcess(module.begin, 'O');
             //CreateProcess(module.begin, 'X');

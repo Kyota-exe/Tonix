@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include "Heap.h"
-#include "Serial.h"
+#include "Panic.h"
 
 template <typename T> class Vector
 {
@@ -14,13 +14,14 @@ private:
 
 public:
     void Push(const T& value);
-    void Remove(uint64_t index);
+    T Pop();
     uint64_t GetLength();
 
     typedef T* iterator;
     iterator begin();
     iterator end();
 
+    T& Get(uint64_t index);
     T& operator[](uint64_t index);
     Vector<T>& operator=(const Vector<T>& newVector);
 
@@ -29,7 +30,7 @@ public:
     ~Vector();
 };
 
-const uint64_t VECTOR_DEFAULT_CAPACITY = 4;
+const uint64_t VECTOR_DEFAULT_CAPACITY = 1;
 
 template<typename T>
 Vector<T>::Vector()
@@ -40,7 +41,7 @@ Vector<T>::Vector()
 }
 
 template<typename T>
-Vector<T>::Vector(const Vector<T> &original)
+Vector<T>::Vector(const Vector<T>& original)
 {
     capacity = original.capacity;
     length = original.length;
@@ -80,13 +81,16 @@ void Vector<T>::Push(const T& value)
 }
 
 template<typename T>
-void Vector<T>::Remove(uint64_t index)
+T Vector<T>::Pop()
 {
+    T value = buffer[length - 1];
+
     length--;
-    for (uint64_t i = index; i < length; ++i)
+    for (uint64_t i = 0; i < length; ++i)
     {
         buffer[i] = buffer[i + 1];
     }
+    return value;
 }
 
 template<typename T>
@@ -110,6 +114,13 @@ typename Vector<T>::iterator Vector<T>::end()
 template<typename T>
 T& Vector<T>::operator[](uint64_t index)
 {
+    return buffer[index];
+}
+
+template<typename T>
+T& Vector<T>::Get(uint64_t index)
+{
+    KAssert(index < GetLength(), "Vector index (%d) out of range.", index);
     return buffer[index];
 }
 

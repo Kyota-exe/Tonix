@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-namespace String
+namespace StringUtils
 {
     uint64_t Length(const char* string, uint64_t max = 0);
     const char* Format(const char* string, int64_t value);

@@ -66,18 +66,18 @@ void* Slab::Alloc()
         while (true) asm("hlt");
     }
 
-    if (slotSize == 9)
-    {
-        Serial::Printf("ALLOC -------------------------------------------------------> %x", (uint64_t)addr, "");
-        Serial::Printf(" - %d", slotSize);
-        Serial::Print("==============================================");
-        Serial::Printf("Allocations in effect: %d", allocationsInEffect);
-        Serial::Printf("Alloc return addr      %x", (uint64_t)addr);
-        Serial::Printf("New head               %x", (uint64_t)head->next);
-        Serial::Printf("New head->next         %x", (uint64_t)head->next->next);
-        Serial::Printf("nullptr                %x", (uint64_t)nullptr);
-        Serial::Print("==============================================");
-    }
+//    if (slotSize == 9)
+//    {
+//        Serial::Printf("ALLOC -------------------------------------------------------> %x", (uint64_t)addr, "");
+//        Serial::Printf(" - %d", slotSize);
+//        Serial::Print("==============================================");
+//        Serial::Printf("Allocations in effect: %d", allocationsInEffect);
+//        Serial::Printf("Alloc return addr      %x", (uint64_t)addr);
+//        Serial::Printf("New head               %x", (uint64_t)head->next);
+//        Serial::Printf("New head->next         %x", (uint64_t)head->next->next);
+//        Serial::Printf("nullptr                %x", (uint64_t)nullptr);
+//        Serial::Print("==============================================");
+//    }
 
     allocTable[masterIndex++] = (uint64_t)addr;
 
@@ -94,21 +94,17 @@ void Slab::Free(void* ptr)
 
     allocationsInEffect--;
 
-    if (slotSize == 9)
-    {
-        if ((uint64_t)ptr == 0xffff8000008c4040)
-        {
-            Serial::Print("lSKDJfl;askjdflkjsdf--------------------");
-        }
-        Serial::Printf("FREE --------------------------------------------------------> %x", (uint64_t)ptr, "");
-        Serial::Printf(" - %d", slotSize);
-        Serial::Print("==============================================");
-        Serial::Printf("Allocations in effect: %d", allocationsInEffect);
-        Serial::Printf("Freed addr:                 %x", (uint64_t)ptr);
-        Serial::Printf("New head:                   %x", (uint64_t)head);
-        Serial::Printf("(prev head) New head->next: %x", (uint64_t)previousHead);
-        Serial::Print("==============================================");
-    }
+//    if (slotSize == 9)
+//    {
+//        Serial::Printf("FREE --------------------------------------------------------> %x", (uint64_t)ptr, "");
+//        Serial::Printf(" - %d", slotSize);
+//        Serial::Print("==============================================");
+//        Serial::Printf("Allocations in effect: %d", allocationsInEffect);
+//        Serial::Printf("Freed addr:                 %x", (uint64_t)ptr);
+//        Serial::Printf("New head:                   %x", (uint64_t)head);
+//        Serial::Printf("(prev head) New head->next: %x", (uint64_t)previousHead);
+//        Serial::Print("==============================================");
+//    }
 
     bool foundAddr = false;
     for (uint64_t i = 0; i < masterIndex + 1; ++i)
@@ -138,6 +134,8 @@ void* KMalloc(uint64_t size)
 
 void KFree(void* ptr)
 {
+    if (ptr == nullptr) return;
+
     for (auto& slab : slabsPool.slabs)
     {
         if (slab.slabBase <= (uint64_t)ptr && (uint64_t)ptr < slab.slabBase + 0x1000)

@@ -1,10 +1,7 @@
-#ifndef MISKOS_VFS_H
-#define MISKOS_VFS_H
+#pragma once
 
-#include <stdint.h>
-
-struct VNode;
-#include "Task.h"
+#include "String.h"
+#include "Vector.h"
 
 enum VFSOpenFlag
 {
@@ -20,21 +17,40 @@ enum VFSSeekType
     SeekEnd = 2
 };
 
-int Open(const char* path, int flags, Process* process);
-uint64_t Read(int descriptor, void* buffer, uint64_t count, Process* process);
-uint64_t Write(int descriptor, const void* buffer, uint64_t count, Process* process);
-void Close(int descriptor, Process* process);
-uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType, Process* process);
+class FileSystem;
 
 struct VNode
 {
-    char* name;
-    uint32_t inodeNum;
+    void* context;
+    uint32_t inodeNum = 0;
+    FileSystem* fileSystem;
 
-    explicit VNode(const char* _name = "", uint32_t _inodeNum = 0);
-    VNode(const VNode& original);
-    VNode& operator=(const VNode& newValue);
-    ~VNode();
+    VNode* mountedVNode = nullptr;
+    VNode* nextInCache = nullptr;
 };
 
-#endif
+class FileSystem
+{
+public:
+    virtual void Mount(VNode* mountPoint) = 0;
+    virtual uint64_t Read(VNode* vNode, void* buffer, uint64_t count, uint64_t readPos) = 0;
+    virtual uint64_t Write(VNode* vNode, const void* buffer, uint64_t count, uint64_t writePos) = 0;
+    virtual VNode* FindInDirectory(VNode* directory, String name) = 0;
+    FileSystem() = default;
+};
+
+struct FileDescriptor
+{
+    bool present = false;
+    uint64_t offset = 0;
+    VNode* vNode;
+};
+
+void InitializeVFS(void* ext2RamDisk);
+
+int Open(const String& path, int flags);
+uint64_t Read(int descriptor, void* buffer, uint64_t count);
+uint64_t Write(int descriptor, const void* buffer, uint64_t count);
+
+void CacheVNode(VNode* vNode);
+VNode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem);

@@ -1,6 +1,6 @@
 #include "StringUtilities.h"
 
-namespace String
+namespace StringUtils
 {
     static char bufferToString[32];
     const char* ToString(int64_t n)
@@ -125,7 +125,7 @@ namespace String
     // Behaves like strtok_r
     char* Split(char* string, char splitCharacter, char** stringPtr)
     {
-        char *end = string;
+        char* end = string;
         while (*end != splitCharacter && *end != 0) end++;
         if (*end == 0)
         {
