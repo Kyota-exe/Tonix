@@ -139,7 +139,7 @@ void SystemCall(InterruptFrame* interruptFrame)
             Serial::Print(contents);
 
             delete[] contents;
-            //Close(desc0);
+            Close(desc0);
             break;
         }
         case 2:
@@ -153,6 +153,7 @@ void SystemCall(InterruptFrame* interruptFrame)
             uint64_t wroteCount = Write(desc2, appendContent.begin(), appendContent.GetLength());
             Serial::Printf("Wrote count: %d", wroteCount);
 
+            RepositionOffset(desc2, 0, VFSSeekType::SeekSet);
             char* contents = new char[100];
             uint64_t readCount = Read(desc2, contents, 99);
             Serial::Printf("Read count: %d", readCount);
@@ -161,48 +162,48 @@ void SystemCall(InterruptFrame* interruptFrame)
             Serial::Print(contents);
 
             delete[] contents;
-            //Close(desc2);
+            Close(desc2);
             break;
-        }/*
+        }
         case 3:
         {
-            int desc3 = Open("/subdirectory-bravo/.mock", VFSOpenFlag::OCreate, process);
+            int desc3 = Open(String("/subdirectory-bravo/.mock"), VFSOpenFlag::OCreate);
 
-            char* fileContents = (char*)".mock contents!\nAre really cool!\n";
-            uint64_t stringLength = StringUtils::Length(fileContents);
+            char* newFileContents = (char*)".mock contents!\nAre really cool!\n";
+            uint64_t stringLength = StringUtils::Length(newFileContents);
             Serial::Print("Content: ", "");
-            Serial::Print(fileContents);
-            uint64_t wroteCount = Write(desc3, fileContents, stringLength, process);
+            Serial::Print(newFileContents);
+            uint64_t wroteCount = Write(desc3, newFileContents, stringLength);
             Serial::Printf("Wrote count: %d", wroteCount);
 
-            RepositionOffset(desc3, 0, VFSSeekType::SeekSet, process);
+            RepositionOffset(desc3, 0, VFSSeekType::SeekSet);
             char* contents = new char[100];
-            uint64_t readCount = Read(desc3, contents, 99, process);
+            uint64_t readCount = Read(desc3, contents, 99);
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
             Serial::Print(contents);
 
             delete[] contents;
-            Close(desc3, process);
+            Close(desc3);
             break;
         }
         case 4:
         {
-            int desc4 = Open("/subdirectory-bravo/.mock", 0, process);
+            int desc4 = Open(String("/subdirectory-bravo/.mock"), 0);
             Serial::Printf("Descriptor: %d", desc4);
 
             char* contents = new char[100];
-            uint64_t readCount = Read(desc4, contents, 99, process);
+            uint64_t readCount = Read(desc4, contents, 99);
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
             Serial::Print(contents);
 
             delete[] contents;
-            Close(desc4, process);
+            Close(desc4);
             break;
-        }
+        }/*
         case 5:
         {
             int desc5 = Open("/foo.txt", VFSOpenFlag::OTruncate, process);

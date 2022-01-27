@@ -132,3 +132,8 @@ String String::Substring(uint64_t index, uint64_t substringLength)
 
     return String(newBuffer);
 }
+
+const char* String::ToCString() const
+{
+    return buffer;
+}

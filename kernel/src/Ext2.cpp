@@ -87,7 +87,7 @@ void Ext2::Mount(VNode* mountPoint)
 
     Serial::Printf("Block group count: %d", blockGroupsCount);
 
-    Serial::Printf("First non-reserved inode in file system: %d", superblock->firstNonReservedInode);
+    Serial::Printf("First non-reserved rootInode in file system: %d", superblock->firstNonReservedInode);
 
     Serial::Printf("Optional features: %x", superblock->optionalFeatures);
     Serial::Printf("Required features: %x", superblock->requiredFeatures);
@@ -102,13 +102,16 @@ void Ext2::Mount(VNode* mountPoint)
     auto ext2Root = new VNode();
     ext2Root->inodeNum = INODE_ROOT_DIR;
     ext2Root->fileSystem = this;
-    ext2Root->context = GetInode(INODE_ROOT_DIR);
+
+    Ext2Inode* rootInode = GetInode(INODE_ROOT_DIR);
+    ext2Root->context = rootInode;
+    ext2Root->fileSize = rootInode->size0;
 
     mountPoint->mountedVNode = ext2Root;
     CacheVNode(ext2Root);
 }
 
-VNode* Ext2::FindInDirectory(VNode* directory, String name)
+VNode* Ext2::FindInDirectory(VNode* directory, const String& name)
 {
     auto context = (Ext2Inode*)directory->context;
 
@@ -128,7 +131,10 @@ VNode* Ext2::FindInDirectory(VNode* directory, String name)
                 child = new VNode();
                 child->inodeNum = directoryEntry.inodeNum;
                 child->fileSystem = this;
-                child->context = GetInode(child->inodeNum);
+
+                Ext2Inode* childInode = GetInode(child->inodeNum);
+                child->context = childInode;
+                child->fileSize = childInode->size0;
 
                 CacheVNode(child);
             }
@@ -153,12 +159,10 @@ VNode* Ext2::FindInDirectory(VNode* directory, String name)
 
 uint64_t Ext2::Read(VNode* vNode, void* buffer, uint64_t count, uint64_t readPos)
 {
-    auto context = (Ext2Inode*)vNode->context;
-
     // TODO: Support files larger than 2^32 bytes
-    if (readPos + count > context->size0)
+    if (readPos + count > vNode->fileSize)
     {
-        count = context->size0 - readPos;
+        count = vNode->fileSize - readPos;
     }
 
     uint64_t currentReadPos = readPos;
@@ -174,7 +178,7 @@ uint64_t Ext2::Read(VNode* vNode, void* buffer, uint64_t count, uint64_t readPos
         uint64_t block = GetBlockAddr(vNode, currentReadPos / blockSize, false);
         uint64_t diskAddr = block * blockSize + offsetInBlock;
 
-        // TODO: Read from disk if file system is not ram-backed
+        // TODO: Read from disk if file system is disk-backed
         MemCopy((void*)((uint64_t)buffer + parsedCount), (void*)(diskAddr + ramDiskVirtAddr), memCopySize);
 
         parsedCount += memCopySize;
@@ -186,8 +190,6 @@ uint64_t Ext2::Read(VNode* vNode, void* buffer, uint64_t count, uint64_t readPos
 
 uint64_t Ext2::Write(VNode* vNode, const void* buffer, uint64_t count, uint64_t writePos)
 {
-    auto context = (Ext2Inode*)vNode->context;
-
     uint64_t currentWritePos = writePos;
     uint64_t wroteCount = 0;
 
@@ -201,49 +203,35 @@ uint64_t Ext2::Write(VNode* vNode, const void* buffer, uint64_t count, uint64_t 
         uint64_t block = GetBlockAddr(vNode, currentWritePos / blockSize, true);
         uint64_t diskAddr = block * blockSize + offsetInBlock;
 
+        // TODO: Write to disk if file system is disk-backed
         MemCopy((void*)(diskAddr + ramDiskVirtAddr), (void*)((uint64_t)buffer + wroteCount), memCopySize);
 
         wroteCount += memCopySize;
         currentWritePos += memCopySize;
 
-        if (context->size0 < currentWritePos) context->size0 = currentWritePos;
+        if (vNode->fileSize < currentWritePos)
+        {
+            // TODO: Write to disk if file system is disk-backed
+            auto context = (Ext2Inode*)vNode->context;
+            context->size0 = currentWritePos;
+            vNode->fileSize = currentWritePos;
+        }
     }
 
     return wroteCount;
 }
 
-/*
-uint64_t Ext2::Write(VNode* vNode, uint64_t value, uint64_t count, uint64_t writePos, bool updateFileSize)
+void Ext2::Create(VNode* vNode, VNode* directory, String name)
 {
-    // TODO: DRY
-    uint64_t currentWritePos = writePos;
-    uint64_t wroteCount = 0;
-    while (wroteCount < count)
-    {
-        uint64_t remainingBytes = count - wroteCount;
-        uint64_t offsetInBlock = currentWritePos % blockSize;
-        uint64_t memsetSize = blockSize - offsetInBlock;
-        if (memsetSize > remainingBytes) memsetSize = remainingBytes;
+    auto directoryContext = (Ext2Inode*)directory->context;
 
-        uint64_t diskAddr = GetBlockAddr(vNode->context, currentWritePos / blockSize, true) * blockSize + offsetInBlock;
-        Memset((void*)(diskAddr + ramDiskVirtAddr), value, memsetSize);
+    KAssert(directoryContext->typePermissions & 0x4000, "Inode must be a directory to create files in it.");
 
-        wroteCount += memsetSize;
-        currentWritePos += memsetSize;
-        if (updateFileSize && vNode->size < currentWritePos) vNode->size = currentWritePos;
-    }
-
-    return wroteCount;
-}
-
-uint32_t Ext2::Create(Ext2Inode* directory, const char* name)
-{
-    KAssert(directory->typePermissions & 0x4000, "Inode must be a directory to create files in it.");
-
-    // Find unallocated directory
+    // Find unallocated inode
     Ext2Inode* inode = nullptr;
     uint32_t inodeNum = 0;
     Ext2BlockGroupDescriptor* blockGroup;
+
     for (uint32_t blockGroupIndex = 0; blockGroupIndex < blockGroupsCount; ++blockGroupIndex)
     {
         blockGroup = &blockGroupDescTable[blockGroupIndex];
@@ -261,10 +249,13 @@ uint32_t Ext2::Create(Ext2Inode* directory, const char* name)
                 if (!inodeUsageBitmap.GetBit(inodeIndex))
                 {
                     inodeNum = blockGroupIndex * superblock->inodesPerBlockGroup + inodeIndex + 1;
-                    directory = GetInode(inodeNum);
+                    inode = GetInode(inodeNum);
+
                     inodeUsageBitmap.SetBit(inodeIndex, true);
+
                     blockGroup->unallocatedInodesCount--;
                     superblock->unallocatedInodesCount--;
+
                     goto FoundUnallocatedInode;
                 }
             }
@@ -273,14 +264,14 @@ uint32_t Ext2::Create(Ext2Inode* directory, const char* name)
 
     FoundUnallocatedInode:
 
-    KAssert(directory != nullptr && inodeNum != 0, "Could not create new file, unallocated directory not found.");
+    KAssert(inode != nullptr && inodeNum != 0, "Could not create new file, unallocated inode not found.");
 
     // TODO: Support permissions, file ACL and other fields in ext2 directory
-    directory->typePermissions = DEFAULT_FILE_TYPE_PERMISSIONS;
-    directory->hardLinksCount = 1;
-    directory->size0 = 0;
+    inode->typePermissions = DEFAULT_FILE_TYPE_PERMISSIONS;
+    inode->hardLinksCount = 1;
+    inode->size0 = 0;
 
-    uint8_t nameLength = StringUtils::Length(name);
+    uint8_t nameLength = name.GetLength();
     uint8_t nameLengthPadding = 4 - (nameLength % 4);
 
     Ext2DirectoryEntry directoryEntry;
@@ -289,15 +280,26 @@ uint32_t Ext2::Create(Ext2Inode* directory, const char* name)
     directoryEntry.nameLength = nameLength;
     directoryEntry.typeIndicator = Ext2DirectoryEntryType::DEntryRegularFile;
 
-    Write(inode, &directoryEntry, sizeof(Ext2DirectoryEntry), inode->size0);
+    Write(directory, &directoryEntry, sizeof(Ext2DirectoryEntry), directory->fileSize);
 
     // Directory entry name field must be padded so that it's size is a multiple of 4
-    Write(inode, name, nameLength, inode->size0);
-    Write(inode, 0, nameLengthPadding, inode->size0, true);
+    Write(directory, name.ToCString(), nameLength, directory->fileSize);
 
-    return inodeNum;
+    uint8_t val = 0;
+    for (uint8_t i = 0; i < nameLengthPadding; ++i)
+    {
+        Write(directory, &val, 1, directory->fileSize);
+    }
+
+    vNode->context = inode;
+    vNode->inodeNum = inodeNum;
+    vNode->fileSystem = this;
+
+    vNode->context = inode;
+    vNode->fileSize = inode->size0;
+
+    CacheVNode(vNode);
 }
-*/
 
 uint32_t Ext2::GetBlockAddr(VNode* vNode, uint32_t requestedBlockIndex, bool allocateMissingBlock)
 {

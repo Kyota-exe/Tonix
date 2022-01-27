@@ -107,7 +107,8 @@ public:
     void Mount(VNode* mountPoint) override;
     uint64_t Read(VNode* vNode, void* buffer, uint64_t count, uint64_t readPos) override;
     uint64_t Write(VNode* vNode, const void* buffer, uint64_t count, uint64_t writePos) override;
-    VNode* FindInDirectory(VNode* directory, String name) override;
+    VNode* FindInDirectory(VNode* directory, const String& name) override;
+    void Create(VNode* vNode, VNode* directory, String name) override;
     explicit Ext2(void* _ramDiskAddr);
 
 private:

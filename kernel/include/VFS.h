@@ -21,8 +21,9 @@ class FileSystem;
 
 struct VNode
 {
-    void* context;
+    void* context = nullptr;
     uint32_t inodeNum = 0;
+    uint32_t fileSize;
     FileSystem* fileSystem;
 
     VNode* mountedVNode = nullptr;
@@ -35,7 +36,8 @@ public:
     virtual void Mount(VNode* mountPoint) = 0;
     virtual uint64_t Read(VNode* vNode, void* buffer, uint64_t count, uint64_t readPos) = 0;
     virtual uint64_t Write(VNode* vNode, const void* buffer, uint64_t count, uint64_t writePos) = 0;
-    virtual VNode* FindInDirectory(VNode* directory, String name) = 0;
+    virtual VNode* FindInDirectory(VNode* directory, const String& name) = 0;
+    virtual void Create(VNode* vNode, VNode* directory, String name) = 0;
     FileSystem() = default;
 };
 
@@ -51,6 +53,8 @@ void InitializeVFS(void* ext2RamDisk);
 int Open(const String& path, int flags);
 uint64_t Read(int descriptor, void* buffer, uint64_t count);
 uint64_t Write(int descriptor, const void* buffer, uint64_t count);
+uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType);
+void Close(int descriptor);
 
 void CacheVNode(VNode* vNode);
 VNode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem);

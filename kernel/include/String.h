@@ -18,6 +18,7 @@ public:
     bool Equals(const String& other);
     bool IsEmpty();
     String Substring(uint64_t index, uint64_t substringLength);
+    const char* ToCString() const;
 
     //temp
     const char* begin() {return buffer;}

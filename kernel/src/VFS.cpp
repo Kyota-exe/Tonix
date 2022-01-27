@@ -26,52 +26,66 @@ void CacheVNode(VNode* vNode)
     currentInCache = vNode;
 }
 
-VNode* TraversePath(String path)
+VNode* TraversePath(String path, String& fileName, VNode*& containingDirectory)
 {
-    VNode* directory = nullptr;
+    VNode* currentDirectory = nullptr;
 
     if (path.Split('/', 0).IsEmpty())
     {
-        directory = root;
+        currentDirectory = root;
         path = path.Substring(1, path.GetLength() - 1);
     }
     else Panic("Traversing using relative path is not supported.");
 
     unsigned int pathDepth = path.Count('/') + 1;
 
-    String pathToken;
     for (unsigned int currentDepth = 0; currentDepth < pathDepth; ++currentDepth)
     {
-        pathToken = path.Split('/', currentDepth);
+        fileName = path.Split('/', currentDepth);
         Vector<VNode*> mounts;
 
         Serial::Print("PATH TOKEN: ", "");
-        Serial::Print(pathToken.begin());
+        Serial::Print(fileName.begin());
 
         do
         {
-            mounts.Push(directory);
-            directory = directory->mountedVNode;
-        } while (directory != nullptr);
+            mounts.Push(currentDirectory);
+            currentDirectory = currentDirectory->mountedVNode;
+        } while (currentDirectory != nullptr);
+
+        FileSystem* fileSystem = nullptr;
 
         do
         {
-            directory = mounts.Pop();
+            currentDirectory = mounts.Pop();
 
-            if (directory->fileSystem == nullptr)
+            if (currentDirectory->fileSystem == nullptr)
             {
-                directory = nullptr;
+                currentDirectory = nullptr;
                 continue;
             }
 
-            directory = directory->fileSystem->FindInDirectory(directory, pathToken);
+            fileSystem = currentDirectory->fileSystem;
+            containingDirectory = currentDirectory;
 
-        } while (directory == nullptr && mounts.GetLength() > 0);
+            currentDirectory = fileSystem->FindInDirectory(containingDirectory, fileName);
+        } while (currentDirectory == nullptr && mounts.GetLength() > 0);
 
-        KAssert(directory != nullptr, "Could not find directory.");
+        if (currentDirectory == nullptr)
+        {
+            if (currentDepth + 1 != pathDepth)
+            {
+                Panic("Could not find currentDirectory.");
+            }
+            Serial::Print("Could not find file.");
+
+            currentDirectory = new VNode();
+            currentDirectory->fileSystem = fileSystem;
+            return currentDirectory;
+        }
     }
 
-    return directory;
+    return currentDirectory;
 }
 
 VNode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem)
@@ -93,48 +107,10 @@ VNode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem)
 }
 
 /*
-uint64_t RepositionOffset(FileDescriptor* fileDescriptor, Ext2Driver::Ext2Inode* inode, uint64_t offset, VFSSeekType seekType)
-{
-    switch (seekType)
-    {
-        case SeekSet:
-            fileDescriptor->offset = offset;
-            break;
-        case SeekCursor:
-            fileDescriptor->offset += offset;
-            break;
-        case SeekEnd:
-            fileDescriptor->offset = inode->size0 + offset;
-            break;
-    }
-
-    if (fileDescriptor->offset > inode->size0)
-    {
-        inode->Write(0, fileDescriptor->offset - inode->size0, inode->size0, false);
-    }
-
-    return fileDescriptor->offset;
-}
-
-uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType)
-{
-    // TODO: Support files larger than 2^32 bytes
-    FileDescriptor* fileDescriptor = &process->fileDescriptors[descriptor];
-    Ext2Driver::Ext2Inode* inode = Ext2Driver::GetInode(fileDescriptor->vNode->inodeNum);
-    return RepositionOffset(fileDescriptor, inode, offset, seekType);
-}
-
 VNode Create(const char* name, Ext2Driver::Ext2Inode* directoryInode)
 {
     uint32_t inodeNum = directoryInode->Create(name);
     return VNode(name, inodeNum);
-}
-
-void Close(int descriptor)
-{
-    FileDescriptor* fileDescriptor = &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
-    fileDescriptor->present = false;
-    fileDescriptor->offset = 0;
 }
 */
 
@@ -158,25 +134,28 @@ int Open(const String& path, int flags)
         fileDescriptors->Push({true, 0, nullptr});
     }
 
-    fileDescriptors->Get(descriptorIndex).vNode = TraversePath(path);
-    Serial::Printf("FOUND!!!!! --> %x", (uint64_t)fileDescriptors->Get(descriptorIndex).vNode);
+    FileDescriptor* fileDescriptor = &fileDescriptors->Get(descriptorIndex);
 
-    /*Ext2Driver::Ext2Inode* inode = Ext2Driver::GetInode(descriptor->vNode->inodeNum);
+    String filename;
+    VNode* containingDirectory = nullptr;
+    VNode* vNode = TraversePath(path, filename, containingDirectory);
+    fileDescriptor->vNode = vNode;
 
-    if ((flags & VFSOpenFlag::OCreate) && !exists)
+    if ((flags & VFSOpenFlag::OCreate) && fileDescriptor->vNode->inodeNum == 0)
     {
-        *descriptor->vNode = Create(filename, inode);
+        vNode->fileSystem->Create(vNode, containingDirectory, filename);
     }
 
+    /*
     if ((flags & VFSOpenFlag::OTruncate) && (inode->typePermissions & Ext2Driver::InodeTypePermissions::RegularFile))
     {
         inode->size0 = 0;
-    }
+    }*/
 
     if ((flags & VFSOpenFlag::OAppend))
     {
-        RepositionOffset(descriptor, inode, 0, VFSSeekType::SeekEnd);
-    }*/
+        fileDescriptor->offset = vNode->fileSize;
+    }
 
     return descriptorIndex;
 }
@@ -197,12 +176,47 @@ uint64_t Write(int descriptor, const void* buffer, uint64_t count)
     FileDescriptor* fileDescriptor = &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
     VNode* vNode = fileDescriptor->vNode;
 
-    auto inode = (Ext2Inode*)(vNode->context);
-    fileDescriptor->offset = inode->size0;
-
     uint64_t wroteCount = vNode->fileSystem->Write(vNode, buffer, count, fileDescriptor->offset);
-
-    fileDescriptor->offset = 0;
+    fileDescriptor->offset += wroteCount;
 
     return wroteCount;
+}
+
+uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType)
+{
+    // TODO: Support files larger than 2^32 bytes
+    FileDescriptor* fileDescriptor = &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
+    VNode* vNode = fileDescriptor->vNode;
+
+    switch (seekType)
+    {
+        case SeekSet:
+            fileDescriptor->offset = offset;
+            break;
+        case SeekCursor:
+            fileDescriptor->offset += offset;
+            break;
+        case SeekEnd:
+            fileDescriptor->offset = vNode->fileSize + offset;
+            break;
+    }
+
+    if (fileDescriptor->offset > vNode->fileSize)
+    {
+        uint8_t val = 0;
+        for (uint64_t i = 0; i < fileDescriptor->offset - vNode->fileSize; ++i)
+        {
+            vNode->fileSystem->Write(vNode, &val, 1, vNode->fileSize);
+        }
+    }
+
+    return fileDescriptor->offset;
+}
+
+void Close(int descriptor)
+{
+    FileDescriptor* fileDescriptor = &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
+
+    fileDescriptor->present = false;
+    fileDescriptor->offset = 0;
 }
