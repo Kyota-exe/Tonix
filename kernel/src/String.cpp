@@ -2,7 +2,7 @@
 #include "Memory/Memory.h"
 #include "Panic.h"
 
-String String::Split(char splitCharacter, unsigned int substringIndex)
+String String::Split(char splitCharacter, unsigned int substringIndex) const
 {
     unsigned int currentSubstring = 0;
     uint64_t substringBegin = 0;
@@ -28,7 +28,7 @@ String String::Split(char splitCharacter, unsigned int substringIndex)
     return {};
 }
 
-uint64_t String::Count(char character)
+uint64_t String::Count(char character) const
 {
     uint64_t count = 0;
 
@@ -42,20 +42,24 @@ uint64_t String::Count(char character)
     return count;
 }
 
-bool String::Equals(const String& other)
+bool String::Equals(const String& other) const
 {
-    const char* ptr1 = buffer;
-    const char* ptr2 = other.buffer;
-
-    while (*ptr1 != 0 && *ptr2 != 0)
-    {
-        if (*ptr1++ != *ptr2++) return false;
-    }
-
-    return *ptr1 == 0 && *ptr2 == 0;
+    return Equals(other.buffer);
 }
 
-char& String::operator[](uint64_t index)
+bool String::Equals(const char* other) const
+{
+    const char* bufferPtr = buffer;
+
+    while (*bufferPtr != 0 && *other != 0)
+    {
+        if (*bufferPtr++ != *other++) return false;
+    }
+
+    return *bufferPtr == 0 && *other == 0;
+}
+
+char& String::operator[](uint64_t index) const
 {
     return buffer[index];
 }
@@ -117,12 +121,12 @@ uint64_t String::GetLength() const
     return length;
 }
 
-bool String::IsEmpty()
+bool String::IsEmpty() const
 {
-    return this->Equals(String(""));
+    return Equals("");
 }
 
-String String::Substring(uint64_t index, uint64_t substringLength)
+String String::Substring(uint64_t index, uint64_t substringLength) const
 {
     KAssert(index + substringLength <= GetLength(), "Substring exceeds bounds of substring.");
 

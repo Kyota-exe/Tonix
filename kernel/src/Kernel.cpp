@@ -38,11 +38,11 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     {
         stivale2_module module = modulesStruct->modules[i];
 
-        if (StringUtils::Equals(module.string, "boot:///ext2-ramdisk-image.ext2"))
+        if (String(module.string).Equals("boot:///ext2-ramdisk-image.ext2"))
         {
             InitializeVFS((void*)module.begin);
         }
-        else if (StringUtils::Equals(module.string, "boot:///proc.elf"))
+        else if (String(module.string).Equals("boot:///proc.elf"))
         {
             CreateProcess(module.begin, 'O');
             //CreateProcess(module.begin, 'X');

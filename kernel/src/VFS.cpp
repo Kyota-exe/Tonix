@@ -45,7 +45,7 @@ VNode* TraversePath(String path, String& fileName, VNode*& containingDirectory)
         Vector<VNode*> mounts;
 
         Serial::Print("PATH TOKEN: ", "");
-        Serial::Print(fileName.begin());
+        Serial::Print(fileName);
 
         do
         {
@@ -105,14 +105,6 @@ VNode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem)
 
     return nullptr;
 }
-
-/*
-VNode Create(const char* name, Ext2Driver::Ext2Inode* directoryInode)
-{
-    uint32_t inodeNum = directoryInode->Create(name);
-    return VNode(name, inodeNum);
-}
-*/
 
 int Open(const String& path, int flags)
 {

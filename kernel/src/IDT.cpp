@@ -149,8 +149,8 @@ void SystemCall(InterruptFrame* interruptFrame)
 
             String appendContent = String("New content!\n");;
             Serial::Print("New content: ", "");
-            Serial::Print(appendContent.begin());
-            uint64_t wroteCount = Write(desc2, appendContent.begin(), appendContent.GetLength());
+            Serial::Print(appendContent.ToCString());
+            uint64_t wroteCount = Write(desc2, appendContent.ToCString(), appendContent.GetLength());
             Serial::Printf("Wrote count: %d", wroteCount);
 
             RepositionOffset(desc2, 0, VFSSeekType::SeekSet);
