@@ -6,7 +6,7 @@
 #include "Bitmap.h"
 #include "String.h"
 
-enum Ext2InodeTypePermissions
+enum Ext2InodeTypePermissions : uint16_t
 {
     // Types
     FIFO = 0x1000,
@@ -35,7 +35,7 @@ enum Ext2InodeTypePermissions
     StickyBit = 0x200
 };
 
-enum Ext2DirectoryEntryType
+enum Ext2DirectoryEntryType : uint8_t
 {
     DEntryUnknown = 0,
     DEntryRegularFile = 1,
@@ -135,6 +135,18 @@ VNode* Ext2::FindInDirectory(VNode* directory, const String& name)
                 Ext2Inode* childInode = GetInode(child->inodeNum);
                 child->context = childInode;
                 child->fileSize = childInode->size0;
+
+                switch (directoryEntry.typeIndicator)
+                {
+                    case DEntryRegularFile:
+                        child->type = VFSRegularFile;
+                        break;
+                    case DEntryDirectory:
+                        child->type = VFSDirectory;
+                        break;
+                    default:
+                        child->type = VFSVirtual;
+                }
 
                 CacheVNode(child);
             }
@@ -282,7 +294,7 @@ void Ext2::Create(VNode* vNode, VNode* directory, String name)
 
     Write(directory, &directoryEntry, sizeof(Ext2DirectoryEntry), directory->fileSize);
 
-    // Directory entry name field must be padded so that it's size is a multiple of 4
+    // Ext2Directory entry name field must be padded so that it's size is a multiple of 4
     Write(directory, name.ToCString(), nameLength, directory->fileSize);
 
     uint8_t val = 0;

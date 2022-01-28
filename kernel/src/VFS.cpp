@@ -133,13 +133,13 @@ int Open(const String& path, int flags)
     VNode* vNode = TraversePath(path, filename, containingDirectory);
     fileDescriptor->vNode = vNode;
 
-    if ((flags & VFSOpenFlag::OCreate) && fileDescriptor->vNode->inodeNum == 0)
+    if ((flags & VFSOpenFlag::OCreate) && vNode->inodeNum == 0)
     {
         vNode->fileSystem->Create(vNode, containingDirectory, filename);
     }
 
     /*
-    if ((flags & VFSOpenFlag::OTruncate) && (inode->typePermissions & Ext2Driver::InodeTypePermissions::RegularFile))
+    if ((flags & VFSOpenFlag::OTruncate) && vNode->type == VnodeType::VFSRegularFile)
     {
         inode->size0 = 0;
     }*/

@@ -3,6 +3,13 @@
 #include "String.h"
 #include "Vector.h"
 
+enum VnodeType
+{
+    VFSVirtual,
+    VFSRegularFile,
+    VFSDirectory
+};
+
 enum VFSOpenFlag
 {
     OCreate = 0x200,
@@ -21,6 +28,8 @@ class FileSystem;
 
 struct VNode
 {
+    VnodeType type;
+
     void* context = nullptr;
     uint32_t inodeNum = 0;
     uint32_t fileSize;
@@ -38,7 +47,6 @@ public:
     virtual uint64_t Write(VNode* vNode, const void* buffer, uint64_t count, uint64_t writePos) = 0;
     virtual VNode* FindInDirectory(VNode* directory, const String& name) = 0;
     virtual void Create(VNode* vNode, VNode* directory, String name) = 0;
-    FileSystem() = default;
 };
 
 struct FileDescriptor
