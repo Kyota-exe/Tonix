@@ -1,5 +1,4 @@
-#ifndef MISKOS_STRING_H
-#define MISKOS_STRING_H
+#pragma once
 
 #include <stdint.h>
 
@@ -27,5 +26,3 @@ public:
     String();
     ~String();
 };
-
-#endif

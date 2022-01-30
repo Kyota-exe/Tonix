@@ -1,5 +1,4 @@
-#ifndef MISKOS_STRINGUTILITIES_H
-#define MISKOS_STRINGUTILITIES_H
+#pragma once
 
 #include <stdint.h>
 
@@ -13,5 +12,3 @@ namespace StringUtils
     uint64_t OctalToUInt(const char* string);
     char* Split(char* string, char splitCharacter, char** stringPtr);
 }
-
-#endif

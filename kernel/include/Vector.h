@@ -1,5 +1,4 @@
-#ifndef MISKOS_VECTOR_H
-#define MISKOS_VECTOR_H
+#pragma once
 
 #include <stdint.h>
 #include "Heap.h"
@@ -140,5 +139,3 @@ Vector<T>& Vector<T>::operator=(const Vector<T>& newVector)
     }
     return *this;
 }
-
-#endif

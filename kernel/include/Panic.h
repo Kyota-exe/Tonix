@@ -1,5 +1,4 @@
-#ifndef MISKOS_PANIC_H
-#define MISKOS_PANIC_H
+#pragma once
 
 #include "StringUtilities.h"
 
@@ -17,5 +16,3 @@ void Panic(const char* message, T value)
 {
     Panic(StringUtils::Format(message, (uint64_t)value));
 }
-
-#endif

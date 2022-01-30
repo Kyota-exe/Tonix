@@ -1,5 +1,4 @@
-#ifndef MISKOS_PAGING_H
-#define MISKOS_PAGING_H
+#pragma once
 
 #include <stdint.h>
 
@@ -42,5 +41,3 @@ public:
 private:
     PagingStructure* pml4;
 };
-
-#endif

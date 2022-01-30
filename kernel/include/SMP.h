@@ -1,8 +1,5 @@
-#ifndef MISKOS_SMP_H
-#define MISKOS_SMP_H
+#pragma once
 
 #include "Scheduler.h"
 
 void StartSchedulerOnNonBSPCores();
-
-#endif

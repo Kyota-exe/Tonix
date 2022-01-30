@@ -1,5 +1,4 @@
-#ifndef MISKOS_EXT2_H
-#define MISKOS_EXT2_H
+#pragma once
 
 #include "VFS.h"
 #include "Vector.h"
@@ -136,5 +135,3 @@ private:
     Ext2Superblock* superblock;
     Ext2BlockGroupDescriptor* blockGroupDescTable;
 };
-
-#endif

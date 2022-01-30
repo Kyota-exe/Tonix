@@ -1,5 +1,4 @@
-#ifndef MISKOS_GDT_H
-#define MISKOS_GDT_H
+#pragma once
 
 #include <stdint.h>
 
@@ -22,5 +21,3 @@ void LoadGDT();
 void InitializeGDT();
 
 extern GDT gdt;
-
-#endif

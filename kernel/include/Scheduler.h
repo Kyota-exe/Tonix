@@ -1,5 +1,4 @@
-#ifndef MISKOS_SCHEDULER_H
-#define MISKOS_SCHEDULER_H
+#pragma once
 
 #include "Vector.h"
 #include "VFS.h"
@@ -48,5 +47,3 @@ void InitializeTaskList();
 void StartScheduler();
 Process GetNextTask(InterruptFrame currentTaskFrame);
 void CreateProcess(uint64_t ramDiskBegin, char rdi = 'A');
-
-#endif

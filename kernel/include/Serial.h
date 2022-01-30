@@ -1,5 +1,4 @@
-#ifndef MISKOS_QEMUSERIAL_H
-#define MISKOS_QEMUSERIAL_H
+#pragma once
 
 #include <stdint.h>
 #include "String.h"
@@ -16,5 +15,3 @@ namespace Serial
         Print(StringUtils::Format(string, (int64_t)value), end);
     }
 }
-
-#endif

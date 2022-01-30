@@ -1,5 +1,4 @@
-#ifndef MISKOS_APIC_H
-#define MISKOS_APIC_H
+#pragma once
 
 #include <stdint.h>
 
@@ -9,5 +8,3 @@ void SetLAPICTimerFrequency(uint64_t frequency);
 void SetLAPICTimerMask(bool mask);
 void LAPICSendEOI();
 void CalibrateLAPICTimer();
-
-#endif

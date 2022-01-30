@@ -1,5 +1,4 @@
-#ifndef MISKOS_HEAP_H
-#define MISKOS_HEAP_H
+#pragma once
 
 #include <stdint.h>
 
@@ -12,5 +11,3 @@ void* operator new[](uint64_t size);
 void operator delete(void* ptr);
 void operator delete(void* ptr, uint64_t);
 void operator delete[](void* ptr);
-
-#endif

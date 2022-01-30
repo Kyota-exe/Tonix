@@ -1,6 +1,3 @@
-#ifndef MISKOS_TSS_H
-#define MISKOS_TSS_H
+#pragma once
 
 void InitializeTSS();
-
-#endif

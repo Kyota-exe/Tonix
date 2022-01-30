@@ -1,5 +1,4 @@
-#ifndef MISKOS_BITMAP_H
-#define MISKOS_BITMAP_H
+#pragma once
 
 #include <stdint.h>
 
@@ -10,5 +9,3 @@ struct Bitmap
     bool GetBit(uint64_t index) const;
     void SetBit(uint64_t index, bool value) const;
 };
-
-#endif

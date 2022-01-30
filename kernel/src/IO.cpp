@@ -14,13 +14,7 @@ uint8_t inb(uint16_t port)
 
 void outb(uint16_t port, uint8_t* values, uint64_t size)
 {
-    for (uint64_t i = 0; i < size; ++i)
-    {
+    for (uint64_t i = 0; i < size; ++i) {
         outb(port, *values++);
     }
-}
-
-void io_wait()
-{
-    outb(0x80, 0);
 }

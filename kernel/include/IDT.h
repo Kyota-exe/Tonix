@@ -1,7 +1,4 @@
-#ifndef MISKOS_IDT_H
-#define MISKOS_IDT_H
+#pragma once
 
 void InitializeIDT();
 void LoadIDT();
-
-#endif

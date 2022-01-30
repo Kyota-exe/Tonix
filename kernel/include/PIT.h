@@ -1,5 +1,4 @@
-#ifndef MISKOS_PIT_H
-#define MISKOS_PIT_H
+#pragma once
 
 #include <stdint.h>
 
@@ -8,5 +7,3 @@ void PITSetReloadValue(uint16_t reloadValue);
 void PITSetFrequency(uint64_t frequency);
 
 extern const uint64_t PIT_BASE_FREQUENCY;
-
-#endif
