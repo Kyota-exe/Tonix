@@ -306,6 +306,13 @@ void Ext2::Create(VNode* vNode, VNode* directory, const String& name)
     CacheVNode(vNode);
 }
 
+void Ext2::Truncate(VNode* vNode)
+{
+    auto context = (Ext2Inode*)vNode->context;
+    context->size0 = 0;
+    vNode->fileSize = 0;
+}
+
 void Ext2::WriteDirectoryEntry(VNode* directory, uint32_t inodeNum, const String& name, Ext2DirectoryEntryType type)
 {
     uint8_t nameLength = name.GetLength();

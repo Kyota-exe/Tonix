@@ -12,9 +12,9 @@ enum VnodeType
 
 enum VFSOpenFlag
 {
-    OCreate = 0x200,
-    OAppend = 0x08,
-    OTruncate = 0x1000
+    OpenCreate = 0x200,
+    OpenAppend = 0x08,
+    OpenTruncate = 0x1000
 };
 
 enum VFSSeekType
@@ -47,6 +47,7 @@ public:
     virtual uint64_t Write(VNode* vNode, const void* buffer, uint64_t count, uint64_t writePos) = 0;
     virtual VNode* FindInDirectory(VNode* directory, const String& name) = 0;
     virtual void Create(VNode* vNode, VNode* directory, const String& name) = 0;
+    virtual void Truncate(VNode* vNode) = 0;
 };
 
 struct FileDescriptor

@@ -109,6 +109,7 @@ public:
     uint64_t Write(VNode* vNode, const void* buffer, uint64_t count, uint64_t writePos) override;
     VNode* FindInDirectory(VNode* directory, const String& name) override;
     void Create(VNode* vNode, VNode* directory, const String& name) override;
+    void Truncate(VNode* vNode) override;
     explicit Ext2(void* _ramDiskAddr);
 
 private:

@@ -124,7 +124,7 @@ void SystemCall(InterruptFrame* interruptFrame)
         case 0:
         {
             CreateDirectory(String("/subdirectory-bravo/sauce"));
-            int desc0 = Open(String("/subdirectory-bravo/sauce/mock.txt"), VFSOpenFlag::OCreate);
+            int desc0 = Open(String("/subdirectory-bravo/sauce/mock.txt"), VFSOpenFlag::OpenCreate);
 
             char* newFileContents = (char*)"mock.txt contents are here!";
             uint64_t stringLength = StringUtils::Length(newFileContents);
@@ -163,7 +163,7 @@ void SystemCall(InterruptFrame* interruptFrame)
         case 2:
         {
             CreateDirectory(String("/subdirectory-bravo/lime"));
-            int placeholder = Open(String("/subdirectory-bravo/lime/orange.txt"), VFSOpenFlag::OCreate);
+            int placeholder = Open(String("/subdirectory-bravo/lime/orange.txt"), VFSOpenFlag::OpenCreate);
             int desc2 = Open(String("/subdirectory-bravo/lime/orange.txt"), 0);
             Serial::Printf("Descriptor: %d", desc2);
 

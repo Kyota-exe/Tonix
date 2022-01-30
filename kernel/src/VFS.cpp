@@ -139,19 +139,18 @@ int Open(const String& path, int flags)
     VNode* vNode = TraversePath(path, filename, containingDirectory);
     fileDescriptor->vNode = vNode;
 
-    if ((flags & VFSOpenFlag::OCreate) && vNode->inodeNum == 0)
+    if ((flags & VFSOpenFlag::OpenCreate) && vNode->inodeNum == 0)
     {
         vNode->type = VFSRegularFile;
         vNode->fileSystem->Create(vNode, containingDirectory, filename);
     }
 
-    /*
-    if ((flags & VFSOpenFlag::OTruncate) && vNode->type == VnodeType::VFSRegularFile)
+    if ((flags & VFSOpenFlag::OpenTruncate) && vNode->type == VnodeType::VFSRegularFile)
     {
-        inode->size0 = 0;
-    }*/
+        vNode->fileSystem->Truncate(vNode);
+    }
 
-    if ((flags & VFSOpenFlag::OAppend))
+    if ((flags & VFSOpenFlag::OpenAppend))
     {
         fileDescriptor->offset = vNode->fileSize;
     }
