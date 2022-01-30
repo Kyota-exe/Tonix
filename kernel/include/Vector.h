@@ -82,13 +82,11 @@ void Vector<T>::Push(const T& value)
 template<typename T>
 T Vector<T>::Pop()
 {
-    T value = buffer[length - 1];
+    KAssert(length > 0, "[Vector] No more left to pop.");
 
+    T value = buffer[length - 1];
     length--;
-    for (uint64_t i = 0; i < length; ++i)
-    {
-        buffer[i] = buffer[i + 1];
-    }
+
     return value;
 }
 
