@@ -10,6 +10,9 @@
 #include "TSS.h"
 #include "Scheduler.h"
 
+#include "Device.h"
+#include "Terminal.h"
+
 PagingManager kernelPagingManager;
 
 extern "C" void _start(stivale2_struct* stivale2Struct)

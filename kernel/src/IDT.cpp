@@ -126,22 +126,12 @@ void SystemCall(InterruptFrame* interruptFrame)
             CreateDirectory(String("/subdirectory-bravo/sauce"));
             int desc0 = Open(String("/subdirectory-bravo/sauce/mock.txt"), VFSOpenFlag::OpenCreate);
 
-            char* newFileContents = (char*)"mock.txt contents are here!";
-            uint64_t stringLength = StringUtils::Length(newFileContents);
+            String newFileContents = String("mock.txt contents are here!");
             Serial::Print("Content: ", "");
             Serial::Print(newFileContents);
-            uint64_t wroteCount = Write(desc0, newFileContents, stringLength);
+            uint64_t wroteCount = Write(desc0, newFileContents.ToCString(), newFileContents.GetLength());
             Serial::Printf("Wrote count: %d", wroteCount);
 
-            RepositionOffset(desc0, 0, VFSSeekType::SeekSet);
-            char* contents = new char[200];
-            uint64_t readCount = Read(desc0, contents, 199);
-            Serial::Printf("Read count: %d", readCount);
-            contents[readCount] = 0;
-
-            Serial::Print(contents);
-
-            delete[] contents;
             Close(desc0);
             break;
         }
@@ -149,8 +139,8 @@ void SystemCall(InterruptFrame* interruptFrame)
         {
             int desc1 = Open(String("/subdirectory-bravo/sauce/mock.txt"), 0);
 
-            char* contents = new char[200];
-            uint64_t readCount = Read(desc1, contents, 199);
+            char* contents = new char[100];
+            uint64_t readCount = Read(desc1, contents, 99);
             Serial::Printf("Read count: %d", readCount);
             contents[readCount] = 0;
 
@@ -159,48 +149,20 @@ void SystemCall(InterruptFrame* interruptFrame)
             delete[] contents;
             Close(desc1);
             break;
-        }/*
+        }
         case 2:
         {
-            CreateDirectory(String("/subdirectory-bravo/lime"));
-            int placeholder = Open(String("/subdirectory-bravo/lime/orange.txt"), VFSOpenFlag::OpenCreate);
-            int desc2 = Open(String("/subdirectory-bravo/lime/orange.txt"), 0);
-            Serial::Printf("Descriptor: %d", desc2);
+            int desc2 = Open(String("/dev/tty"), 0);
 
-            char* newFileContents = (char*)"orange.txt contents! Yes, oranges are very good.\n";
-            uint64_t stringLength = StringUtils::Length(newFileContents);
+            String newFileContents = String("tty stuff! Yay!");
             Serial::Print("Content: ", "");
             Serial::Print(newFileContents);
-            uint64_t wroteCount = Write(desc2, newFileContents, stringLength);
+            uint64_t wroteCount = Write(desc2, newFileContents.ToCString(), newFileContents.GetLength());
             Serial::Printf("Wrote count: %d", wroteCount);
 
-            RepositionOffset(desc2, 0, VFSSeekType::SeekSet);
-            char* contents = new char[100];
-            uint64_t readCount = Read(desc2, contents, 99);
-            Serial::Printf("Read count: %d", readCount);
-            contents[readCount] = 0;
-
-            Serial::Print(contents);
-
-            delete[] contents;
-            Close(placeholder);
             Close(desc2);
             break;
         }
-        case 6:
-        {
-            int desc6 = Open(String("/subdirectory-bravo/lime/orange.txt"), 0);
-            Serial::Printf("Descriptor: %d", desc6);
-
-            char* contents = new char[100];
-            uint64_t readCount = Read(desc6, contents, 99);
-            Serial::Printf("Read count: %d", readCount);
-            contents[readCount] = 0;
-
-            delete[] contents;
-            Close(desc6);
-            break;
-        }*/
         default:
         {
             Panic("Fell into step: %d", step);

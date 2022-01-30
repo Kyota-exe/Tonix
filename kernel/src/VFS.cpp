@@ -1,5 +1,6 @@
 #include "VFS.h"
 #include "Ext2.h"
+#include "DeviceFS.h"
 #include "StringUtilities.h"
 #include "Panic.h"
 #include "Vector.h"
@@ -11,15 +12,18 @@ Vnode* currentInCache = nullptr;
 
 void InitializeVFS(void* ext2RamDisk)
 {
-    FileSystem* ext2FileSystem;
-    ext2FileSystem = (FileSystem*)new Ext2(ext2RamDisk);
-
     root = new Vnode();
     root->type = VFSDirectory;
-
     currentInCache = root;
 
+    FileSystem* ext2FileSystem;
+    ext2FileSystem = new Ext2(ext2RamDisk);
     ext2FileSystem->Mount(root);
+
+    Vnode* devMountPoint = CreateDirectory(String("/dev"));
+    FileSystem* deviceFileSystem;
+    deviceFileSystem = new DeviceFS();
+    deviceFileSystem->Mount(devMountPoint);
 }
 
 void CacheVNode(Vnode* vnode)
@@ -43,9 +47,6 @@ Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory)
 
     for (unsigned int currentDepth = 0; currentDepth < pathDepth; ++currentDepth)
     {
-        KAssert(currentDirectory->type == VFSDirectory,
-                "Path element at depth %d is not a directory.", currentDepth);
-
         fileName = path.Split('/', currentDepth);
         Vector<Vnode*> mounts;
 
@@ -55,6 +56,9 @@ Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory)
         do
         {
             mounts.Push(currentDirectory);
+
+            KAssert(currentDirectory->type == VFSDirectory,"Not a directory.", currentDepth);
+
             currentDirectory = currentDirectory->mountedVNode;
         } while (currentDirectory != nullptr);
 
@@ -219,7 +223,7 @@ void Close(int descriptor)
     fileDescriptor->offset = 0;
 }
 
-void CreateDirectory(const String& path)
+Vnode* CreateDirectory(const String& path)
 {
     String directoryName;
     Vnode* containingDirectory = nullptr;
@@ -229,4 +233,6 @@ void CreateDirectory(const String& path)
 
     vnode->type = VFSDirectory;
     vnode->fileSystem->Create(vnode, containingDirectory, directoryName);
+
+    return vnode;
 }

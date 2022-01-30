@@ -91,6 +91,7 @@ void Ext2::Mount(Vnode* mountPoint)
     blockGroupDescTable = (Ext2BlockGroupDescriptor*)(ramDiskVirtAddr + blockGroupDescTableDiskAddr);
 
     auto ext2Root = new Vnode();
+    ext2Root->type = VFSDirectory;
     ext2Root->inodeNum = INODE_ROOT_DIR;
     ext2Root->fileSystem = this;
 
@@ -148,6 +149,7 @@ Vnode* Ext2::FindInDirectory(Vnode* directory, const String& name)
 
             Serial::Print("------------------- Found: ", "");
             Serial::Print(nameBuffer);
+
             if (String(nameBuffer).Equals(name))
             {
                 return child;
@@ -229,9 +231,6 @@ void Ext2::Create(Vnode* vnode, Vnode* directory, const String& name)
     auto directoryContext = (Ext2Inode*)directory->context;
 
     KAssert(directoryContext->typePermissions & Directory, "Inode must be a directory to create files in it.");
-
-    Serial::Printf("ME: %x", (uint64_t)vnode);
-    Serial::Printf("DIR: %x", (uint64_t)directory);
 
     // Find unallocated inode
     Ext2Inode* inode = nullptr;

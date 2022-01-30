@@ -2,6 +2,7 @@
 
 #include "VFS.h"
 #include "Vector.h"
+#include "FileSystem.h"
 
 struct Ext2Superblock
 {
