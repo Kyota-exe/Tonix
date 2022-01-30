@@ -6,15 +6,15 @@
 #include "Serial.h"
 #include "Scheduler.h"
 
-VNode* root;
-VNode* currentInCache = nullptr;
+Vnode* root;
+Vnode* currentInCache = nullptr;
 
 void InitializeVFS(void* ext2RamDisk)
 {
     FileSystem* ext2FileSystem;
     ext2FileSystem = (FileSystem*)new Ext2(ext2RamDisk);
 
-    root = new VNode();
+    root = new Vnode();
     root->type = VFSDirectory;
 
     currentInCache = root;
@@ -22,15 +22,15 @@ void InitializeVFS(void* ext2RamDisk)
     ext2FileSystem->Mount(root);
 }
 
-void CacheVNode(VNode* vNode)
+void CacheVNode(Vnode* vnode)
 {
-    currentInCache->nextInCache = vNode;
-    currentInCache = vNode;
+    currentInCache->nextInCache = vnode;
+    currentInCache = vnode;
 }
 
-VNode* TraversePath(String path, String& fileName, VNode*& containingDirectory)
+Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory)
 {
-    VNode* currentDirectory = nullptr;
+    Vnode* currentDirectory = nullptr;
 
     if (path.Split('/', 0).IsEmpty())
     {
@@ -47,7 +47,7 @@ VNode* TraversePath(String path, String& fileName, VNode*& containingDirectory)
                 "Path element at depth %d is not a directory.", currentDepth);
 
         fileName = path.Split('/', currentDepth);
-        Vector<VNode*> mounts;
+        Vector<Vnode*> mounts;
 
         Serial::Print("PATH TOKEN: ", "");
         Serial::Print(fileName);
@@ -85,7 +85,7 @@ VNode* TraversePath(String path, String& fileName, VNode*& containingDirectory)
             Serial::Print("Could not find file: ", "");
             Serial::Print(fileName);
 
-            currentDirectory = new VNode();
+            currentDirectory = new Vnode();
             currentDirectory->fileSystem = fileSystem;
             return currentDirectory;
         }
@@ -94,10 +94,10 @@ VNode* TraversePath(String path, String& fileName, VNode*& containingDirectory)
     return currentDirectory;
 }
 
-VNode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem)
+Vnode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem)
 {
     // VFS root is always first in cache
-    VNode* current = root;
+    Vnode* current = root;
 
     while (current != nullptr)
     {
@@ -135,24 +135,24 @@ int Open(const String& path, int flags)
     FileDescriptor* fileDescriptor = &fileDescriptors->Get(descriptorIndex);
 
     String filename;
-    VNode* containingDirectory = nullptr;
-    VNode* vNode = TraversePath(path, filename, containingDirectory);
-    fileDescriptor->vNode = vNode;
+    Vnode* containingDirectory = nullptr;
+    Vnode* vnode = TraversePath(path, filename, containingDirectory);
+    fileDescriptor->vnode = vnode;
 
-    if ((flags & VFSOpenFlag::OpenCreate) && vNode->inodeNum == 0)
+    if ((flags & VFSOpenFlag::OpenCreate) && vnode->inodeNum == 0)
     {
-        vNode->type = VFSRegularFile;
-        vNode->fileSystem->Create(vNode, containingDirectory, filename);
+        vnode->type = VFSRegularFile;
+        vnode->fileSystem->Create(vnode, containingDirectory, filename);
     }
 
-    if ((flags & VFSOpenFlag::OpenTruncate) && vNode->type == VnodeType::VFSRegularFile)
+    if ((flags & VFSOpenFlag::OpenTruncate) && vnode->type == VnodeType::VFSRegularFile)
     {
-        vNode->fileSystem->Truncate(vNode);
+        vnode->fileSystem->Truncate(vnode);
     }
 
     if ((flags & VFSOpenFlag::OpenAppend))
     {
-        fileDescriptor->offset = vNode->fileSize;
+        fileDescriptor->offset = vnode->fileSize;
     }
 
     return descriptorIndex;
@@ -161,9 +161,9 @@ int Open(const String& path, int flags)
 uint64_t Read(int descriptor, void* buffer, uint64_t count)
 {
     FileDescriptor* fileDescriptor =  &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
-    VNode* vNode = fileDescriptor->vNode;
+    Vnode* vnode = fileDescriptor->vnode;
 
-    uint64_t readCount = vNode->fileSystem->Read(vNode, buffer, count, fileDescriptor->offset);
+    uint64_t readCount = vnode->fileSystem->Read(vnode, buffer, count, fileDescriptor->offset);
     fileDescriptor->offset += readCount;
 
     return readCount;
@@ -172,9 +172,9 @@ uint64_t Read(int descriptor, void* buffer, uint64_t count)
 uint64_t Write(int descriptor, const void* buffer, uint64_t count)
 {
     FileDescriptor* fileDescriptor = &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
-    VNode* vNode = fileDescriptor->vNode;
+    Vnode* vnode = fileDescriptor->vnode;
 
-    uint64_t wroteCount = vNode->fileSystem->Write(vNode, buffer, count, fileDescriptor->offset);
+    uint64_t wroteCount = vnode->fileSystem->Write(vnode, buffer, count, fileDescriptor->offset);
     fileDescriptor->offset += wroteCount;
 
     return wroteCount;
@@ -184,7 +184,7 @@ uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType)
 {
     // TODO: Support files larger than 2^32 bytes
     FileDescriptor* fileDescriptor = &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
-    VNode* vNode = fileDescriptor->vNode;
+    Vnode* vnode = fileDescriptor->vnode;
 
     switch (seekType)
     {
@@ -195,16 +195,16 @@ uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType)
             fileDescriptor->offset += offset;
             break;
         case SeekEnd:
-            fileDescriptor->offset = vNode->fileSize + offset;
+            fileDescriptor->offset = vnode->fileSize + offset;
             break;
     }
 
-    if (fileDescriptor->offset > vNode->fileSize)
+    if (fileDescriptor->offset > vnode->fileSize)
     {
         uint8_t val = 0;
-        for (uint64_t i = 0; i < fileDescriptor->offset - vNode->fileSize; ++i)
+        for (uint64_t i = 0; i < fileDescriptor->offset - vnode->fileSize; ++i)
         {
-            vNode->fileSystem->Write(vNode, &val, 1, vNode->fileSize);
+            vnode->fileSystem->Write(vnode, &val, 1, vnode->fileSize);
         }
     }
 
@@ -221,16 +221,12 @@ void Close(int descriptor)
 
 void CreateDirectory(const String& path)
 {
-    Serial::Print("MAKING------------------------------------------------");
     String directoryName;
-    VNode* containingDirectory = nullptr;
-    VNode* vNode = TraversePath(path, directoryName, containingDirectory);
+    Vnode* containingDirectory = nullptr;
+    Vnode* vnode = TraversePath(path, directoryName, containingDirectory);
 
-    KAssert(vNode->inodeNum == 0, "Directory already exists.");
+    KAssert(vnode->inodeNum == 0, "Directory already exists.");
 
-    vNode->type = VFSDirectory;
-    vNode->fileSystem->Create(vNode, containingDirectory, directoryName);
-    Serial::Print("MAKINGE------------------------------------------------");
-
-    Serial::Printf("))))))))))))))))))))))))))))))))))))))))))))))))))))))) DIRECTORY SIZE: %d", vNode->fileSize);
+    vnode->type = VFSDirectory;
+    vnode->fileSystem->Create(vnode, containingDirectory, directoryName);
 }

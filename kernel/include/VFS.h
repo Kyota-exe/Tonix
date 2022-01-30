@@ -26,7 +26,7 @@ enum VFSSeekType
 
 class FileSystem;
 
-struct VNode
+struct Vnode
 {
     VnodeType type;
 
@@ -35,26 +35,26 @@ struct VNode
     uint32_t fileSize;
     FileSystem* fileSystem;
 
-    VNode* mountedVNode = nullptr;
-    VNode* nextInCache = nullptr;
+    Vnode* mountedVNode = nullptr;
+    Vnode* nextInCache = nullptr;
 };
 
 class FileSystem
 {
 public:
-    virtual void Mount(VNode* mountPoint) = 0;
-    virtual uint64_t Read(VNode* vNode, void* buffer, uint64_t count, uint64_t readPos) = 0;
-    virtual uint64_t Write(VNode* vNode, const void* buffer, uint64_t count, uint64_t writePos) = 0;
-    virtual VNode* FindInDirectory(VNode* directory, const String& name) = 0;
-    virtual void Create(VNode* vNode, VNode* directory, const String& name) = 0;
-    virtual void Truncate(VNode* vNode) = 0;
+    virtual void Mount(Vnode* mountPoint) = 0;
+    virtual uint64_t Read(Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos) = 0;
+    virtual uint64_t Write(Vnode* vnode, const void* buffer, uint64_t count, uint64_t writePos) = 0;
+    virtual Vnode* FindInDirectory(Vnode* directory, const String& name) = 0;
+    virtual void Create(Vnode* vnode, Vnode* directory, const String& name) = 0;
+    virtual void Truncate(Vnode* vnode) = 0;
 };
 
 struct FileDescriptor
 {
     bool present = false;
     uint64_t offset = 0;
-    VNode* vNode;
+    Vnode* vnode;
 };
 
 void InitializeVFS(void* ext2RamDisk);
@@ -66,5 +66,5 @@ uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType)
 void Close(int descriptor);
 void CreateDirectory(const String& path);
 
-void CacheVNode(VNode* vNode);
-VNode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem);
+void CacheVNode(Vnode* vnode);
+Vnode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem);
