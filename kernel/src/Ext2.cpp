@@ -35,25 +35,16 @@ enum Ext2InodeTypePermissions : uint16_t
     StickyBit = 0x200
 };
 
-enum Ext2DirectoryEntryType : uint8_t
-{
-    DEntryUnknown = 0,
-    DEntryRegularFile = 1,
-    DEntryDirectory = 2,
-    DEntryCharacterDevice = 3,
-    DEntryBlockDevice = 4,
-    DEntryFIFO = 5,
-    DEntrySocket = 6,
-    DEntrySymLink = 7
-};
-
 const uint32_t INODE_ROOT_DIR = 2;
 const uint16_t DEFAULT_FILE_TYPE_PERMISSIONS = RegularFile | UserRead | UserWrite | GroupRead | OtherRead;
+const uint16_t DEFAULT_DIRECTORY_TYPE_PERMISSIONS = Directory | UserRead | UserWrite | GroupRead | OtherRead;
 
 Ext2::Ext2(void *_ramDiskAddr) : ramDiskVirtAddr((uint64_t)_ramDiskAddr) { }
 
 void Ext2::Mount(VNode* mountPoint)
 {
+    KAssert(mountPoint->type == VFSDirectory, "Mount point must be a directory.");
+
     Serial::Print("Initializing Ext2Driver file system...");
 
     superblock = (Ext2Superblock*)(ramDiskVirtAddr + 1024);
@@ -145,7 +136,7 @@ VNode* Ext2::FindInDirectory(VNode* directory, const String& name)
                         child->type = VFSDirectory;
                         break;
                     default:
-                        child->type = VFSVirtual;
+                        child->type = VFSUnknown;
                 }
 
                 CacheVNode(child);
@@ -233,11 +224,14 @@ uint64_t Ext2::Write(VNode* vNode, const void* buffer, uint64_t count, uint64_t 
     return wroteCount;
 }
 
-void Ext2::Create(VNode* vNode, VNode* directory, String name)
+void Ext2::Create(VNode* vNode, VNode* directory, const String& name)
 {
     auto directoryContext = (Ext2Inode*)directory->context;
 
-    KAssert(directoryContext->typePermissions & 0x4000, "Inode must be a directory to create files in it.");
+    KAssert(directoryContext->typePermissions & Directory, "Inode must be a directory to create files in it.");
+
+    Serial::Printf("ME: %x", (uint64_t)vNode);
+    Serial::Printf("DIR: %x", (uint64_t)directory);
 
     // Find unallocated inode
     Ext2Inode* inode = nullptr;
@@ -278,29 +272,22 @@ void Ext2::Create(VNode* vNode, VNode* directory, String name)
 
     KAssert(inode != nullptr && inodeNum != 0, "Could not create new file, unallocated inode not found.");
 
-    // TODO: Support permissions, file ACL and other fields in ext2 directory
-    inode->typePermissions = DEFAULT_FILE_TYPE_PERMISSIONS;
+    // TODO: Support file ACL and other fields in ext2 directory
     inode->hardLinksCount = 1;
     inode->size0 = 0;
 
-    uint8_t nameLength = name.GetLength();
-    uint8_t nameLengthPadding = 4 - (nameLength % 4);
-
-    Ext2DirectoryEntry directoryEntry;
-    directoryEntry.inodeNum = inodeNum;
-    directoryEntry.entrySize = (uint16_t)(sizeof(Ext2DirectoryEntry) + nameLength + nameLengthPadding);
-    directoryEntry.nameLength = nameLength;
-    directoryEntry.typeIndicator = Ext2DirectoryEntryType::DEntryRegularFile;
-
-    Write(directory, &directoryEntry, sizeof(Ext2DirectoryEntry), directory->fileSize);
-
-    // Ext2Directory entry name field must be padded so that it's size is a multiple of 4
-    Write(directory, name.ToCString(), nameLength, directory->fileSize);
-
-    uint8_t val = 0;
-    for (uint8_t i = 0; i < nameLengthPadding; ++i)
+    switch (vNode->type)
     {
-        Write(directory, &val, 1, directory->fileSize);
+        case VFSRegularFile:
+            WriteDirectoryEntry(directory, inodeNum, name, DEntryRegularFile);
+            inode->typePermissions = DEFAULT_FILE_TYPE_PERMISSIONS;
+            break;
+        case VFSDirectory:
+            WriteDirectoryEntry(directory, inodeNum, name, DEntryDirectory);
+            inode->typePermissions = DEFAULT_DIRECTORY_TYPE_PERMISSIONS;
+            break;
+        default:
+            WriteDirectoryEntry(directory, inodeNum, name, DEntryUnknown);
     }
 
     vNode->context = inode;
@@ -310,7 +297,33 @@ void Ext2::Create(VNode* vNode, VNode* directory, String name)
     vNode->context = inode;
     vNode->fileSize = inode->size0;
 
+    if (vNode->type == VFSDirectory)
+    {
+        WriteDirectoryEntry(vNode, vNode->inodeNum, String("."), DEntryDirectory);
+        WriteDirectoryEntry(vNode, directory->inodeNum, String(".."), DEntryDirectory);
+    }
+
     CacheVNode(vNode);
+}
+
+void Ext2::WriteDirectoryEntry(VNode* directory, uint32_t inodeNum, const String& name, Ext2DirectoryEntryType type)
+{
+    uint8_t nameLength = name.GetLength();
+    uint8_t nameLengthPadding = 4 - (nameLength % 4);
+
+    Ext2DirectoryEntry directoryEntry;
+    directoryEntry.typeIndicator = type;
+    directoryEntry.inodeNum = inodeNum;
+    directoryEntry.entrySize = sizeof(Ext2DirectoryEntry) + nameLength + nameLengthPadding;
+    directoryEntry.nameLength = nameLength;
+
+    uint8_t zero = 0;
+    Write(directory, &directoryEntry, sizeof(Ext2DirectoryEntry), directory->fileSize);
+    Write(directory, name.ToCString(), directoryEntry.nameLength, directory->fileSize);
+    for (uint8_t i = 0; i < nameLengthPadding; ++i)
+    {
+        Write(directory, &zero, 1, directory->fileSize);
+    }
 }
 
 uint32_t Ext2::GetBlockAddr(VNode* vNode, uint32_t requestedBlockIndex, bool allocateMissingBlock)

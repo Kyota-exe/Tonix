@@ -108,12 +108,25 @@ public:
     uint64_t Read(VNode* vNode, void* buffer, uint64_t count, uint64_t readPos) override;
     uint64_t Write(VNode* vNode, const void* buffer, uint64_t count, uint64_t writePos) override;
     VNode* FindInDirectory(VNode* directory, const String& name) override;
-    void Create(VNode* vNode, VNode* directory, String name) override;
+    void Create(VNode* vNode, VNode* directory, const String& name) override;
     explicit Ext2(void* _ramDiskAddr);
 
 private:
+    enum Ext2DirectoryEntryType : uint8_t
+    {
+        DEntryUnknown = 0,
+        DEntryRegularFile = 1,
+        DEntryDirectory = 2,
+        DEntryCharacterDevice = 3,
+        DEntryBlockDevice = 4,
+        DEntryFIFO = 5,
+        DEntrySocket = 6,
+        DEntrySymLink = 7
+    };
+
     uint32_t GetBlockAddr(VNode* vNode, uint32_t requestedBlockIndex, bool allocateMissingBlock);
     Ext2Inode* GetInode(uint32_t inodeNum);
+    void WriteDirectoryEntry(VNode* directory, uint32_t inodeNum, const String& name, Ext2DirectoryEntryType type);
 
     uint64_t ramDiskVirtAddr;
 

@@ -15,6 +15,8 @@ void InitializeVFS(void* ext2RamDisk)
     ext2FileSystem = (FileSystem*)new Ext2(ext2RamDisk);
 
     root = new VNode();
+    root->type = VFSDirectory;
+
     currentInCache = root;
 
     ext2FileSystem->Mount(root);
@@ -41,6 +43,9 @@ VNode* TraversePath(String path, String& fileName, VNode*& containingDirectory)
 
     for (unsigned int currentDepth = 0; currentDepth < pathDepth; ++currentDepth)
     {
+        KAssert(currentDirectory->type == VFSDirectory,
+                "Path element at depth %d is not a directory.", currentDepth);
+
         fileName = path.Split('/', currentDepth);
         Vector<VNode*> mounts;
 
@@ -75,9 +80,10 @@ VNode* TraversePath(String path, String& fileName, VNode*& containingDirectory)
         {
             if (currentDepth + 1 != pathDepth)
             {
-                Panic("Could not find currentDirectory.");
+                Panic("Could not find directory.");
             }
-            Serial::Print("Could not find file.");
+            Serial::Print("Could not find file: ", "");
+            Serial::Print(fileName);
 
             currentDirectory = new VNode();
             currentDirectory->fileSystem = fileSystem;
@@ -93,7 +99,7 @@ VNode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem)
     // VFS root is always first in cache
     VNode* current = root;
 
-    while (current->nextInCache != nullptr)
+    while (current != nullptr)
     {
         if (current->inodeNum == inodeNum && current->fileSystem == fileSystem)
         {
@@ -135,6 +141,7 @@ int Open(const String& path, int flags)
 
     if ((flags & VFSOpenFlag::OCreate) && vNode->inodeNum == 0)
     {
+        vNode->type = VFSRegularFile;
         vNode->fileSystem->Create(vNode, containingDirectory, filename);
     }
 
@@ -211,4 +218,20 @@ void Close(int descriptor)
 
     fileDescriptor->present = false;
     fileDescriptor->offset = 0;
+}
+
+void CreateDirectory(const String& path)
+{
+    Serial::Print("MAKING------------------------------------------------");
+    String directoryName;
+    VNode* containingDirectory = nullptr;
+    VNode* vNode = TraversePath(path, directoryName, containingDirectory);
+
+    KAssert(vNode->inodeNum == 0, "Directory already exists.");
+
+    vNode->type = VFSDirectory;
+    vNode->fileSystem->Create(vNode, containingDirectory, directoryName);
+    Serial::Print("MAKINGE------------------------------------------------");
+
+    Serial::Printf("))))))))))))))))))))))))))))))))))))))))))))))))))))))) DIRECTORY SIZE: %d", vNode->fileSize);
 }
