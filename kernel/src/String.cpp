@@ -141,3 +141,13 @@ const char* String::ToCString() const
 {
     return buffer;
 }
+
+const char* String::begin()
+{
+    return buffer;
+}
+
+const char* String::end()
+{
+    return buffer + GetLength();
+}

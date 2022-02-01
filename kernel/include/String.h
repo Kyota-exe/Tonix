@@ -20,6 +20,9 @@ public:
     String Substring(uint64_t index, uint64_t substringLength) const;
     const char* ToCString() const;
 
+    const char* begin();
+    const char* end();
+
     explicit String(const char* original);
     String(const char* original, uint64_t stringLength);
     String(const String& original);
