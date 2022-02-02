@@ -154,7 +154,7 @@ void SystemCall(InterruptFrame* interruptFrame)
         {
             int desc2 = Open(String("/dev/tty"), 0);
 
-            String newFileContents = String("tty stuff! Yay!");
+            String newFileContents = String("I am hello");
             Serial::Print("Content: ", "");
             Serial::Print(newFileContents);
             uint64_t wroteCount = Write(desc2, newFileContents.ToCString(), newFileContents.GetLength());

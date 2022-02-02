@@ -9,9 +9,8 @@
 #include "GDT.h"
 #include "TSS.h"
 #include "Scheduler.h"
-
 #include "Device.h"
-#include "Terminal.h"
+#include "Framebuffer.h"
 
 PagingManager kernelPagingManager;
 
@@ -25,7 +24,6 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     LoadGDT();
     InitializeIDT();
     LoadIDT();
-    // TODO: Does the "pre-init-process" kernel even need custom paging? Seems like a lot of wasted page frames to me.
     InitializePageFrameAllocator();
     kernelPagingManager.InitializePaging();
     kernelPagingManager.SetCR3();
@@ -34,6 +32,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     InitializePIC();
     ActivatePICKeyboardInterrupts();
     InitializeTaskList();
+    Framebuffer::Initialize();
 
     auto modulesStruct = (stivale2_struct_tag_modules*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MODULES_ID);
     Serial::Printf("Module Count: %d", modulesStruct->module_count);

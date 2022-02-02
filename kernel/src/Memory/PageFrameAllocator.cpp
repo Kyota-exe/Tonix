@@ -92,3 +92,47 @@ void* RequestPageFrame()
     Panic("Free page frame could not be found!");
     return nullptr;
 }
+
+void* RequestPageFrames(uint64_t count)
+{
+    uint64_t contiguousCount = 0;
+    for (; latestAllocatedPageFrame < pageFrameBitmap.size * 8; ++latestAllocatedPageFrame)
+    {
+        if (!pageFrameBitmap.GetBit(latestAllocatedPageFrame))
+        {
+            contiguousCount++;
+            if (contiguousCount == count)
+            {
+                uint64_t first = latestAllocatedPageFrame - contiguousCount + 1;
+                for (uint64_t pageFrame = first; pageFrame <= latestAllocatedPageFrame; ++pageFrame)
+                {
+                    pageFrameBitmap.SetBit(pageFrame, true);
+                }
+                return (void*)(first * 0x1000);
+            }
+        }
+        else
+        {
+            contiguousCount = 0;
+        }
+    }
+
+    // Free page frame could not be found.
+    Panic("Could not find %d contiguous free pages.", count);
+    return nullptr;
+}
+
+void FreePageFrame(void* ptr)
+{
+    uint64_t pageFrame = (uint64_t)ptr / 0x1000;
+    KAssert(pageFrameBitmap.GetBit(pageFrame), "Physical double free!");
+    pageFrameBitmap.SetBit(pageFrame, false);
+}
+
+void FreePageFrames(void* ptr, uint64_t count)
+{
+    for (uint64_t i = 0; i < count; ++i)
+    {
+        FreePageFrame((void*)((uint64_t)ptr + i * 0x1000));
+    }
+}

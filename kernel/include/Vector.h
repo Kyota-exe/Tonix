@@ -14,6 +14,7 @@ private:
 public:
     void Push(const T& value);
     T Pop();
+    T Pop(uint64_t index);
     uint64_t GetLength();
 
     typedef T* iterator;
@@ -31,7 +32,7 @@ public:
 
 const uint64_t VECTOR_DEFAULT_CAPACITY = 1;
 
-template<typename T>
+template <typename T>
 Vector<T>::Vector()
 {
     buffer = new T[VECTOR_DEFAULT_CAPACITY];
@@ -39,7 +40,7 @@ Vector<T>::Vector()
     length = 0;
 }
 
-template<typename T>
+template <typename T>
 Vector<T>::Vector(const Vector<T>& original)
 {
     capacity = original.capacity;
@@ -52,13 +53,13 @@ Vector<T>::Vector(const Vector<T>& original)
     }
 }
 
-template<typename T>
+template <typename T>
 Vector<T>::~Vector()
 {
     delete[] buffer;
 }
 
-template<typename T>
+template <typename T>
 void Vector<T>::Push(const T& value)
 {
     if (length == capacity)
@@ -79,7 +80,7 @@ void Vector<T>::Push(const T& value)
     length++;
 }
 
-template<typename T>
+template <typename T>
 T Vector<T>::Pop()
 {
     KAssert(length > 0, "[Vector] No more left to pop.");
@@ -90,38 +91,54 @@ T Vector<T>::Pop()
     return value;
 }
 
-template<typename T>
+template <typename T>
+T Vector<T>::Pop(uint64_t index)
+{
+    KAssert(index < length, "[Vector] Index is out of bounds.");
+
+    T value = buffer[index];
+    length--;
+
+    for (uint64_t i = index; i < length; ++i)
+    {
+        buffer[i] = buffer[i + 1];
+    }
+
+    return value;
+}
+
+template <typename T>
 uint64_t Vector<T>::GetLength()
 {
     return length;
 }
 
-template<typename T>
+template <typename T>
 typename Vector<T>::iterator Vector<T>::begin()
 {
     return buffer;
 }
 
-template<typename T>
+template <typename T>
 typename Vector<T>::iterator Vector<T>::end()
 {
     return buffer + GetLength();
 }
 
-template<typename T>
+template <typename T>
 T& Vector<T>::operator[](uint64_t index)
 {
     return buffer[index];
 }
 
-template<typename T>
+template <typename T>
 T& Vector<T>::Get(uint64_t index)
 {
     KAssert(index < GetLength(), "Vector index (%d) out of range.", index);
     return buffer[index];
 }
 
-template<typename T>
+template <typename T>
 Vector<T>& Vector<T>::operator=(const Vector<T>& newVector)
 {
     if (&newVector != this)

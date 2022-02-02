@@ -124,11 +124,22 @@ void Slab::Free(void* ptr)
     }
 }
 
+void* LargeKMalloc(uint64_t size)
+{
+    uint64_t pageCount = size / 0x1000;
+    return (void*)((uint64_t)RequestPageFrames(pageCount) + 0xffff'8000'0000'0000);
+}
+
 void* KMalloc(uint64_t size)
 {
     if (size < 8) size = 8;
     uint64_t slabIndex = CeilLog2(size) - 3;
-    KAssert(slabIndex < SLABS_COUNT, "KMalloc does not support allocations of size %d.", size);
+
+    if (slabIndex >= SLABS_COUNT)
+    {
+        return LargeKMalloc(size);
+    }
+
     return slabsPool.slabs[slabIndex].Alloc();
 }
 
@@ -141,8 +152,11 @@ void KFree(void* ptr)
         if (slab.slabBase <= (uint64_t)ptr && (uint64_t)ptr < slab.slabBase + 0x1000)
         {
             slab.Free(ptr);
+            return;
         }
     }
+
+    Panic("Could not free.");
 }
 
 void InitializeKernelHeap()

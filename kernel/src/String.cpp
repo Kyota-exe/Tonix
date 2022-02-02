@@ -142,12 +142,12 @@ const char* String::ToCString() const
     return buffer;
 }
 
-const char* String::begin()
+const char* String::begin() const
 {
     return buffer;
 }
 
-const char* String::end()
+const char* String::end() const
 {
     return buffer + GetLength();
 }

@@ -7,12 +7,13 @@ bool Bitmap::GetBit(uint64_t index) const
 
     if (byteIndex > size - 1)
     {
-        Serial::Printf("Bitfield: Index %x exceeds bitmap bounds.", index);
+        Serial::Printf("Bounds: %d", size);
+        Serial::Printf("Bitfield: Index %d exceeds bitmap bounds.", byteIndex);
         while (true) asm("hlt");
     }
 
-    uint8_t bitIndex = index % 8;
-    return (buffer[byteIndex] & (1 << bitIndex));
+    uint8_t bitIndex = 1 << (index % 8);
+    return (buffer[byteIndex] & bitIndex);
 }
 
 void Bitmap::SetBit(uint64_t index, bool value) const
@@ -25,13 +26,13 @@ void Bitmap::SetBit(uint64_t index, bool value) const
         while (true) asm("hlt");
     }
 
-    uint8_t bitIndex = index % 8;
+    uint8_t bitIndex = 1 << (index % 8);
     if (value)
     {
-        buffer[byteIndex] |= (1 << bitIndex);
+        buffer[byteIndex] |= bitIndex;
     }
     else
     {
-        buffer[byteIndex] &= ~(1 << bitIndex);
+        buffer[byteIndex] &= ~bitIndex;
     }
 }
