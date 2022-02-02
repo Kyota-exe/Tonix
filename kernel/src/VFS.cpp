@@ -143,10 +143,17 @@ int Open(const String& path, int flags)
     Vnode* vnode = TraversePath(path, filename, containingDirectory);
     fileDescriptor->vnode = vnode;
 
-    if ((flags & VFSOpenFlag::OpenCreate) && vnode->inodeNum == 0)
+    if (vnode->inodeNum == 0)
     {
-        vnode->type = VFSRegularFile;
-        vnode->fileSystem->Create(vnode, containingDirectory, filename);
+        if (flags & VFSOpenFlag::OpenCreate)
+        {
+            vnode->type = VFSRegularFile;
+            vnode->fileSystem->Create(vnode, containingDirectory, filename);
+        }
+        else
+        {
+            Panic("Could not find file.");
+        }
     }
 
     if ((flags & VFSOpenFlag::OpenTruncate) && vnode->type == VnodeType::VFSRegularFile)

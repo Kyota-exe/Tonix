@@ -35,7 +35,7 @@ OBJ += $(patsubst src/%, obj/%, $(ASMSRC:.asm=.asm.o))
 OBJSUBDIRS := $(sort $(shell dirname $(OBJ)))
 
 .PHONY: all
-all: $(KERNEL)
+all: $(KERNEL) $(EXT2RAMDISK)
 
 $(KERNEL): $(OBJSUBDIRS) $(OBJ)
 	$(LD) $(OBJ) $(LDFLAGS) $(INTERNALLDFLAGS) -o $@
@@ -48,6 +48,9 @@ obj/%.o: src/%.cpp
 
 obj/%.asm.o: src/%.asm
 	nasm $(ASMFLAGS) -g $< -o $@
+
+$(EXT2RAMDISK):
+	e2fsimage -d root-directory -v -f ext2-ramdisk-image.ext2
 
 .PHONY: clean
 clean:

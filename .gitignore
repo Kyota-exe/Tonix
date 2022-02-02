@@ -4,3 +4,4 @@
 *.d
 
 .idea/
+ext2-ramdisk-image.ext2
