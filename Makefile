@@ -18,7 +18,7 @@ limine:
 kernel:
 	$(MAKE) -C kernel
 
-$(ISO_IMAGE): limine kernel
+$(ISO_IMAGE): limine kernel ext2ramdisk
 	rm -rf iso_root
 	mkdir -p iso_root
 	cp kernel/bin/kernel.elf \
@@ -31,6 +31,10 @@ $(ISO_IMAGE): limine kernel
 		iso_root -o $(ISO_IMAGE)
 	limine/limine-install $(ISO_IMAGE)
 	rm -rf iso_root
+
+.PHONY: ext2ramdisk
+ext2ramdisk:
+	e2fsimage -d root-directory -v -f ext2-ramdisk-image.ext2
 
 .PHONY: clean
 clean:
