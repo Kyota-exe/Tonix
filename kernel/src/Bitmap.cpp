@@ -12,7 +12,7 @@ bool Bitmap::GetBit(uint64_t index) const
         while (true) asm("hlt");
     }
 
-    uint8_t bitIndex = 1 << (index % 8);
+    uint8_t bitIndex = firstIsLeft ? 1 << (7 - (index % 8)) : 1 << (index % 8);
     return (buffer[byteIndex] & bitIndex);
 }
 
@@ -26,7 +26,7 @@ void Bitmap::SetBit(uint64_t index, bool value) const
         while (true) asm("hlt");
     }
 
-    uint8_t bitIndex = 1 << (index % 8);
+    uint8_t bitIndex = firstIsLeft ? 1 << (7 - index % 8) : 1 << (index % 8);
     if (value)
     {
         buffer[byteIndex] |= bitIndex;

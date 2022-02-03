@@ -187,7 +187,7 @@ uint64_t Ext2::Read(Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos
         MemCopy((void*)((uint64_t)buffer + parsedCount), (void*)(diskAddr + ramDiskVirtAddr), memCopySize);
 
         parsedCount += memCopySize;
-        readPos += memCopySize;
+        currentReadPos += memCopySize;
     }
 
     return parsedCount;
