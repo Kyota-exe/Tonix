@@ -154,7 +154,7 @@ void SystemCall(InterruptFrame* interruptFrame)
         {
             int desc2 = Open(String("/dev/tty"), 0);
 
-            String newFileContents = String("I am hello");
+            String newFileContents = String("Writing to /dev/tty with a PSF2 font");
             Serial::Print("Content: ", "");
             Serial::Print(newFileContents);
             uint64_t wroteCount = Write(desc2, newFileContents.ToCString(), newFileContents.GetLength());

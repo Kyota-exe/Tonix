@@ -1,7 +1,8 @@
 #include "Terminal.h"
 #include "Serial.h"
 
-const char* fontPath = "/fonts/MicroKnight_v1.0.psf";
+const char* FONT_PATH = "/fonts/Uni3-TerminusBold28x14.psf";
+const int TEXT_CHARACTER_SPACING = 0;
 
 uint64_t Terminal::Read(void* buffer, uint64_t count)
 {
@@ -12,14 +13,14 @@ uint64_t Terminal::Read(void* buffer, uint64_t count)
 
 uint64_t Terminal::Write(const void* buffer, uint64_t count)
 {
-    textRenderer->Print(String((const char*)buffer), cursorX, cursorY, Colour(255, 255, 255));
+    textRenderer->Print(String((const char*)buffer), cursorX, cursorY, textColour);
     return count;
 }
 
-Terminal::Terminal(const String& name, uint32_t inodeNum) : Device(new String(name), inodeNum)
-{
-    textRenderer = new TextRenderer(String(fontPath));
-}
+Terminal::Terminal(const String& name, uint32_t inodeNum) :
+    Device(new String(name), inodeNum),
+    textRenderer(new TextRenderer(String(FONT_PATH), TEXT_CHARACTER_SPACING)),
+    textColour(Colour(255, 255, 255)) { }
 
 Terminal::~Terminal()
 {

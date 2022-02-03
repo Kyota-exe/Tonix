@@ -12,6 +12,7 @@ public:
     Terminal(const String& _name, uint32_t _inodeNum);
     ~Terminal();
     TextRenderer* textRenderer;
+    Colour textColour;
 private:
     unsigned int cursorX = 0;
     unsigned int cursorY = 0;

@@ -2,37 +2,26 @@
 #include "Framebuffer.h"
 #include "Serial.h"
 
-PSF2Font* TextRenderer::font = nullptr;
-
-TextRenderer::TextRenderer(const String& fontPath)
+TextRenderer::TextRenderer(const String& fontPath, int characterSpacing) : characterSpacing(characterSpacing)
 {
-    if (font == nullptr)
-    {
-        font = new PSF2Font(fontPath);
-    }
+    font = new PSF2Font(fontPath);
 }
 
 void TextRenderer::Print(char c, unsigned int x, unsigned int y, Colour colour)
 {
-    Bitmap glyphBitmap = font->GetGlyphBitmap(c);
+    PSF2Glyph glyph = font->GetGlyphBitmap(c);
 
     for (uint32_t glyphY = 0; glyphY < font->Height(); ++glyphY)
     {
-        for (uint32_t glyphX = font->Width() - 1; glyphX < font->Width(); --glyphX)
+        for (uint32_t glyphX = 0; glyphX < font->Width(); ++glyphX)
         {
-            uint64_t index = (glyphY * font->Width()) + glyphX;
-            if (glyphBitmap.GetBit(index))
+            if (glyph.GetPixel(glyphX, glyphY))
             {
-                unsigned int screenX = x + font->Width() - glyphX;
+                unsigned int screenX = x + glyphX;
                 unsigned int screenY = y + glyphY;
                 Framebuffer::instance->PlotPixel(screenX, screenY, colour);
             }
-
-            if (glyphBitmap.GetBit(glyphY * font->Width() + glyphX))
-                Serial::Print("#", "");
-            else Serial::Print(" ", "");
         }
-        Serial::Print("");
     }
 }
 
@@ -44,6 +33,6 @@ void TextRenderer::Print(const String& string, unsigned int x, unsigned int y, C
     for (const char c : string)
     {
         Print(c, screenX, screenY, colour);
-        screenX += font->Width();
+        screenX += font->Width() + characterSpacing;
     }
 }

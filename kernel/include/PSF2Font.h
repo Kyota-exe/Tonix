@@ -1,12 +1,15 @@
 #pragma once
 
+class PSF2Font;
+
 #include "String.h"
 #include "Bitmap.h"
+#include "PSF2Glyph.h"
 
 class PSF2Font
 {
 public:
-    Bitmap GetGlyphBitmap(char c);
+    PSF2Glyph GetGlyphBitmap(char c);
     uint32_t Height();
     uint32_t Width();
 
