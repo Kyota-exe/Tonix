@@ -32,6 +32,7 @@ constexpr uint8_t KERNEL_DATA_TYPE_ATTRIBUTES = 0b1'00'1'0010;
 constexpr uint8_t USER_CODE_TYPE_ATTRIBUTES = 0b1'11'1'1010;
 constexpr uint8_t USER_DATA_TYPE_ATTRIBUTES = 0b1'11'1'0010;
 constexpr uint8_t LIMIT1_ATTRIBUTES = 0b0'01'00000;
+constexpr uint8_t TSS_TYPE_ATTRIBUTES = 0b1'00'0'1001;
 
 GDTR gdtr;
 GDT gdt;
@@ -85,7 +86,7 @@ void GDT::InitializeTSS()
     gdt.entries[3].base1 = (uint64_t)tss >> 16;
     gdt.entries[3].base2 = (uint64_t)tss >> 24;
     gdt.entries[3].limit0 = sizeof(TSS) - 1;
-    gdt.entries[3].limit1Attributes = 0b0'0'0'0'0000 | ((sizeof(TSS) - 1) >> 16);
-    gdt.entries[3].typeAttributes = 0b1'00'0'1001;
+    gdt.entries[3].limit1Attributes = (sizeof(TSS) - 1) >> 16;
+    gdt.entries[3].typeAttributes = TSS_TYPE_ATTRIBUTES;
     *(uint64_t*)&gdt.entries[4] = (uint64_t)tss >> 32;
 }

@@ -46,7 +46,7 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
 {
     Serial::Print("Initializing Ext2 file system...");
 
-    disk->Read(EXT2_SUPERBLOCK_DISK_ADDR, &superblock, sizeof(Ext2Superblock), false);
+    disk->AllocateRead(EXT2_SUPERBLOCK_DISK_ADDR, (void**)&superblock, sizeof(Ext2Superblock));
 
     KAssert(superblock->ext2Signature == EXT2_SIGNATURE, "Invalid ext2 signature!");
     KAssert(superblock->fileSystemState == 1, "File system state is not clean.");
@@ -86,7 +86,7 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
     Serial::Printf("Number of blocks to preallocate for directories: %d", superblock->preallocDirectoriesBlocksCount);
 
     uint32_t blockGroupDescTableDiskAddr = blockSize * (blockSize == 1024 ? 2 : 1);
-    disk->Read(blockGroupDescTableDiskAddr, &blockGroupDescTable, sizeof(Ext2BlockGroupDescriptor) * blockGroupsCount, false);
+    disk->AllocateRead(blockGroupDescTableDiskAddr, (void**)&blockGroupDescTable, sizeof(Ext2BlockGroupDescriptor) * blockGroupsCount);
 
     fileSystemRoot = new Vnode();
     fileSystemRoot->type = VFSDirectory;
@@ -187,7 +187,7 @@ uint64_t Ext2::Read(Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos
         uint64_t block = GetBlockAddr(vnode, currentReadPos / blockSize, false);
         uint64_t diskAddr = block * blockSize + offsetInBlock;
 
-        disk->Read(diskAddr, (void*)((uint64_t)buffer + parsedCount), readSize, true);
+        disk->Read(diskAddr, (void*)((uint64_t)buffer + parsedCount), readSize);
 
         parsedCount += readSize;
         currentReadPos += readSize;
@@ -248,7 +248,7 @@ void Ext2::Create(Vnode* vnode, Vnode* directory, const String& name)
             if (blockGroup->unallocatedInodesCount % 8 != 0) inodeUsageBitmapSize++;
 
             Bitmap inodeUsageBitmap;
-            disk->Read(blockGroup->inodeUsageBitmapBlock * blockSize, &inodeUsageBitmap.buffer, inodeUsageBitmapSize, false);
+            disk->AllocateRead(blockGroup->inodeUsageBitmapBlock * blockSize, (void**)&inodeUsageBitmap.buffer, inodeUsageBitmapSize);
             inodeUsageBitmap.size = inodeUsageBitmapSize;
 
             for (uint32_t inodeIndex = 0; inodeIndex < inodeUsageBitmap.size * 8; ++inodeIndex)
@@ -374,7 +374,7 @@ uint32_t Ext2::GetBlockAddr(Vnode* vnode, uint32_t requestedBlockIndex, bool all
                 if (blockGroup->unallocatedBlocksCount % 8 != 0) blockUsageBitmapSize++;
 
                 Bitmap blockUsageBitmap;
-                disk->Read(blockGroup->inodeUsageBitmapBlock * blockSize, &blockUsageBitmap.buffer, blockUsageBitmapSize, false);
+                disk->AllocateRead(blockGroup->inodeUsageBitmapBlock * blockSize, (void**)&blockUsageBitmap.buffer, blockUsageBitmapSize);
                 blockUsageBitmap.size = blockUsageBitmapSize;
 
                 for (uint32_t blockIndex = 0; blockIndex < blockUsageBitmap.size * 8; ++blockIndex)
@@ -406,7 +406,7 @@ Ext2Inode* Ext2::GetInode(uint32_t inodeNum)
     uint64_t diskAddr = inodeTableDiskAddr + (inodeIndex * superblock->inodeSize);
 
     Ext2Inode* inode = nullptr;
-    disk->Read(diskAddr, &inode, sizeof(Ext2Inode), false);
+    disk->AllocateRead(diskAddr, (void**)&inode, sizeof(Ext2Inode));
 
     return inode;
 }

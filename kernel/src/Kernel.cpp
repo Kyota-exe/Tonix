@@ -55,10 +55,6 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
         }
     }
 
-//    TextRenderer textRenderer(String("/fonts/cherry-13-r.psf"), -4);
-//    textRenderer.Print(String("Hello world"), 0, 0, Colour(255, 255, 255));
-//    while (true) asm("hlt");
-
     //StartSchedulerOnNonBSPCores();
     StartScheduler();
 

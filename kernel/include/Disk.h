@@ -5,7 +5,8 @@
 class Disk
 {
 public:
-    virtual uint64_t Read(uint64_t addr, void* buffer, uint64_t count, bool preAllocated) = 0;
-    virtual uint64_t Write(uint64_t addr, const void* buffer, uint64_t count) = 0;
+    virtual void Read(uint64_t addr, void* buffer, uint64_t count) = 0;
+    virtual void Write(uint64_t addr, const void* buffer, uint64_t count) = 0;
+    virtual void AllocateRead(uint64_t addr, void** bufferPtr, uint64_t count);
     virtual ~Disk() = default;
 };
