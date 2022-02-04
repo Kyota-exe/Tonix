@@ -11,7 +11,7 @@ DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
     fileSystemRoot->fileSystem = this;
     CacheVNode(fileSystemRoot);
 
-    // Create terminal
+    // OpenCreate terminal
     Device* terminal = new Terminal(String("tty"), currentInodeNum++);
     devices.Push(terminal);
 

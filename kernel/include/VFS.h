@@ -16,16 +16,27 @@ enum VnodeType
 
 enum VFSOpenFlag
 {
-    OpenCreate = 0x200,
-    OpenAppend = 0x08,
-    OpenTruncate = 0x1000
+    OpenCreate = 0x10,
+    OpenAppend = 0x8,
+    OpenTruncate = 0x200,
+    OpenExclude = 0x40,
+    OpenWriteOnly = 0x5,
+    OpenReadWrite = 0x3
 };
 
-enum VFSSeekType
+enum class VFSError : int
 {
-    SeekSet = 0,
-    SeekCursor = 1,
-    SeekEnd = 2
+    Exists = 17,
+    IsDirectory = 21,
+    NoFile = 2,
+    NotDirectory = 20
+};
+
+enum class VFSSeekType
+{
+    Set = 0,
+    Cursor = 1,
+    End = 2
 };
 
 struct Vnode
@@ -56,7 +67,7 @@ uint64_t Read(int descriptor, void* buffer, uint64_t count);
 uint64_t Write(int descriptor, const void* buffer, uint64_t count);
 uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType);
 void Close(int descriptor);
-Vnode* CreateDirectory(const String& path);
+int CreateDirectory(const String& path, Vnode** directory);
 
 void CacheVNode(Vnode* vnode);
 Vnode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem);

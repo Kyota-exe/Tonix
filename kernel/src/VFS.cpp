@@ -11,6 +11,13 @@
 Vnode* root;
 Vnode* currentInCache = nullptr;
 
+bool operator&(VFSOpenFlag lhs, VFSOpenFlag rhs) {
+    return (
+            static_cast<uint16_t>(lhs) &
+            static_cast<uint16_t>(rhs)
+    );
+}
+
 void InitializeVFS(void* ext2RamDisk)
 {
     root = new Vnode();
@@ -21,7 +28,8 @@ void InitializeVFS(void* ext2RamDisk)
     ext2FileSystem = new Ext2(new RAMDisk(ext2RamDisk));
     Mount(root, ext2FileSystem->fileSystemRoot);
 
-    Vnode* devMountPoint = CreateDirectory(String("/dev"));
+    Vnode* devMountPoint = nullptr;
+    CreateDirectory(String("/dev"), &devMountPoint);
     FileSystem* deviceFileSystem;
     deviceFileSystem = new DeviceFS(nullptr);
     Mount(devMountPoint, deviceFileSystem->fileSystemRoot);
@@ -33,7 +41,7 @@ void CacheVNode(Vnode* vnode)
     currentInCache = vnode;
 }
 
-Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory)
+Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, FileSystem*& fileSystem, int& error)
 {
     Vnode* currentDirectory = nullptr;
 
@@ -54,16 +62,20 @@ Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory)
         Serial::Print("PATH TOKEN: ", "");
         Serial::Print(fileName);
 
+        // We make a stack of vnodes mounted on this directory so that we can attempt to find the next
+        // file from the most recently mounted vnode.
         do
         {
             mounts.Push(currentDirectory);
 
-            KAssert(currentDirectory->type == VFSDirectory,"Not a directory.", currentDepth);
+            if (currentDirectory->type != VFSDirectory)
+            {
+                error = (int)VFSError::NotDirectory;
+                return nullptr;
+            }
 
             currentDirectory = currentDirectory->mountedVNode;
         } while (currentDirectory != nullptr);
-
-        FileSystem* fileSystem = nullptr;
 
         do
         {
@@ -87,12 +99,8 @@ Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory)
             {
                 Panic("Could not find directory.");
             }
-            Serial::Print("Could not find file: ", "");
-            Serial::Print(fileName);
-
-            currentDirectory = new Vnode();
-            currentDirectory->fileSystem = fileSystem;
-            return currentDirectory;
+            error = (int)VFSError::NoFile;
+            return nullptr;
         }
     }
 
@@ -136,7 +144,6 @@ int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor)
     {
         if (!fileDescriptors->Get(i).present)
         {
-            fileDescriptors->Get(i).present = true;
             descriptorIndex = i;
         }
     }
@@ -144,7 +151,7 @@ int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor)
     if (descriptorIndex == -1)
     {
         descriptorIndex = (int)fileDescriptors->GetLength();
-        fileDescriptors->Push({true, 0, nullptr});
+        fileDescriptors->Push({false, 0, nullptr});
     }
 
     fileDescriptor = &fileDescriptors->Get(descriptorIndex);
@@ -159,23 +166,38 @@ int Open(const String& path, int flags)
 
     String filename;
     Vnode* containingDirectory = nullptr;
-    Vnode* vnode = TraversePath(path, filename, containingDirectory);
-    fileDescriptor->vnode = vnode;
+    FileSystem* fileSystem = nullptr;
+    int error = 0;
+    Vnode* vnode = TraversePath(path, filename, containingDirectory, fileSystem, error);
 
-    if (vnode->inodeNum == 0)
+    if (error != 0 && error != (int)VFSError::NoFile)
     {
-        if (flags & VFSOpenFlag::OpenCreate)
+        return error;
+    }
+
+    if (flags & VFSOpenFlag::OpenCreate)
+    {
+        if (vnode == nullptr)
         {
+            vnode = new Vnode();
             vnode->type = VFSRegularFile;
-            vnode->fileSystem->Create(vnode, containingDirectory, filename);
+            vnode->fileSystem = fileSystem;
+            fileSystem->Create(vnode, containingDirectory, filename);
+            error = 0;
         }
-        else
+        else if (flags & VFSOpenFlag::OpenExclude)
         {
-            Panic("Could not find file.");
+            return (int)VFSError::Exists;
         }
     }
 
-    if ((flags & VFSOpenFlag::OpenTruncate) && vnode->type == VnodeType::VFSRegularFile)
+    if (vnode == nullptr)
+    {
+        KAssert(error == (int)VFSError::NoFile, "Invalid error code returned from traversing.");
+        return error;
+    }
+
+    if ((flags & VFSOpenFlag::OpenTruncate) && vnode->type == VFSRegularFile)
     {
         vnode->fileSystem->Truncate(vnode);
     }
@@ -185,6 +207,13 @@ int Open(const String& path, int flags)
         fileDescriptor->offset = vnode->fileSize;
     }
 
+    if (((flags & VFSOpenFlag::OpenWriteOnly) || (flags & VFSOpenFlag::OpenReadWrite)) && vnode->type == VFSDirectory)
+    {
+        return (int)VFSError::IsDirectory;
+    }
+
+    fileDescriptor->vnode = vnode;
+    fileDescriptor->present = true;
     return descriptorIndex;
 }
 
@@ -218,13 +247,13 @@ uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType)
 
     switch (seekType)
     {
-        case SeekSet:
+        case VFSSeekType::Set:
             fileDescriptor->offset = offset;
             break;
-        case SeekCursor:
+        case VFSSeekType::Cursor:
             fileDescriptor->offset += offset;
             break;
-        case SeekEnd:
+        case VFSSeekType::End:
             fileDescriptor->offset = vnode->fileSize + offset;
             break;
     }
@@ -249,16 +278,27 @@ void Close(int descriptor)
     fileDescriptor->offset = 0;
 }
 
-Vnode* CreateDirectory(const String& path)
+int CreateDirectory(const String& path, Vnode** directory)
 {
     String directoryName;
     Vnode* containingDirectory = nullptr;
-    Vnode* vnode = TraversePath(path, directoryName, containingDirectory);
+    FileSystem* fileSystem = nullptr;
+    int error = 0;
+    Vnode* vnode = TraversePath(path, directoryName, containingDirectory, fileSystem, error);
 
-    KAssert(vnode->inodeNum == 0, "Directory already exists.");
+    if (error != 0 && error != (int)VFSError::NoFile)
+    {
+        return error;
+    }
 
+    KAssert(vnode == nullptr, "Directory already exists.");
+
+    vnode = new Vnode();
     vnode->type = VFSDirectory;
-    vnode->fileSystem->Create(vnode, containingDirectory, directoryName);
+    vnode->fileSystem = fileSystem;
+    fileSystem->Create(vnode, containingDirectory, directoryName);
 
-    return vnode;
+    if (directory != nullptr) *directory = vnode;
+
+    return 0;
 }

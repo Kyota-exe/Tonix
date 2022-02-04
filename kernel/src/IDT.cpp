@@ -123,7 +123,9 @@ void SystemCall(InterruptFrame* interruptFrame)
     {
         case 0:
         {
-            CreateDirectory(String("/subdirectory-bravo/sauce"));
+            int e = CreateDirectory(String("/subdirectory-bravo/sauce"), nullptr);
+            KAssert(e == 0, "Error.");
+
             int desc0 = Open(String("/subdirectory-bravo/sauce/mock.txt"), VFSOpenFlag::OpenCreate);
 
             String newFileContents = String("mock.txt contents are here!");
