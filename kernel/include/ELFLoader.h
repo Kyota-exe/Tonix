@@ -2,4 +2,8 @@
 
 #include <stdint.h>
 
-uint64_t LoadELF(uint64_t ramDiskBegin, PagingManager* pagingManager);
+class ELFLoader
+{
+public:
+    static uint64_t LoadELF(uint64_t ramDiskBegin, PagingManager* pagingManager);
+};

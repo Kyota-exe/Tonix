@@ -1,7 +1,10 @@
 #pragma once
 
+struct Vnode;
+
 #include "String.h"
 #include "Vector.h"
+#include "FileSystem.h"
 
 enum VnodeType
 {
@@ -25,8 +28,6 @@ enum VFSSeekType
     SeekEnd = 2
 };
 
-class FileSystem;
-
 struct Vnode
 {
     VnodeType type;
@@ -48,6 +49,7 @@ struct FileDescriptor
 };
 
 void InitializeVFS(void* ext2RamDisk);
+void Mount(Vnode* mountPoint, Vnode* vnode);
 
 int Open(const String& path, int flags);
 uint64_t Read(int descriptor, void* buffer, uint64_t count);

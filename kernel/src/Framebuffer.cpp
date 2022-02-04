@@ -4,7 +4,12 @@
 #include "Panic.h"
 #include "Memory/Memory.h"
 
-Framebuffer* Framebuffer::instance = nullptr;
+uint32_t* Framebuffer::virtAddr = nullptr;
+uint16_t Framebuffer::width = 0;
+uint16_t Framebuffer::height = 0;
+uint8_t Framebuffer::redShift = 0;
+uint8_t Framebuffer::blueShift = 0;
+uint8_t Framebuffer::greenShift = 0;
 
 void Framebuffer::Initialize()
 {
@@ -17,15 +22,14 @@ void Framebuffer::Initialize()
     Serial::Printf("Framebuffer height: %d", framebufferStruct->framebuffer_height);
     Serial::Printf("Framebuffer pitch: %d", framebufferStruct->framebuffer_pitch);
 
-    instance = new Framebuffer();
-    instance->virtAddr = (uint32_t*)framebufferStruct->framebuffer_addr;
-    instance->width = framebufferStruct->framebuffer_width;
-    instance->height = framebufferStruct->framebuffer_height;
-    instance->redShift = framebufferStruct->red_mask_shift;
-    instance->greenShift = framebufferStruct->green_mask_shift;
-    instance->blueShift = framebufferStruct->blue_mask_shift;
+    virtAddr = (uint32_t*)framebufferStruct->framebuffer_addr;
+    width = framebufferStruct->framebuffer_width;
+    height = framebufferStruct->framebuffer_height;
+    redShift = framebufferStruct->red_mask_shift;
+    greenShift = framebufferStruct->green_mask_shift;
+    blueShift = framebufferStruct->blue_mask_shift;
 
-    Memset(instance->virtAddr, 0, instance->width * instance->height * sizeof(uint32_t));
+    Memset(virtAddr, 0, width * height * sizeof(uint32_t));
 }
 
 void Framebuffer::PlotPixel(unsigned int x, unsigned int y, Colour colour)

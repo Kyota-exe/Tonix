@@ -2,18 +2,17 @@
 #include "SMP.h"
 #include "Serial.h"
 #include "Stivale2Interface.h"
-#include "APIC.h"
 #include "IDT.h"
 #include "GDT.h"
-#include "TSS.h"
 #include "KernelUtilities.h"
 
 static void InitializeCore(stivale2_smp_info* smpInfoPtr)
 {
-    LoadGDT();
-    LoadIDT();
+    // This is really incomplete.
+
     kernelPagingManager.SetCR3();
-    InitializeTSS();
+    GDT::LoadGDTR();
+    GDT::LoadTSS();
 
     // The address of the smpInfoPtr stivale2 passes us is physical, so we convert it to virtual here so that we can access it.
     smpInfoPtr = (stivale2_smp_info*)((uint64_t)smpInfoPtr + 0xffff'8000'0000'0000);
@@ -34,7 +33,6 @@ void StartSchedulerOnNonBSPCores()
         for (uint64_t coreIndex = 0; coreIndex < smpStruct->cpu_count; ++coreIndex)
         {
             stivale2_smp_info* smpInfo = &smpStruct->smp_info[coreIndex];
-            if (coreIndex == 2) Serial::Printf("INFO addr: %x", (uint64_t)smpInfo);
             if (smpInfo->lapic_id == smpStruct->bsp_lapic_id) continue;
             smpInfo->target_stack = (uint64_t)RequestPageFrame() + 0xffff'8000'0000'0000;
             smpInfo->goto_address = reinterpret_cast<uint64_t>(InitializeCore);

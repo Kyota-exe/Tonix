@@ -104,13 +104,12 @@ struct Ext2Inode
 class Ext2 : public FileSystem
 {
 public:
-    void Mount(Vnode* mountPoint) override;
     uint64_t Read(Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos) override;
     uint64_t Write(Vnode* vnode, const void* buffer, uint64_t count, uint64_t writePos) override;
     Vnode* FindInDirectory(Vnode* directory, const String& name) override;
     void Create(Vnode* vnode, Vnode* directory, const String& name) override;
     void Truncate(Vnode* vnode) override;
-    explicit Ext2(void* _ramDiskAddr);
+    explicit Ext2(Disk* disk);
 
 private:
     enum Ext2DirectoryEntryType : uint8_t
@@ -128,8 +127,7 @@ private:
     uint32_t GetBlockAddr(Vnode* vnode, uint32_t requestedBlockIndex, bool allocateMissingBlock);
     Ext2Inode* GetInode(uint32_t inodeNum);
     void WriteDirectoryEntry(Vnode* directory, uint32_t inodeNum, const String& name, Ext2DirectoryEntryType type);
-
-    uint64_t ramDiskVirtAddr;
+    Vnode* CacheDirectoryEntry(Ext2DirectoryEntry* directoryEntry);
 
     uint32_t blockGroupsCount;
     uint64_t blockSize;

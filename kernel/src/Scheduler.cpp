@@ -2,7 +2,7 @@
 #include "Memory/PagingManager.h"
 #include "Memory/PageFrameAllocator.h"
 #include "ELFLoader.h"
-#include "APIC.h"
+#include "LAPIC.h"
 #include "Serial.h"
 
 const uint64_t QUANTUM_IN_TICKS = 1;
@@ -28,11 +28,11 @@ void InitializeTaskList()
 
 void StartScheduler()
 {
-    ActivateLAPIC();
-    CalibrateLAPICTimer();
-    SetLAPICTimerMask(false);
-    SetLAPICTimerMode(1);
-    SetLAPICTimerFrequency(TIMER_FREQUENCY);
+    LAPIC::Activate();
+    LAPIC::CalibrateTimer();
+    LAPIC::SetTimerMask(false);
+    LAPIC::SetTimerMode(1);
+    LAPIC::SetTimerFrequency(TIMER_FREQUENCY);
     asm volatile("sti");
 }
 
@@ -60,7 +60,7 @@ void CreateProcess(uint64_t ramDiskBegin, char rdi)
     auto pagingManager = new PagingManager();
     pagingManager->InitializePaging();
 
-    uint64_t entry = LoadELF(ramDiskBegin, pagingManager);
+    uint64_t entry = ELFLoader::LoadELF(ramDiskBegin, pagingManager);
 
     Process process;
     process.frame.rip = entry;

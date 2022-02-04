@@ -1,10 +1,10 @@
 #include "Ext2.h"
 #include <stdint.h>
-#include "Memory/Memory.h"
 #include "Serial.h"
 #include "Panic.h"
 #include "Bitmap.h"
 #include "String.h"
+#include "RAMDisk.h"
 
 enum Ext2InodeTypePermissions : uint16_t
 {
@@ -35,24 +35,22 @@ enum Ext2InodeTypePermissions : uint16_t
     StickyBit = 0x200
 };
 
-const uint32_t INODE_ROOT_DIR = 2;
-const uint16_t DEFAULT_FILE_TYPE_PERMISSIONS = RegularFile | UserRead | UserWrite | GroupRead | OtherRead;
-const uint16_t DEFAULT_DIRECTORY_TYPE_PERMISSIONS = Directory | UserRead | UserWrite | GroupRead | OtherRead;
+constexpr uint16_t EXT2_SIGNATURE = 0xef53;
+constexpr uint64_t EXT2_SUPERBLOCK_DISK_ADDR = 1024;
 
-Ext2::Ext2(void *_ramDiskAddr) : ramDiskVirtAddr((uint64_t)_ramDiskAddr) { }
+constexpr uint32_t INODE_ROOT_DIR = 2;
+constexpr uint16_t DEFAULT_FILE_TYPE_PERMISSIONS = RegularFile | UserRead | UserWrite | GroupRead | OtherRead;
+constexpr uint16_t DEFAULT_DIRECTORY_TYPE_PERMISSIONS = Directory | UserRead | UserWrite | GroupRead | OtherRead;
 
-void Ext2::Mount(Vnode* mountPoint)
+Ext2::Ext2(Disk* disk) : FileSystem(disk)
 {
-    KAssert(mountPoint->type == VFSDirectory, "Mount point must be a directory.");
+    Serial::Print("Initializing Ext2 file system...");
 
-    Serial::Print("Initializing Ext2Driver file system...");
+    disk->Read(EXT2_SUPERBLOCK_DISK_ADDR, &superblock, sizeof(Ext2Superblock), false);
 
-    superblock = (Ext2Superblock*)(ramDiskVirtAddr + 1024);
-
-    KAssert(superblock->ext2Signature == 0xef53, "Invalid ext2 signature!");
+    KAssert(superblock->ext2Signature == EXT2_SIGNATURE, "Invalid ext2 signature!");
     KAssert(superblock->fileSystemState == 1, "File system state is not clean.");
 
-    // Parse from superblock
     blockSize = 1024 << superblock->blockSizeLog2Minus10;
 
     Serial::Printf("Inodes count: %d", superblock->inodesCount);
@@ -68,11 +66,11 @@ void Ext2::Mount(Vnode* mountPoint)
     Serial::Print("Volume name: ", "");
     Serial::Print(superblock->volumeName);
 
-    blockGroupsCount = superblock->blocksCount / superblock->blocksPerBlockGroup +
-                       (superblock->blocksCount % superblock->blocksPerBlockGroup > 0 ? 1 : 0);
+    blockGroupsCount = superblock->blocksCount / superblock->blocksPerBlockGroup;
+    if (superblock->blocksCount % superblock->blocksPerBlockGroup != 0) blockGroupsCount += 1;
 
-    uint32_t blockGroupsCountCheck = superblock->inodesCount / superblock->inodesPerBlockGroup +
-                                     (superblock->inodesCount % superblock->inodesPerBlockGroup > 0 ? 1 : 0);
+    uint32_t blockGroupsCountCheck = superblock->inodesCount / superblock->inodesPerBlockGroup;
+    if (superblock->inodesCount % superblock->inodesPerBlockGroup > 0) blockGroupsCountCheck += 1;
 
     KAssert(blockGroupsCount == blockGroupsCountCheck, "Block group count could not be calculated.");
 
@@ -88,19 +86,45 @@ void Ext2::Mount(Vnode* mountPoint)
     Serial::Printf("Number of blocks to preallocate for directories: %d", superblock->preallocDirectoriesBlocksCount);
 
     uint32_t blockGroupDescTableDiskAddr = blockSize * (blockSize == 1024 ? 2 : 1);
-    blockGroupDescTable = (Ext2BlockGroupDescriptor*)(ramDiskVirtAddr + blockGroupDescTableDiskAddr);
+    disk->Read(blockGroupDescTableDiskAddr, &blockGroupDescTable, sizeof(Ext2BlockGroupDescriptor) * blockGroupsCount, false);
 
-    auto ext2Root = new Vnode();
-    ext2Root->type = VFSDirectory;
-    ext2Root->inodeNum = INODE_ROOT_DIR;
-    ext2Root->fileSystem = this;
+    fileSystemRoot = new Vnode();
+    fileSystemRoot->type = VFSDirectory;
+    fileSystemRoot->inodeNum = INODE_ROOT_DIR;
+    fileSystemRoot->fileSystem = this;
 
     Ext2Inode* rootInode = GetInode(INODE_ROOT_DIR);
-    ext2Root->context = rootInode;
-    ext2Root->fileSize = rootInode->size0;
+    fileSystemRoot->context = rootInode;
+    fileSystemRoot->fileSize = rootInode->size0;
 
-    mountPoint->mountedVNode = ext2Root;
-    CacheVNode(ext2Root);
+    CacheVNode(fileSystemRoot);
+}
+
+Vnode* Ext2::CacheDirectoryEntry(Ext2DirectoryEntry* directoryEntry)
+{
+    auto vnode = new Vnode();
+    vnode->inodeNum = directoryEntry->inodeNum;
+    vnode->fileSystem = this;
+
+    Ext2Inode* childInode = GetInode(vnode->inodeNum);
+    vnode->context = childInode;
+    vnode->fileSize = childInode->size0;
+
+    switch (directoryEntry->typeIndicator)
+    {
+        case DEntryRegularFile:
+            vnode->type = VFSRegularFile;
+            break;
+        case DEntryDirectory:
+            vnode->type = VFSDirectory;
+            break;
+        default:
+            vnode->type = VFSUnknown;
+    }
+
+    CacheVNode(vnode);
+
+    return vnode;
 }
 
 Vnode* Ext2::FindInDirectory(Vnode* directory, const String& name)
@@ -120,27 +144,7 @@ Vnode* Ext2::FindInDirectory(Vnode* directory, const String& name)
             // SearchInCache returns nullptr if it could not find vnode in cache
             if (child == nullptr)
             {
-                child = new Vnode();
-                child->inodeNum = directoryEntry.inodeNum;
-                child->fileSystem = this;
-
-                Ext2Inode* childInode = GetInode(child->inodeNum);
-                child->context = childInode;
-                child->fileSize = childInode->size0;
-
-                switch (directoryEntry.typeIndicator)
-                {
-                    case DEntryRegularFile:
-                        child->type = VFSRegularFile;
-                        break;
-                    case DEntryDirectory:
-                        child->type = VFSDirectory;
-                        break;
-                    default:
-                        child->type = VFSUnknown;
-                }
-
-                CacheVNode(child);
+                child = CacheDirectoryEntry(&directoryEntry);
             }
 
             char nameBuffer[directoryEntry.nameLength];
@@ -177,17 +181,16 @@ uint64_t Ext2::Read(Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos
     {
         uint64_t remainingBytes = count - parsedCount;
         uint64_t offsetInBlock = currentReadPos % blockSize;
-        uint64_t memCopySize = blockSize - offsetInBlock;
-        if (memCopySize > remainingBytes) memCopySize = remainingBytes;
+        uint64_t readSize = blockSize - offsetInBlock;
+        if (readSize > remainingBytes) readSize = remainingBytes;
 
         uint64_t block = GetBlockAddr(vnode, currentReadPos / blockSize, false);
         uint64_t diskAddr = block * blockSize + offsetInBlock;
 
-        // TODO: Read from disk if file system is disk-backed
-        MemCopy((void*)((uint64_t)buffer + parsedCount), (void*)(diskAddr + ramDiskVirtAddr), memCopySize);
+        disk->Read(diskAddr, (void*)((uint64_t)buffer + parsedCount), readSize, true);
 
-        parsedCount += memCopySize;
-        currentReadPos += memCopySize;
+        parsedCount += readSize;
+        currentReadPos += readSize;
     }
 
     return parsedCount;
@@ -202,17 +205,16 @@ uint64_t Ext2::Write(Vnode* vnode, const void* buffer, uint64_t count, uint64_t 
     {
         uint64_t remainingBytes = count - wroteCount;
         uint64_t offsetInBlock = currentWritePos % blockSize;
-        uint64_t memCopySize = blockSize - offsetInBlock;
-        if (memCopySize > remainingBytes) memCopySize = remainingBytes;
+        uint64_t writeSize = blockSize - offsetInBlock;
+        if (writeSize > remainingBytes) writeSize = remainingBytes;
 
         uint64_t block = GetBlockAddr(vnode, currentWritePos / blockSize, true);
         uint64_t diskAddr = block * blockSize + offsetInBlock;
 
-        // TODO: Write to disk if file system is disk-backed
-        MemCopy((void*)(diskAddr + ramDiskVirtAddr), (void*)((uint64_t)buffer + wroteCount), memCopySize);
+        disk->Write(diskAddr, (const void*)((uint64_t)buffer + wroteCount), writeSize);
 
-        wroteCount += memCopySize;
-        currentWritePos += memCopySize;
+        wroteCount += writeSize;
+        currentWritePos += writeSize;
 
         if (vnode->fileSize < currentWritePos)
         {
@@ -246,7 +248,7 @@ void Ext2::Create(Vnode* vnode, Vnode* directory, const String& name)
             if (blockGroup->unallocatedInodesCount % 8 != 0) inodeUsageBitmapSize++;
 
             Bitmap inodeUsageBitmap;
-            inodeUsageBitmap.buffer = (uint8_t*)(blockGroup->inodeUsageBitmapBlock * blockSize + ramDiskVirtAddr);
+            disk->Read(blockGroup->inodeUsageBitmapBlock * blockSize, &inodeUsageBitmap.buffer, inodeUsageBitmapSize, false);
             inodeUsageBitmap.size = inodeUsageBitmapSize;
 
             for (uint32_t inodeIndex = 0; inodeIndex < inodeUsageBitmap.size * 8; ++inodeIndex)
@@ -372,7 +374,7 @@ uint32_t Ext2::GetBlockAddr(Vnode* vnode, uint32_t requestedBlockIndex, bool all
                 if (blockGroup->unallocatedBlocksCount % 8 != 0) blockUsageBitmapSize++;
 
                 Bitmap blockUsageBitmap;
-                blockUsageBitmap.buffer = (uint8_t*)(blockGroup->blockUsageBitmapBlock * blockSize + ramDiskVirtAddr);
+                disk->Read(blockGroup->inodeUsageBitmapBlock * blockSize, &blockUsageBitmap.buffer, blockUsageBitmapSize, false);
                 blockUsageBitmap.size = blockUsageBitmapSize;
 
                 for (uint32_t blockIndex = 0; blockIndex < blockUsageBitmap.size * 8; ++blockIndex)
@@ -403,6 +405,8 @@ Ext2Inode* Ext2::GetInode(uint32_t inodeNum)
     uint64_t inodeTableDiskAddr = blockGroupDescTable[blockGroupIndex].inodeTableStartBlock * blockSize;
     uint64_t diskAddr = inodeTableDiskAddr + (inodeIndex * superblock->inodeSize);
 
-    // TODO: Read from disk if the inode is not already cached
-    return (Ext2Inode*)(diskAddr + ramDiskVirtAddr);
+    Ext2Inode* inode = nullptr;
+    disk->Read(diskAddr, &inode, sizeof(Ext2Inode), false);
+
+    return inode;
 }

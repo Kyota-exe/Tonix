@@ -7,7 +7,6 @@
 #include "Serial.h"
 #include "Heap.h"
 #include "GDT.h"
-#include "TSS.h"
 #include "Scheduler.h"
 #include "Device.h"
 #include "Framebuffer.h"
@@ -21,15 +20,18 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
 
     Serial::Print("Kernel ELF successfully loaded");
 
-    InitializeGDT();
-    LoadGDT();
-    InitializeIDT();
-    LoadIDT();
     InitializePageFrameAllocator();
     kernelPagingManager.InitializePaging();
     kernelPagingManager.SetCR3();
     InitializeKernelHeap();
-    InitializeTSS();
+
+    GDT::Initialize();
+    GDT::InitializeTSS();
+    GDT::LoadGDTR();
+    GDT::LoadTSS();
+    InitializeIDT();
+    LoadIDT();
+
     InitializePIC();
     ActivatePICKeyboardInterrupts();
     InitializeTaskList();
@@ -61,4 +63,9 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     StartScheduler();
 
     while (true) asm("hlt");
+}
+
+extern "C" __attribute__((unused)) void __cxa_pure_virtual()
+{
+    Panic("__cxa_pure_virtual called");
 }

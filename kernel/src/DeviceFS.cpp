@@ -3,15 +3,13 @@
 #include "Terminal.h"
 #include "Serial.h"
 
-void DeviceFS::Mount(Vnode* mountPoint)
+DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
 {
-    devRoot = new Vnode();
-    devRoot->inodeNum = currentInodeNum++;
-    devRoot->type = VFSDirectory;
-    devRoot->fileSystem = this;
-
-    mountPoint->mountedVNode = devRoot;
-    CacheVNode(devRoot);
+    fileSystemRoot = new Vnode();
+    fileSystemRoot->inodeNum = currentInodeNum++;
+    fileSystemRoot->type = VFSDirectory;
+    fileSystemRoot->fileSystem = this;
+    CacheVNode(fileSystemRoot);
 
     // Create terminal
     Device* terminal = new Terminal(String("tty"), currentInodeNum++);
@@ -44,14 +42,14 @@ uint64_t DeviceFS::Write(Vnode* vnode, const void* buffer, uint64_t count, uint6
 
 Vnode* DeviceFS::FindInDirectory(Vnode* directory, const String& name)
 {
-    KAssert(directory == devRoot, "[/dev] Directory is not /dev.");
+    KAssert(directory == fileSystemRoot, "[/dev] Directory is not /dev.");
 
     for (Device* device : devices)
     {
         Serial::Print("[/dev]------------- Found: ", "");
-        Serial::Print(device->name->ToCString());
+        Serial::Print(device->name.ToCString());
 
-        if (device->name->Equals(name))
+        if (device->name.Equals(name))
         {
             Vnode* file = SearchInCache(device->inodeNum, this);
 

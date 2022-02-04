@@ -6,6 +6,7 @@
 #include "Vector.h"
 #include "Serial.h"
 #include "Scheduler.h"
+#include "RAMDisk.h"
 
 Vnode* root;
 Vnode* currentInCache = nullptr;
@@ -17,13 +18,13 @@ void InitializeVFS(void* ext2RamDisk)
     currentInCache = root;
 
     FileSystem* ext2FileSystem;
-    ext2FileSystem = new Ext2(ext2RamDisk);
-    ext2FileSystem->Mount(root);
+    ext2FileSystem = new Ext2(new RAMDisk(ext2RamDisk));
+    Mount(root, ext2FileSystem->fileSystemRoot);
 
     Vnode* devMountPoint = CreateDirectory(String("/dev"));
     FileSystem* deviceFileSystem;
-    deviceFileSystem = new DeviceFS();
-    deviceFileSystem->Mount(devMountPoint);
+    deviceFileSystem = new DeviceFS(nullptr);
+    Mount(devMountPoint, deviceFileSystem->fileSystemRoot);
 }
 
 void CacheVNode(Vnode* vnode)
@@ -116,12 +117,21 @@ Vnode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem)
     return nullptr;
 }
 
-int Open(const String& path, int flags)
+void Mount(Vnode* mountPoint, Vnode* vnode)
+{
+    Vnode* currentMountPoint = mountPoint;
+    while (currentMountPoint->mountedVNode != nullptr)
+    {
+        currentMountPoint = currentMountPoint->mountedVNode;
+    }
+    currentMountPoint->mountedVNode = vnode;
+}
+
+int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor)
 {
     Vector<FileDescriptor>* fileDescriptors = &(*taskList)[currentTaskIndex].fileDescriptors;
-
-    // Find descriptor int
     int descriptorIndex = -1;
+
     for (int i = 0; (uint64_t)i < fileDescriptors->GetLength(); ++i)
     {
         if (!fileDescriptors->Get(i).present)
@@ -130,13 +140,22 @@ int Open(const String& path, int flags)
             descriptorIndex = i;
         }
     }
+
     if (descriptorIndex == -1)
     {
         descriptorIndex = (int)fileDescriptors->GetLength();
         fileDescriptors->Push({true, 0, nullptr});
     }
 
-    FileDescriptor* fileDescriptor = &fileDescriptors->Get(descriptorIndex);
+    fileDescriptor = &fileDescriptors->Get(descriptorIndex);
+
+    return descriptorIndex;
+}
+
+int Open(const String& path, int flags)
+{
+    FileDescriptor* fileDescriptor = nullptr;
+    int descriptorIndex = FindFreeFileDescriptor(fileDescriptor);
 
     String filename;
     Vnode* containingDirectory = nullptr;

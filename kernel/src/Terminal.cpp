@@ -18,12 +18,11 @@ uint64_t Terminal::Write(const void* buffer, uint64_t count)
 }
 
 Terminal::Terminal(const String& name, uint32_t inodeNum) :
-    Device(new String(name), inodeNum),
+    Device(name, inodeNum),
     textRenderer(new TextRenderer(String(FONT_PATH), TEXT_CHARACTER_SPACING)),
     textColour(Colour(255, 255, 255)) { }
 
 Terminal::~Terminal()
 {
-    delete name;
     delete textRenderer;
 }

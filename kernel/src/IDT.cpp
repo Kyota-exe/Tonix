@@ -1,6 +1,6 @@
 #include "IDT.h"
 #include <stdint.h>
-#include "APIC.h"
+#include "LAPIC.h"
 #include "PIC.h"
 #include "Serial.h"
 #include "Scheduler.h"
@@ -78,7 +78,7 @@ extern "C" void ISRWrapper45();
 extern "C" void ISRWrapper46();
 extern "C" void ISRWrapper47();
 
-// Local APIC IRQs
+// Local LAPIC IRQs
 extern "C" void ISRWrapper48();
 extern "C" void ISRWrapper255();
 
@@ -110,7 +110,7 @@ void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
     *interruptFrame = nextTask.frame;
     nextTask.pagingManager->SetCR3();
 
-    LAPICSendEOI();
+    LAPIC::SendEOI();
 }
 
 void SystemCall(InterruptFrame* interruptFrame)
@@ -242,7 +242,7 @@ void InitializeInterruptHandlers()
     idt.SetInterruptHandler(46, reinterpret_cast<uint64_t>(ISRWrapper46));
     idt.SetInterruptHandler(47, reinterpret_cast<uint64_t>(ISRWrapper47));
 
-    // Local APIC IRQs
+    // Local LAPIC IRQs
     idt.SetInterruptHandler(48, reinterpret_cast<uint64_t>(ISRWrapper48));
     idt.SetInterruptHandler(255, reinterpret_cast<uint64_t>(ISRWrapper255));
 

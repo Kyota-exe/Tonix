@@ -19,7 +19,7 @@ void TextRenderer::Print(char c, unsigned int x, unsigned int y, Colour colour)
             {
                 unsigned int screenX = x + glyphX;
                 unsigned int screenY = y + glyphY;
-                Framebuffer::instance->PlotPixel(screenX, screenY, colour);
+                Framebuffer::PlotPixel(screenX, screenY, colour);
             }
         }
     }

@@ -4,8 +4,6 @@
 #include "ELFLoader.h"
 #include "Serial.h"
 
-const uint32_t PT_LOAD = 1;
-
 struct ELFHeader
 {
     uint8_t eIdentMagic[4];
@@ -22,7 +20,7 @@ struct ELFHeader
     uint64_t programHeaderTableOffset;
     uint64_t sectionHeaderTableOffset;
     uint32_t flags;
-    uint16_t headerSize; // Normally 64B for 64-bit and 52B for 32-bit
+    uint16_t headerSize; // Normally 64 bytes for 64-bit and 52 bytes for 32-bit
     uint16_t programHeaderTableEntrySize;
     uint16_t programHeaderTableEntryCount;
     uint16_t sectionHeaderTableEntrySize;
@@ -40,11 +38,11 @@ struct ProgramHeader
     uint64_t segmentSizeInFile;
     uint64_t segmentSizeInMemory;
     uint64_t align;
-};
+} __attribute__((packed));
 
-extern "C" void SwitchToRing3(uint64_t entry, uint64_t stackBase, char in, uint64_t printAddr);
+constexpr uint32_t PT_LOAD = 1;
 
-uint64_t LoadELF(uint64_t ramDiskBegin, PagingManager* pagingManager)
+uint64_t ELFLoader::LoadELF(uint64_t ramDiskBegin, PagingManager* pagingManager)
 {
     // TODO: read from disk
     auto elfHeader = (ELFHeader*)ramDiskBegin;

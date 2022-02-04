@@ -7,9 +7,9 @@ class Device
 public:
     virtual uint64_t Read(void* buffer, uint64_t count) = 0;
     virtual uint64_t Write(const void* buffer, uint64_t count) = 0;
-    Device(String* _name, uint32_t _inodeNum) : name(_name), inodeNum(_inodeNum) { }
+    Device(const String& name, uint32_t inodeNum);
 
 public:
-    String* name;
+    String name;
     uint32_t inodeNum;
 };
