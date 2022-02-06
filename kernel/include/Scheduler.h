@@ -46,4 +46,4 @@ extern uint64_t currentTaskIndex;
 void InitializeTaskList();
 void StartScheduler();
 Process GetNextTask(InterruptFrame currentTaskFrame);
-void CreateProcess(uint64_t ramDiskBegin, char rdi = 'A');
+void CreateProcess(const String& path);

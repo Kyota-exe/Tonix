@@ -5,3 +5,7 @@
 
 .idea/
 ext2-ramdisk-image.ext2
+
+sysroot/
+3rdparty/
+

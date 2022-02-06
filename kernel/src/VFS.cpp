@@ -11,13 +11,6 @@
 Vnode* root;
 Vnode* currentInCache = nullptr;
 
-bool operator&(VFSOpenFlag lhs, VFSOpenFlag rhs) {
-    return (
-            static_cast<uint16_t>(lhs) &
-            static_cast<uint16_t>(rhs)
-    );
-}
-
 void InitializeVFS(void* ext2RamDisk)
 {
     root = new Vnode();
@@ -172,7 +165,7 @@ int Open(const String& path, int flags)
 
     if (error != 0 && error != (int)VFSError::NoFile)
     {
-        return error;
+        return -error;
     }
 
     if (flags & VFSOpenFlag::OpenCreate)
@@ -194,7 +187,7 @@ int Open(const String& path, int flags)
     if (vnode == nullptr)
     {
         KAssert(error == (int)VFSError::NoFile, "Invalid error code returned from traversing.");
-        return error;
+        return -error;
     }
 
     if ((flags & VFSOpenFlag::OpenTruncate) && vnode->type == VFSRegularFile)

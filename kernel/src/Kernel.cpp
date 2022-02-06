@@ -10,7 +10,6 @@
 #include "Scheduler.h"
 #include "Device.h"
 #include "Framebuffer.h"
-#include "TextRenderer.h"
 
 PagingManager kernelPagingManager;
 
@@ -29,8 +28,8 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     GDT::InitializeTSS();
     GDT::LoadGDTR();
     GDT::LoadTSS();
-    InitializeIDT();
-    LoadIDT();
+    IDT::Initialize();
+    IDT::Load();
 
     InitializePIC();
     ActivatePICKeyboardInterrupts();
@@ -47,15 +46,9 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
         {
             InitializeVFS((void*)module.begin);
         }
-        else if (String(module.string).Equals("boot:///proc.elf"))
-        {
-            CreateProcess(module.begin, 'O');
-            //CreateProcess(module.begin, 'X');
-            //CreateProcess(module.begin, 'I');
-        }
     }
 
-    //StartSchedulerOnNonBSPCores();
+    CreateProcess(String("/programs/test.elf"));
     StartScheduler();
 
     while (true) asm("hlt");

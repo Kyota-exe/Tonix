@@ -2,7 +2,8 @@
 #include "Memory/PageFrameAllocator.h"
 #include "Memory/PagingManager.h"
 #include "ELFLoader.h"
-#include "Serial.h"
+#include "Panic.h"
+#include "VFS.h"
 
 struct ELFHeader
 {
@@ -42,43 +43,44 @@ struct ProgramHeader
 
 constexpr uint32_t PT_LOAD = 1;
 
-uint64_t ELFLoader::LoadELF(uint64_t ramDiskBegin, PagingManager* pagingManager)
+uint64_t ELFLoader::LoadELF(int elfFile, PagingManager* pagingManager)
 {
-    // TODO: read from disk
-    auto elfHeader = (ELFHeader*)ramDiskBegin;
+    auto elfHeader = new ELFHeader;
+    uint64_t elfHeaderSize = Read(elfFile, elfHeader, sizeof(ELFHeader));
+    KAssert(elfHeaderSize == sizeof(ELFHeader), "Invalid ELF file: failed to read header.");
 
-    if (elfHeader->eIdentMagic[0] != 0x7f || elfHeader->eIdentMagic[1] != 0x45 || elfHeader->eIdentMagic[2] != 0x4c || elfHeader->eIdentMagic[3] != 0x46)
-    {
-        Serial::Print("Magic bytes do not match.");
-        Serial::Print("Hanging...");
-        while (true) asm("hlt");
-    }
+    KAssert(elfHeader->eIdentMagic[0] == 0x7f &&
+            elfHeader->eIdentMagic[1] == 0x45 &&
+            elfHeader->eIdentMagic[2] == 0x4c &&
+            elfHeader->eIdentMagic[3] == 0x46,
+            "Invalid ELF file: magic bytes mismatch.");
 
-    if (elfHeader->programHeaderTableEntrySize != sizeof(ProgramHeader))
-    {
-        Serial::Printf("Program header table entry size from the ELF header field (%x)", elfHeader->programHeaderTableEntrySize, "");
-        Serial::Printf(" does not match with the hardcoded program header table entry size (%x).", sizeof(ProgramHeader));
-    }
+    KAssert(elfHeader->programHeaderTableEntrySize == sizeof(ProgramHeader), "Invalid ELF file: invalid header.");
 
-    // TODO: read from disk
-    auto programHeaderTable = (ProgramHeader*)(ramDiskBegin + elfHeader->programHeaderTableOffset);
+    uint64_t programHeaderTableSize = elfHeader->programHeaderTableEntryCount * elfHeader->programHeaderTableEntrySize;
+
+    auto programHeaderTable = new ProgramHeader[elfHeader->programHeaderTableEntryCount];
+    uint64_t programHeaderTableSizeRead = Read(elfFile, programHeaderTable, programHeaderTableSize);
+
+    KAssert(programHeaderTableSize == programHeaderTableSizeRead, "Invalid ELF file: failed to read program header table.");
 
     for (uint16_t i = 0; i < elfHeader->programHeaderTableEntryCount; ++i)
     {
         ProgramHeader programHeader = programHeaderTable[i];
         if (programHeader.type == PT_LOAD)
         {
-            uint64_t segmentPagesCount = programHeader.segmentSizeInMemory / 0x1000 + programHeader.segmentSizeInMemory % 0x1000 != 0 ? 1 : 0;
+            uint64_t segmentPagesCount = programHeader.segmentSizeInMemory / 0x1000;
+            if (programHeader.segmentSizeInMemory % 0x1000 != 0) segmentPagesCount++;
+
             for (uint64_t page = 0; page < segmentPagesCount; ++page)
             {
                 void* physAddr = RequestPageFrame();
                 void* virtAddr = (void*)(programHeader.virtAddr + page * 0x1000);
-
                 pagingManager->MapMemory(virtAddr, physAddr, true);
-
-                // TODO: read from disk
                 void* upperHalfVirtAddr = (void*)((uint64_t)physAddr + 0xffff'8000'0000'0000);
-                MemCopy(upperHalfVirtAddr, (void*)(ramDiskBegin + programHeader.offsetInFile), programHeader.segmentSizeInFile);
+
+                RepositionOffset(elfFile, programHeader.offsetInFile, VFSSeekType::Set);
+                Read(elfFile, upperHalfVirtAddr, programHeader.segmentSizeInFile);
 
                 uint64_t paddingSize = programHeader.segmentSizeInMemory - programHeader.segmentSizeInFile;
                 Memset((void*)((uint64_t)virtAddr + programHeader.segmentSizeInFile), 0, paddingSize);

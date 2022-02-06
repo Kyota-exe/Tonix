@@ -5,5 +5,5 @@
 class ELFLoader
 {
 public:
-    static uint64_t LoadELF(uint64_t ramDiskBegin, PagingManager* pagingManager);
+    static uint64_t LoadELF(int elfFile, PagingManager* pagingManager);
 };

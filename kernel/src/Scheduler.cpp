@@ -55,12 +55,15 @@ Process GetNextTask(InterruptFrame currentTaskFrame)
     return (*taskList)[currentTaskIndex];
 }
 
-void CreateProcess(uint64_t ramDiskBegin, char rdi)
+void CreateProcess(const String& path)
 {
     auto pagingManager = new PagingManager();
     pagingManager->InitializePaging();
 
-    uint64_t entry = ELFLoader::LoadELF(ramDiskBegin, pagingManager);
+    int elfFile = Open(path, 0);
+    KAssert(elfFile >= 0, "Failed to read ELF file.");
+    uint64_t entry = ELFLoader::LoadELF(elfFile, pagingManager);
+    Close(elfFile);
 
     Process process;
     process.frame.rip = entry;
@@ -74,9 +77,6 @@ void CreateProcess(uint64_t ramDiskBegin, char rdi)
     process.frame.rsp = USER_STACK_TOP;
 
     process.pagingManager = pagingManager;
-
-    // TEMPORARY
-    process.frame.rdi = (unsigned char)rdi;
 
     taskList->Push(process);
 }
