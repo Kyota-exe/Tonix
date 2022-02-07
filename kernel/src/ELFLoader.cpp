@@ -4,47 +4,19 @@
 #include "ELFLoader.h"
 #include "Panic.h"
 #include "VFS.h"
+#include "Serial.h"
+#include "ELF.h"
 
-struct ELFHeader
+constexpr uint64_t RTDL_ADDR = 0x40000000;
+
+uint64_t ELFLoader::LoadELF(const String& path, Process* process)
 {
-    uint8_t eIdentMagic[4];
-    uint8_t eIdentClass; // 1 for 32-bit, 2 for 64-bit
-    uint8_t eIdentEndianness;
-    uint8_t eIdentVersion;
-    uint8_t eIdentAbi;
-    uint8_t eIdentAbiVersion;
-    uint8_t eIdentZero[7];
-    uint16_t type;
-    uint16_t architecture;
-    uint32_t version;
-    uint64_t entry;
-    uint64_t programHeaderTableOffset;
-    uint64_t sectionHeaderTableOffset;
-    uint32_t flags;
-    uint16_t headerSize; // Normally 64 bytes for 64-bit and 52 bytes for 32-bit
-    uint16_t programHeaderTableEntrySize;
-    uint16_t programHeaderTableEntryCount;
-    uint16_t sectionHeaderTableEntrySize;
-    uint16_t sectionHeaderTableEntryCount;
-    uint16_t sectionNamesEntryIndex;
-} __attribute__((packed));
+    PagingManager* pagingManager = process->pagingManager;
 
-struct ProgramHeader
-{
-    uint32_t type;
-    uint32_t flags;
-    uint64_t offsetInFile;
-    uint64_t virtAddr;
-    uint64_t physAddr;
-    uint64_t segmentSizeInFile;
-    uint64_t segmentSizeInMemory;
-    uint64_t align;
-} __attribute__((packed));
+    Error error;
+    int elfFile = Open(path, 0, error);
+    KAssert(elfFile != -1, "Failed to read ELF file. Error code: %d", error);
 
-constexpr uint32_t PT_LOAD = 1;
-
-uint64_t ELFLoader::LoadELF(int elfFile, PagingManager* pagingManager)
-{
     auto elfHeader = new ELFHeader;
     uint64_t elfHeaderSize = Read(elfFile, elfHeader, sizeof(ELFHeader));
     KAssert(elfHeaderSize == sizeof(ELFHeader), "Invalid ELF file: failed to read header.");
@@ -64,29 +36,57 @@ uint64_t ELFLoader::LoadELF(int elfFile, PagingManager* pagingManager)
 
     KAssert(programHeaderTableSize == programHeaderTableSizeRead, "Invalid ELF file: failed to read program header table.");
 
+    Serial::Printf("Program header count: %d", elfHeader->programHeaderTableEntryCount);
     for (uint16_t i = 0; i < elfHeader->programHeaderTableEntryCount; ++i)
     {
         ProgramHeader programHeader = programHeaderTable[i];
-        if (programHeader.type == PT_LOAD)
+        Serial::Print("Program header---------------------------------------------------");
+        Serial::Printf("Type: %d", programHeader.type);
+
+        if (programHeader.type == ProgramHeaderType::Load)
         {
-            uint64_t segmentPagesCount = programHeader.segmentSizeInMemory / 0x1000;
-            if (programHeader.segmentSizeInMemory % 0x1000 != 0) segmentPagesCount++;
+            Serial::Printf("Virtual address: %x", programHeader.virtAddr);
+            Serial::Printf("Memory size: %x", programHeader.segmentSizeInMemory);
+
+            uint64_t baseAddr = programHeader.virtAddr;
+
+            // If the virtual address is 0, this ELF is a RTDL
+            if (programHeader.virtAddr == 0)
+            {
+                baseAddr = RTDL_ADDR;
+            }
+
+            uint64_t segmentPagesCount = (programHeader.segmentSizeInMemory - 1) / 0x1000 + 1;
+            Serial::Printf("Segment page count: %d", segmentPagesCount);
+
+            RepositionOffset(elfFile, programHeader.offsetInFile, VFSSeekType::Set);
 
             for (uint64_t page = 0; page < segmentPagesCount; ++page)
             {
                 void* physAddr = RequestPageFrame();
-                void* virtAddr = (void*)(programHeader.virtAddr + page * 0x1000);
+                void* virtAddr = (void*)(baseAddr + page * 0x1000);
+
                 pagingManager->MapMemory(virtAddr, physAddr, true);
-                void* upperHalfVirtAddr = (void*)((uint64_t)physAddr + 0xffff'8000'0000'0000);
 
-                RepositionOffset(elfFile, programHeader.offsetInFile, VFSSeekType::Set);
-                Read(elfFile, upperHalfVirtAddr, programHeader.segmentSizeInFile);
+                void* higherHalfVirtAddr = (void*)((uint64_t)physAddr + 0xffff'8000'0000'0000);
 
-                uint64_t paddingSize = programHeader.segmentSizeInMemory - programHeader.segmentSizeInFile;
-                Memset((void*)((uint64_t)virtAddr + programHeader.segmentSizeInFile), 0, paddingSize);
+                Memset(higherHalfVirtAddr, 0, 0x1000);
+                Read(elfFile, higherHalfVirtAddr, 0x1000);
             }
+        }
+        else if (programHeader.type == ProgramHeaderType::Interpreter)
+        {
+            char* rtdlPath = new char[programHeader.segmentSizeInFile + 1];
+
+            RepositionOffset(elfFile, programHeader.offsetInFile, VFSSeekType::Set);
+            Read(elfFile, rtdlPath, programHeader.segmentSizeInFile);
+
+            rtdlPath[programHeader.segmentSizeInFile] = 0;
+
+            LoadELF(String(rtdlPath), process);
         }
     }
 
+    Close(elfFile);
     return elfHeader->entry;
 }

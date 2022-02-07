@@ -1,1 +1,0 @@
-Locks are sometimes called "binary semaphores".

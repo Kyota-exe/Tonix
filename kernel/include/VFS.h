@@ -5,6 +5,7 @@ struct Vnode;
 #include "String.h"
 #include "Vector.h"
 #include "FileSystem.h"
+#include "Error.h"
 
 enum VnodeType
 {
@@ -22,14 +23,6 @@ enum VFSOpenFlag
     OpenExclude = 0x40,
     OpenWriteOnly = 0x5,
     OpenReadWrite = 0x3
-};
-
-enum class VFSError : int
-{
-    Exists = 17,
-    IsDirectory = 21,
-    NoFile = 2,
-    NotDirectory = 20
 };
 
 enum class VFSSeekType
@@ -62,12 +55,13 @@ struct FileDescriptor
 void InitializeVFS(void* ext2RamDisk);
 void Mount(Vnode* mountPoint, Vnode* vnode);
 
-int Open(const String& path, int flags);
+int Open(const String& path, int flags, Error& error);
 uint64_t Read(int descriptor, void* buffer, uint64_t count);
 uint64_t Write(int descriptor, const void* buffer, uint64_t count);
 uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType);
 void Close(int descriptor);
-int CreateDirectory(const String& path, Vnode** directory);
+uint64_t CurrentOffset(int descriptor);
+int CreateDirectory(const String& path, Vnode** directory, Error& error);
 
 void CacheVNode(Vnode* vnode);
 Vnode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem);

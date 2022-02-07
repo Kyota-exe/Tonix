@@ -10,6 +10,7 @@
 #include "Scheduler.h"
 #include "Device.h"
 #include "Framebuffer.h"
+#include "TextRenderer.h"
 
 PagingManager kernelPagingManager;
 
@@ -48,7 +49,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
         }
     }
 
-    CreateProcess(String("/programs/test.elf"));
+    CreateProcess(String("/programs/test"));
     StartScheduler();
 
     while (true) asm("hlt");

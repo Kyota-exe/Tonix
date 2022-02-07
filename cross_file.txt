@@ -1,0 +1,12 @@
+[binaries]
+c = 'x86_64-tonix-gcc'
+cpp = 'x86_64-tonix-g++'
+ar = 'x86_64-tonix-ar'
+strip = 'x86_64-tonix-strip'
+pkgconfig = 'pkg-config'
+
+[host_machine]
+system = 'tonix'
+cpu_family = 'x86_64'
+cpu = 'x86_64'
+endian = 'little'

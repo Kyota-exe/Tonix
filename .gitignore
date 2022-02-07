@@ -4,8 +4,9 @@
 *.d
 
 .idea/
-ext2-ramdisk-image.ext2
 
-sysroot/
+xbstrap-build/
 3rdparty/
 
+ext2-ramdisk-image.ext2
+ramdisk-mountpoint/

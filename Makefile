@@ -18,7 +18,7 @@ limine:
 kernel:
 	$(MAKE) -C kernel
 
-$(ISO_IMAGE): limine kernel ext2ramdisk
+$(ISO_IMAGE): limine kernel
 	rm -rf iso_root
 	mkdir -p iso_root
 	cp kernel/bin/kernel.elf \
@@ -32,9 +32,22 @@ $(ISO_IMAGE): limine kernel ext2ramdisk
 	limine/limine-install $(ISO_IMAGE)
 	rm -rf iso_root
 
-.PHONY: ext2ramdisk
-ext2ramdisk:
-	e2fsimage -d root-directory -v -f ext2-ramdisk-image.ext2
+.PHONY: ramdisk
+ramdisk:
+# Create mount point for ext2 ramdisk image
+	sudo rm -rf ramdisk-mountpoint
+	mkdir -p ramdisk-mountpoint
+# Create ext2 ramdisk image
+	dd if=/dev/zero of=ext2-ramdisk-image.ext2 bs=1024 count=8192
+	mke2fs -F ext2-ramdisk-image.ext2
+# Mount it on ramdisk-mountpoint/
+	sudo mount -o loop ext2-ramdisk-image.ext2 ramdisk-mountpoint
+# Copy sysroot/system-root/ contents into it
+	sudo cp -r xbstrap-build/system-root/* ramdisk-mountpoint
+# Copy root-directory/ contents into it
+	sudo cp -r root-directory/* ramdisk-mountpoint
+# Unmount
+	sudo umount ramdisk-mountpoint
 
 .PHONY: clean
 clean:

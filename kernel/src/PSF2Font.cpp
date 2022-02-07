@@ -11,7 +11,9 @@ constexpr uint32_t PSF2_HEADER_FLAG_HAS_UNICODE_TABLE = 0x01;
 
 PSF2Font::PSF2Font(const String &path)
 {
-    int fontFile = Open(path, 0);
+    Error fontFileError = Error::None;
+    int fontFile = Open(path, 0, fontFileError);
+    KAssert(fontFileError == Error::None, "Failed to open font file.");
 
     header = new PSF2Header;
     uint64_t headerSize = Read(fontFile, header, sizeof(PSF2Header));

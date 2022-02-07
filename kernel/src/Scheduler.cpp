@@ -60,12 +60,11 @@ void CreateProcess(const String& path)
     auto pagingManager = new PagingManager();
     pagingManager->InitializePaging();
 
-    int elfFile = Open(path, 0);
-    KAssert(elfFile >= 0, "Failed to read ELF file.");
-    uint64_t entry = ELFLoader::LoadELF(elfFile, pagingManager);
-    Close(elfFile);
-
     Process process;
+    process.pagingManager = pagingManager;
+
+    uint64_t entry = ELFLoader::LoadELF(path, &process);
+
     process.frame.rip = entry;
     process.frame.cs = USER_CODE_SEGMENT;
     process.frame.ss = USER_DATA_SEGMENT;

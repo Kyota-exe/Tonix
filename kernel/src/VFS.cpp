@@ -22,7 +22,9 @@ void InitializeVFS(void* ext2RamDisk)
     Mount(root, ext2FileSystem->fileSystemRoot);
 
     Vnode* devMountPoint = nullptr;
-    CreateDirectory(String("/dev"), &devMountPoint);
+    Error devMountPointError;
+    int devDirectory = CreateDirectory(String("/dev"), &devMountPoint, devMountPointError);
+    KAssert(devDirectory != -1, "Failed to create /dev directory.");
     FileSystem* deviceFileSystem;
     deviceFileSystem = new DeviceFS(nullptr);
     Mount(devMountPoint, deviceFileSystem->fileSystemRoot);
@@ -34,7 +36,7 @@ void CacheVNode(Vnode* vnode)
     currentInCache = vnode;
 }
 
-Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, FileSystem*& fileSystem, int& error)
+Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error)
 {
     Vnode* currentDirectory = nullptr;
 
@@ -63,7 +65,7 @@ Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, 
 
             if (currentDirectory->type != VFSDirectory)
             {
-                error = (int)VFSError::NotDirectory;
+                error = Error::NotDirectory;
                 return nullptr;
             }
 
@@ -88,11 +90,7 @@ Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, 
 
         if (currentDirectory == nullptr)
         {
-            if (currentDepth + 1 != pathDepth)
-            {
-                Panic("Could not find directory.");
-            }
-            error = (int)VFSError::NoFile;
+            error = Error::NoFile;
             return nullptr;
         }
     }
@@ -152,7 +150,7 @@ int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor)
     return descriptorIndex;
 }
 
-int Open(const String& path, int flags)
+int Open(const String& path, int flags, Error& error)
 {
     FileDescriptor* fileDescriptor = nullptr;
     int descriptorIndex = FindFreeFileDescriptor(fileDescriptor);
@@ -160,34 +158,30 @@ int Open(const String& path, int flags)
     String filename;
     Vnode* containingDirectory = nullptr;
     FileSystem* fileSystem = nullptr;
-    int error = 0;
     Vnode* vnode = TraversePath(path, filename, containingDirectory, fileSystem, error);
-
-    if (error != 0 && error != (int)VFSError::NoFile)
-    {
-        return -error;
-    }
 
     if (flags & VFSOpenFlag::OpenCreate)
     {
-        if (vnode == nullptr)
+        if (error == Error::NoFile)
         {
+            KAssert(vnode == nullptr, "VFS Traversing error");
+
             vnode = new Vnode();
             vnode->type = VFSRegularFile;
             vnode->fileSystem = fileSystem;
             fileSystem->Create(vnode, containingDirectory, filename);
-            error = 0;
+            error = Error::None;
         }
         else if (flags & VFSOpenFlag::OpenExclude)
         {
-            return (int)VFSError::Exists;
+            error = Error::Exists;
+            return -1;
         }
     }
 
     if (vnode == nullptr)
     {
-        KAssert(error == (int)VFSError::NoFile, "Invalid error code returned from traversing.");
-        return -error;
+        return -1;
     }
 
     if ((flags & VFSOpenFlag::OpenTruncate) && vnode->type == VFSRegularFile)
@@ -202,7 +196,8 @@ int Open(const String& path, int flags)
 
     if (((flags & VFSOpenFlag::OpenWriteOnly) || (flags & VFSOpenFlag::OpenReadWrite)) && vnode->type == VFSDirectory)
     {
-        return (int)VFSError::IsDirectory;
+        error = Error::IsDirectory;
+        return -1;
     }
 
     fileDescriptor->vnode = vnode;
@@ -271,20 +266,25 @@ void Close(int descriptor)
     fileDescriptor->offset = 0;
 }
 
-int CreateDirectory(const String& path, Vnode** directory)
+uint64_t CurrentOffset(int descriptor)
+{
+    FileDescriptor* fileDescriptor = &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
+    return fileDescriptor->offset;
+}
+
+int CreateDirectory(const String& path, Vnode** directory, Error& error)
 {
     String directoryName;
     Vnode* containingDirectory = nullptr;
     FileSystem* fileSystem = nullptr;
-    int error = 0;
     Vnode* vnode = TraversePath(path, directoryName, containingDirectory, fileSystem, error);
 
-    if (error != 0 && error != (int)VFSError::NoFile)
+    if (containingDirectory == nullptr)
     {
-        return error;
+        return -1;
     }
 
-    KAssert(vnode == nullptr, "Directory already exists.");
+    KAssert(vnode == nullptr && error == Error::NoFile, "Fatal error while creating directory.");
 
     vnode = new Vnode();
     vnode->type = VFSDirectory;
