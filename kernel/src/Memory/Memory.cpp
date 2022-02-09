@@ -19,3 +19,8 @@ void MemCopy(void* destination, const void* source, uint64_t count)
         dest[i] = src[i];
     }
 }
+
+uintptr_t HigherHalf(uintptr_t physAddr)
+{
+	return physAddr + 0xffff'8000'0000'0000;
+}

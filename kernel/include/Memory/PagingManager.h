@@ -20,7 +20,6 @@ struct PagingStructureEntry
     bool GetFlag(PagingFlag flag) const;
     void SetPhysicalAddress(uint64_t physAddr);
     uint64_t GetPhysicalAddress() const;
-    // void SetProtectionKey(uint8_t value);
 };
 
 struct PagingStructure
@@ -33,11 +32,14 @@ class PagingManager
 public:
     void InitializePaging();
     void SetCR3() const;
-    void MapMemory(void* virtAddr, void* physAddr, bool user);
-    void UnmapMemory(void* virtAddr);
-    uint8_t CheckIfPagePresent(void* virtAddr);
-    uint64_t pml4PhysAddr;
-
+    void MapMemory(const void* virtAddr, const void* physAddr, bool user);
+    void UnmapMemory(const void* virtAddr);
+    uint8_t PageNotPresentLevel(const void* virtAddr);
+    uintptr_t pml4PhysAddr;
 private:
     PagingStructure* pml4;
+	static void GetPageTableIndexes(const void* virtAddr, uint16_t& pageIndex, uint16_t& pageTableIndex,
+									uint16_t& pageDirectoryIndex, uint16_t& pdptIndex);
+	static void PopulatePagingStructureEntry(PagingStructureEntry* entry, uintptr_t physAddr, bool user);
+	static PagingStructure* AllocatePagingStructure(PagingStructureEntry* entry, bool user);
 };

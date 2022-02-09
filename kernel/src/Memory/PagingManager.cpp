@@ -2,28 +2,69 @@
 #include "Memory/PageFrameAllocator.h"
 #include "Memory/PagingManager.h"
 #include "Stivale2Interface.h"
+#include "stddef.h"
+
+void PagingManager::GetPageTableIndexes(const void* virtAddr, uint16_t& pageIndex, uint16_t& pageTableIndex,
+										uint16_t& pageDirectoryIndex, uint16_t& pdptIndex)
+{
+	auto virtualAddress = reinterpret_cast<uintptr_t>(virtAddr);
+
+	virtualAddress >>= 12;
+	pageIndex = virtualAddress & 0b111'111'111;
+
+	virtualAddress >>= 9;
+	pageTableIndex = virtualAddress & 0b111'111'111;
+
+	virtualAddress >>= 9;
+	pageDirectoryIndex = virtualAddress & 0b111'111'111;
+
+	virtualAddress >>= 9;
+	pdptIndex = virtualAddress & 0b111'111'111;
+}
+
+void PagingManager::PopulatePagingStructureEntry(PagingStructureEntry* entry, uintptr_t physAddr, bool user)
+{
+	entry->SetPhysicalAddress(physAddr);
+
+	// Flags
+	entry->SetFlag(Present, true);
+	entry->SetFlag(ReadWrite, true);
+	entry->SetFlag(UserAllowed, user);
+}
+
+PagingStructure* PagingManager::AllocatePagingStructure(PagingStructureEntry* entry, bool user)
+{
+	auto physAddr = reinterpret_cast<uintptr_t>(RequestPageFrame());
+
+	auto pagingStruct = reinterpret_cast<PagingStructure*>(HigherHalf(physAddr));
+	Memset(pagingStruct, 0, 0x1000);
+
+	PopulatePagingStructureEntry(entry, physAddr, user);
+
+	return pagingStruct;
+}
 
 void PagingManager::InitializePaging()
 {
-    pml4PhysAddr = (uint64_t)RequestPageFrame();
-    pml4 = (PagingStructure*)(pml4PhysAddr + 0xffff'8000'0000'0000);
+    pml4PhysAddr = reinterpret_cast<uintptr_t>(RequestPageFrame());
+    pml4 = reinterpret_cast<PagingStructure*>(HigherHalf(pml4PhysAddr));
     Memset(pml4, 0, 0x1000);
 
-    for (uint64_t pageFrameIndex = 0; pageFrameIndex < pageFrameCount; ++pageFrameIndex)
+    for (size_t pageFrameIndex = 0; pageFrameIndex < pageFrameCount; ++pageFrameIndex)
     {
-        uint64_t physAddr = pageFrameIndex * 0x1000;
-        MapMemory((void*)(physAddr + 0xffff'8000'0000'0000), (void*)physAddr, false);
+        uintptr_t physAddr = pageFrameIndex * 0x1000;
+        MapMemory(reinterpret_cast<void*>(HigherHalf(physAddr)), reinterpret_cast<void*>(physAddr), false);
     }
 
-    auto kernelBaseAddrStruct = (stivale2_struct_tag_kernel_base_address*)GetStivale2Tag(STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID);
-    auto pmrsStruct = (stivale2_struct_tag_pmrs*)GetStivale2Tag(STIVALE2_STRUCT_TAG_PMRS_ID);
+    auto kernelBaseAddrStruct = reinterpret_cast<stivale2_struct_tag_kernel_base_address*>(GetStivale2Tag(STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID));
+    auto pmrsStruct = reinterpret_cast<stivale2_struct_tag_pmrs*>(GetStivale2Tag(STIVALE2_STRUCT_TAG_PMRS_ID));
     for (uint64_t pmrIndex = 0; pmrIndex < pmrsStruct->entries; ++pmrIndex)
     {
         stivale2_pmr pmr = pmrsStruct->pmrs[pmrIndex];
         for (uint64_t pmrVirtAddr = pmr.base; pmrVirtAddr < pmr.base + pmr.length; pmrVirtAddr += 0x1000)
         {
             uint64_t physAddr = kernelBaseAddrStruct->physical_base_address + (pmrVirtAddr - kernelBaseAddrStruct->virtual_base_address);
-            MapMemory((void*)pmrVirtAddr, (void*)physAddr, false);
+            MapMemory(reinterpret_cast<void*>(pmrVirtAddr), reinterpret_cast<void*>(physAddr), false);
         }
     }
 }
@@ -33,128 +74,80 @@ void PagingManager::SetCR3() const
     asm volatile("mov %0, %%cr3" : : "r" (pml4PhysAddr));
 }
 
-void PagingManager::MapMemory(void* virtAddr, void* physAddr, bool user)
+void PagingManager::MapMemory(const void* virtAddr, const void* physAddr, bool user)
 {
-    auto virtualAddress = (uint64_t)virtAddr;
-    virtualAddress >>= 12;
-    uint16_t pageIndex = virtualAddress & 0b111'111'111;
-    virtualAddress >>= 9;
-    uint16_t pageTableIndex = virtualAddress & 0b111'111'111;
-    virtualAddress >>= 9;
-    uint16_t pageDirectoryIndex = virtualAddress & 0b111'111'111;
-    virtualAddress >>= 9;
-    uint16_t pdptIndex = virtualAddress & 0b111'111'111;
+	uint16_t pageIndex, pageTableIndex, pageDirectoryIndex, pdptIndex;
+	GetPageTableIndexes(virtAddr, pageIndex, pageTableIndex, pageDirectoryIndex, pdptIndex);
 
     PagingStructureEntry* pml4Entry = &pml4->entries[pdptIndex];
     PagingStructure* pdpt;
     if (!pml4Entry->GetFlag(Present))
     {
-        auto pdptPhysAddr = (uint64_t)RequestPageFrame();
-        pdpt = (PagingStructure*)(pdptPhysAddr + 0xffff'8000'0000'0000);
-        Memset(pdpt, 0, 0x1000);
-        pml4Entry->SetPhysicalAddress(pdptPhysAddr);
-
-        // Flags
-        pml4Entry->SetFlag(Present, true);
-        pml4Entry->SetFlag(ReadWrite, true);
-        pml4Entry->SetFlag(UserAllowed, user);
+	    pdpt = AllocatePagingStructure(pml4Entry, user);
     }
     else
     {
-        pdpt = (PagingStructure*)(pml4Entry->GetPhysicalAddress() + 0xffff'8000'0000'0000);
+        pdpt = reinterpret_cast<PagingStructure*>(HigherHalf(pml4Entry->GetPhysicalAddress()));
     }
 
     PagingStructureEntry* pdptEntry = &pdpt->entries[pageDirectoryIndex];
     PagingStructure* pageDirectory;
     if (!pdptEntry->GetFlag(Present))
     {
-        auto pageDirectoryPhysAddr = (uint64_t)RequestPageFrame();
-        pageDirectory = (PagingStructure*)(pageDirectoryPhysAddr + 0xffff'8000'0000'0000);
-        Memset(pageDirectory, 0, 0x1000);
-        pdptEntry->SetPhysicalAddress(pageDirectoryPhysAddr);
-
-        // Flags
-        pdptEntry->SetFlag(Present, true);
-        pdptEntry->SetFlag(ReadWrite, true);
-        pdptEntry->SetFlag(UserAllowed, user);
+		pageDirectory = AllocatePagingStructure(pdptEntry, user);
     }
     else
     {
-        pageDirectory = (PagingStructure*)(pdptEntry->GetPhysicalAddress() + 0xffff'8000'0000'0000);
+        pageDirectory = reinterpret_cast<PagingStructure*>(HigherHalf(pdptEntry->GetPhysicalAddress()));
     }
 
     PagingStructureEntry* pageDirectoryEntry = &pageDirectory->entries[pageTableIndex];
     PagingStructure* pageTable;
     if (!pageDirectoryEntry->GetFlag(Present))
     {
-        auto pageTablePhysAddr = (uint64_t)RequestPageFrame();
-        pageTable = (PagingStructure*)(pageTablePhysAddr + 0xffff'8000'0000'0000);
-        Memset(pageTable, 0, 0x1000);
-        pageDirectoryEntry->SetPhysicalAddress(pageTablePhysAddr);
-
-        // Flags
-        pageDirectoryEntry->SetFlag(Present, true);
-        pageDirectoryEntry->SetFlag(ReadWrite, true);
-        pageDirectoryEntry->SetFlag(UserAllowed, user);
+		pageTable = AllocatePagingStructure(pageDirectoryEntry, user);
     }
     else
     {
-        pageTable = (PagingStructure*)(pageDirectoryEntry->GetPhysicalAddress() + 0xffff'8000'0000'0000);
+        pageTable = reinterpret_cast<PagingStructure*>(HigherHalf(pageDirectoryEntry->GetPhysicalAddress()));
     }
 
     PagingStructureEntry* pageTableEntry = &pageTable->entries[pageIndex];
-    pageTableEntry->SetPhysicalAddress((uint64_t)physAddr);
-    pageTableEntry->SetFlag(Present, true);
-    pageTableEntry->SetFlag(ReadWrite, true);
-    pageTableEntry->SetFlag(UserAllowed, user);
+	PopulatePagingStructureEntry(pageTableEntry, reinterpret_cast<uintptr_t>(physAddr), user);
 }
 
-void PagingManager::UnmapMemory(void* virtAddr)
+void PagingManager::UnmapMemory(const void* virtAddr)
 {
-    auto virtualAddress = (uint64_t)virtAddr;
-    virtualAddress >>= 12;
-    uint16_t pageIndex = virtualAddress & 0b111'111'111;
-    virtualAddress >>= 9;
-    uint16_t pageTableIndex = virtualAddress & 0b111'111'111;
-    virtualAddress >>= 9;
-    uint16_t pageDirectoryIndex = virtualAddress & 0b111'111'111;
-    virtualAddress >>= 9;
-    uint16_t pdptIndex = virtualAddress & 0b111'111'111;
+	uint16_t pageIndex, pageTableIndex, pageDirectoryIndex, pdptIndex;
+	GetPageTableIndexes(virtAddr, pageIndex, pageTableIndex, pageDirectoryIndex, pdptIndex);
 
-    auto pdpt = (PagingStructure*)(pml4->entries[pdptIndex].GetPhysicalAddress() + 0xffff'8000'0000'0000);
-    auto pageDirectory = (PagingStructure*)(pdpt->entries[pageDirectoryIndex].GetPhysicalAddress() + 0xffff'8000'0000'0000);
-    auto pageTable = (PagingStructure*)(pageDirectory->entries[pageTableIndex].GetPhysicalAddress() + 0xffff'8000'0000'0000);
+    auto pdpt = reinterpret_cast<PagingStructure*>(HigherHalf(pml4->entries[pdptIndex].GetPhysicalAddress()));
+    auto pageDirectory = reinterpret_cast<PagingStructure*>(HigherHalf(pdpt->entries[pageDirectoryIndex].GetPhysicalAddress()));
+    auto pageTable = reinterpret_cast<PagingStructure*>(HigherHalf(pageDirectory->entries[pageTableIndex].GetPhysicalAddress()));
     pageTable->entries[pageIndex].SetFlag(Present, false);
 
     asm volatile("invlpg (%0)" : : "b"(virtAddr) : "memory");
 }
 
-uint8_t PagingManager::CheckIfPagePresent(void* virtAddr)
+uint8_t PagingManager::PageNotPresentLevel(const void* virtAddr)
 {
-    auto virtualAddress = (uint64_t)virtAddr;
-    virtualAddress >>= 12;
-    uint16_t pageIndex = virtualAddress & 0b111'111'111;
-    virtualAddress >>= 9;
-    uint16_t pageTableIndex = virtualAddress & 0b111'111'111;
-    virtualAddress >>= 9;
-    uint16_t pageDirectoryIndex = virtualAddress & 0b111'111'111;
-    virtualAddress >>= 9;
-    uint16_t pdptIndex = virtualAddress & 0b111'111'111;
+	uint16_t pageIndex, pageTableIndex, pageDirectoryIndex, pdptIndex;
+	GetPageTableIndexes(virtAddr, pageIndex, pageTableIndex, pageDirectoryIndex, pdptIndex);
 
     PagingStructureEntry* pml4Entry = &pml4->entries[pdptIndex];
     if (!pml4Entry->GetFlag(Present)) return 4;
 
-    auto pdpt = (PagingStructure*)(pml4Entry->GetPhysicalAddress() + 0xffff'8000'0000'0000);
+    auto pdpt = reinterpret_cast<PagingStructure*>(HigherHalf(pml4Entry->GetPhysicalAddress()));
     PagingStructureEntry* pdptEntry = &pdpt->entries[pageDirectoryIndex];
     if (!pdptEntry->GetFlag(Present)) return 3;
 
-    auto pageDirectory = (PagingStructure*)(pdptEntry->GetPhysicalAddress() + 0xffff'8000'0000'0000);
+    auto pageDirectory = reinterpret_cast<PagingStructure*>(HigherHalf(pdptEntry->GetPhysicalAddress()));
     PagingStructureEntry* pageDirectoryEntry = &pageDirectory->entries[pageTableIndex];
     if (!pageDirectoryEntry->GetFlag(Present)) return 2;
 
-    auto pageTable = (PagingStructure*)(pageDirectoryEntry->GetPhysicalAddress() + 0xffff'8000'0000'0000);
+    auto pageTable = reinterpret_cast<PagingStructure*>(HigherHalf(pageDirectoryEntry->GetPhysicalAddress()));
     PagingStructureEntry* pageTableEntry = &pageTable->entries[pageIndex];
-    return (!pageTableEntry->GetFlag(Present));
+    return !pageTableEntry->GetFlag(Present);
 }
 
 void PagingStructureEntry::SetFlag(PagingFlag flag, bool enable)
