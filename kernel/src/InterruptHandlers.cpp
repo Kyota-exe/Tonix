@@ -20,9 +20,13 @@ void KeyboardInterruptHandler()
 
 void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 {
+	Serial::Print("Timer");
     Process nextTask = GetNextTask(*interruptFrame);
 
     *interruptFrame = nextTask.frame;
+	Serial::Print("\n\nReturned");
+	Serial::Printf("RIP: %x", interruptFrame->rip);
+	Serial::Printf("Yes? %d", nextTask.pagingManager->FlagMismatchLevel((void*)interruptFrame->rip, PagingFlag::Present, true));
     nextTask.pagingManager->SetCR3();
 
     LAPIC::SendEOI();
@@ -30,8 +34,6 @@ void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 
 void SystemCallHandler(InterruptFrame* interruptFrame)
 {
-    Serial::Print("syscall");
-
     Error error = Error::None;
 
     interruptFrame->rax = SystemCall((SystemCallType)interruptFrame->rdi,

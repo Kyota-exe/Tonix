@@ -2,6 +2,15 @@
 
 #include <stdint.h>
 
+enum class ELFType : uint16_t
+{
+    None = 0,
+    Relocatable = 1,
+    Executable = 2,
+    Shared = 3,
+    Core = 4
+};
+
 struct ELFHeader
 {
     uint8_t eIdentMagic[4];
@@ -11,7 +20,7 @@ struct ELFHeader
     uint8_t eIdentAbi;
     uint8_t eIdentAbiVersion;
     uint8_t eIdentZero[7];
-    uint16_t type;
+    ELFType type;
     uint16_t architecture;
     uint32_t version;
     uint64_t entry;

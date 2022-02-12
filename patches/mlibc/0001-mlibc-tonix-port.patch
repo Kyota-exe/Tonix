@@ -1,13 +1,15 @@
-From c9191cbed4658fe801d163e32b2ced5d935b57e3 Mon Sep 17 00:00:00 2001
+From bff41d71f6b2a457859d36cea3457a2f6dc848f0 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
-Date: Sun, 6 Feb 2022 13:29:20 -0500
+Date: Fri, 11 Feb 2022 22:27:33 -0500
 Subject: [PATCH] mlibc tonix port
 
 ---
  meson.build                                  |   4 +
+ options/rtdl/generic/linker.cpp              |   6 +-
+ options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 +++
- sysdeps/tonix/generic/Generic.cpp            | 286 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 255 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -35,7 +37,7 @@ Subject: [PATCH] mlibc tonix port
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
  sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
  sysdeps/tonix/meson.build                    |  51 ++++
- 31 files changed, 418 insertions(+)
+ 33 files changed, 392 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -82,6 +84,38 @@ index b363aa3..6a1c4b5 100644
  else
  	error('No sysdeps defined for OS: ' + host_machine.system())
  endif
+diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
+index 5326417..70d7758 100644
+--- a/options/rtdl/generic/linker.cpp
++++ b/options/rtdl/generic/linker.cpp
+@@ -12,9 +12,9 @@
+ 
+ uintptr_t libraryBase = 0x41000000;
+ 
+-bool verbose = false;
+-bool stillSlightlyVerbose = false;
+-bool logBaseAddresses = false;
++bool verbose = true;
++bool stillSlightlyVerbose = true;
++bool logBaseAddresses = true;
+ bool eagerBinding = true;
+ 
+ #if defined(__x86_64__)
+diff --git a/options/rtdl/generic/main.cpp b/options/rtdl/generic/main.cpp
+index bed8e11..322dbf7 100644
+--- a/options/rtdl/generic/main.cpp
++++ b/options/rtdl/generic/main.cpp
+@@ -14,8 +14,8 @@
+ #define HIDDEN  __attribute__ ((visibility ("hidden")))
+ #define EXPORT  __attribute__ ((visibility ("default")))
+ 
+-static constexpr bool logEntryExit = false;
+-static constexpr bool logStartup = false;
++static constexpr bool logEntryExit = true;
++static constexpr bool logStartup = true;
+ 
+ #ifndef MLIBC_STATIC_BUILD
+ extern HIDDEN void *_GLOBAL_OFFSET_TABLE_[];
 diff --git a/sysdeps/tonix/crt-x86_64/crt0.S b/sysdeps/tonix/crt-x86_64/crt0.S
 new file mode 100644
 index 0000000..0807ce2
@@ -137,10 +171,10 @@ index 0000000..57f881f
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 0000000..894a241
+index 0000000..7356feb
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,286 @@
+@@ -0,0 +1,255 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -170,18 +204,89 @@ index 0000000..894a241
 +
 +namespace mlibc
 +{
-+    void sys_libc_log(const char *message) {
-+        unsigned long res;
-+        asm volatile ("syscall" : "=a"(res)
-+        : "a"(50), "D"(message)
-+        : "rcx", "r11", "rdx");
++    void sys_libc_log(const char* message)
++    {
++        asm volatile("int $0x80" : : "D"(255), "S"(message));
 +    }
 +
-+    void sys_libc_panic() {
-+        mlibc::infoLogger() << "\e[31mmlibc: panic!" << frg::endlog;
-+        asm volatile ("syscall" :
-+        : "a"(12), "D"(1)
-+        : "rcx", "r11", "rdx");
++    void sys_libc_panic()
++    {
++        asm volatile("int $0x80" : : "D"(254), "S"("mlibc panic!"));
++    }
++
++    int sys_open(const char* path, int flags, int* fd)
++    {
++        int ret;
++        int error;
++        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(0), "S"(path), "d"(flags));
++
++        if (ret == -1) return error;
++
++        *fd = ret;
++        return 0;
++    }
++
++    int sys_close(int fd)
++    {
++        int ret;
++        int error;
++        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(4), "S"(fd));
++
++        if (ret == -1) return error;
++
++        return 0;
++    }
++
++    int sys_read(int fd, void* buf, size_t count, ssize_t* bytes_read)
++    {
++        ssize_t ret;
++        int error;
++        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(1), "S"(fd), "d"(buf), "c"(count));
++
++        if (ret == -1) return error;
++
++        *bytes_read = ret;
++        return 0;
++    }
++
++#ifndef MLIBC_BUILDING_RTDL
++    int sys_write(int fd, const void* buf, size_t count, ssize_t* bytes_written)
++    {
++        ssize_t ret;
++        int error;
++        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(2), "S"(fd), "d"(buf), "c"(count));
++
++        if (ret == -1) return error;
++
++        *bytes_written = ret;
++        return 0;
++    }
++#endif
++
++    int sys_seek(int fd, off_t offset, int whence, off_t* new_offset)
++    {
++        off_t ret;
++        int error;
++        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(3), "S"(fd), "d"(offset));
++
++        if (ret == -1) return error;
++
++        *new_offset = ret;
++        return 0;
++    }
++
++    int sys_vm_map(void* hint, size_t size, int prot, int flags, int fd, off_t offset, void** window)
++    {
++        void* ret;
++        int error;
++
++        register off_t* r8 asm("r8") = &offset;
++        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(5), "S"(hint), "d"(size), "c"(prot), "r"(r8));
++
++        if (ret == nullptr) return error;
++
++        *window = ret;
++        return 0;
 +    }
 +
 +    int sys_tcb_set(void *pointer) {
@@ -236,108 +341,6 @@ index 0000000..894a241
 +        return 0;
 +    }
 +#endif
-+
-+    int sys_open(const char *path, int flags, int *fd) {
-+        int ret;
-+        int sys_errno;
-+
-+        asm volatile ("syscall"
-+        : "=a"(ret), "=d"(sys_errno)
-+        : "a"(2), "D"(path), "S"(flags), "d"(0)
-+        : "rcx", "r11");
-+
-+        if (ret == -1)
-+            return sys_errno;
-+
-+        *fd = ret;
-+        return 0;
-+    }
-+
-+    int sys_close(int fd) {
-+        int ret;
-+        int sys_errno;
-+
-+        asm volatile ("syscall"
-+        : "=a"(ret), "=d"(sys_errno)
-+        : "a"(3), "D"(fd)
-+        : "rcx", "r11");
-+
-+        if (ret == -1)
-+            return sys_errno;
-+
-+        return 0;
-+    }
-+
-+    int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) {
-+        ssize_t ret;
-+        int sys_errno;
-+
-+        asm volatile ("syscall"
-+        : "=a"(ret), "=d"(sys_errno)
-+        : "a"(0), "D"(fd), "S"(buf), "d"(count)
-+        : "rcx", "r11");
-+
-+        if (ret == -1)
-+            return sys_errno;
-+
-+        *bytes_read = ret;
-+        return 0;
-+    }
-+
-+#ifndef MLIBC_BUILDING_RTDL
-+    int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written) {
-+        ssize_t ret;
-+        int sys_errno;
-+
-+        asm volatile ("syscall"
-+        : "=a"(ret), "=d"(sys_errno)
-+        : "a"(1), "D"(fd), "S"(buf), "d"(count)
-+        : "rcx", "r11");
-+
-+        if (ret == -1)
-+            return sys_errno;
-+
-+        *bytes_written = ret;
-+        return 0;
-+    }
-+#endif
-+
-+    int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) {
-+        off_t ret;
-+        int sys_errno;
-+
-+        asm volatile ("syscall"
-+        : "=a"(ret), "=d"(sys_errno)
-+        : "a"(8), "D"(fd), "S"(offset), "d"(whence)
-+        : "rcx", "r11");
-+
-+        if (ret == -1)
-+            return sys_errno;
-+
-+        *new_offset = ret;
-+        return 0;
-+    }
-+
-+    int sys_vm_map(void *hint, size_t size, int prot, int flags,
-+                   int fd, off_t offset, void **window) {
-+        __ensure(flags & MAP_ANONYMOUS);
-+        void *ret;
-+        int sys_errno;
-+
-+        // mlibc::infoLogger() << "calling sys_vm_map with size: " << size << frg::endlog;
-+
-+        asm volatile ("syscall"
-+        : "=a"(ret), "=d"(sys_errno)
-+        : "a"(9), "D"(hint), "S"(size)
-+        : "rcx", "r11");
-+
-+        if (!ret)
-+            return sys_errno;
-+
-+        *window = ret;
-+
-+        return 0;
-+    }
 +
 +    int sys_vm_unmap(void *pointer, size_t size) {
 +        return sys_anon_free(pointer, size);

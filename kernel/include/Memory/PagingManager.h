@@ -5,7 +5,7 @@
 enum class PagingFlag : uint64_t
 {
     Present = 0,
-    ReadWrite = 1,
+    AllowWrite = 1,
     UserAllowed = 2,
     WriteThrough = 3,
     CacheDisable = 4,

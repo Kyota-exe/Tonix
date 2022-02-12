@@ -23,7 +23,7 @@ void PagingManager::PopulatePagingStructureEntry(PageTableEntry* entry, uintptr_
 
 	// Flags
 	entry->SetFlag(PagingFlag::Present, true);
-	entry->SetFlag(PagingFlag::ReadWrite, true);
+	entry->SetFlag(PagingFlag::AllowWrite, true);
 	entry->SetFlag(PagingFlag::UserAllowed, user);
 }
 
@@ -119,7 +119,7 @@ unsigned int PagingManager::FlagMismatchLevel(const void* virtAddr, PagingFlag f
 	{
 		auto i = pageIndexes[level];
 		auto entry = table->entries[i];
-		if (!entry.GetFlag(flag))
+		if (entry.GetFlag(flag) != enabled)
 		{
 			return level;
 		}
