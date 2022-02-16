@@ -57,6 +57,7 @@ void CreateProcess(const String& path)
 
     Process process;
     process.pagingManager = pagingManager;
+	process.userspaceAllocator = new UserspaceAllocator();
 
     // LoadELF will set the rip register and rsp
     ELFLoader::LoadELF(path, &process);

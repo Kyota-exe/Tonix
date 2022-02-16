@@ -2,6 +2,7 @@
 #include "Memory/PageFrameAllocator.h"
 #include "Memory/PagingManager.h"
 #include "Stivale2Interface.h"
+#include "Panic.h"
 
 constexpr unsigned int PAGING_LEVELS = 4;
 
@@ -87,6 +88,9 @@ void PagingManager::MapMemory(const void* virtAddr, const void* physAddr, bool u
 			table = AllocatePagingStructure(entry, user);
 		}
 	}
+
+	PageTableEntry* page = &table->entries[pageIndexes[0]];
+	KAssert(!page->GetFlag(PagingFlag::Present), "Page is already present!");
 
 	PopulatePagingStructureEntry(&table->entries[pageIndexes[0]], reinterpret_cast<uintptr_t>(physAddr), user);
 }

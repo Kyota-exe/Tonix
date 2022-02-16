@@ -1,6 +1,6 @@
-From bff41d71f6b2a457859d36cea3457a2f6dc848f0 Mon Sep 17 00:00:00 2001
+From 7cf9d4ed10439c44cdcc52327553779bb9b6e40b Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
-Date: Fri, 11 Feb 2022 22:27:33 -0500
+Date: Tue, 15 Feb 2022 21:13:47 -0500
 Subject: [PATCH] mlibc tonix port
 
 ---
@@ -8,8 +8,8 @@ Subject: [PATCH] mlibc tonix port
  options/rtdl/generic/linker.cpp              |   6 +-
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
- sysdeps/tonix/generic/Entry.cpp              |  34 +++
- sysdeps/tonix/generic/Generic.cpp            | 255 +++++++++++++++++++
+ sysdeps/tonix/generic/Entry.cpp              |  34 ++++
+ sysdeps/tonix/generic/Generic.cpp            | 193 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -35,9 +35,9 @@ Subject: [PATCH] mlibc tonix port
  sysdeps/tonix/include/abi-bits/uid_t.h       |   1 +
  sysdeps/tonix/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
- sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
- sysdeps/tonix/meson.build                    |  51 ++++
- 33 files changed, 392 insertions(+), 5 deletions(-)
+ sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 ++
+ sysdeps/tonix/meson.build                    |  51 +++++
+ 33 files changed, 330 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -171,10 +171,10 @@ index 0000000..57f881f
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 0000000..7356feb
+index 0000000..80a8176
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,255 @@
+@@ -0,0 +1,193 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -183,24 +183,6 @@ index 0000000..7356feb
 +#include <dirent.h>
 +#include <fcntl.h>
 +#include <limits.h>
-+
-+/*
-+namespace mlibc
-+{
-+    int sys_open(const char* path, int flags, int* fd)
-+    {
-+        int ret;
-+        int sys_errno;
-+
-+        asm volatile("int $0x80" : "=a"(ret) : "D"(0), "S"(path), "d"(flags));
-+
-+        if (ret == -1)
-+            return sys_errno;
-+
-+        *fd = ret;
-+        return 0;
-+    }
-+}*/
 +
 +namespace mlibc
 +{
@@ -280,8 +262,10 @@ index 0000000..7356feb
 +        void* ret;
 +        int error;
 +
-+        register off_t* r8 asm("r8") = &offset;
-+        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(5), "S"(hint), "d"(size), "c"(prot), "r"(r8));
++        register auto r8 asm("r8") = &flags;
++		register auto r9 asm("r9") = &fd;
++		register auto r10 asm("r10") = &offset;
++        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(5), "S"(hint), "d"(size), "c"(prot), "r"(r8), "r"(r9), "r"(r10));
 +
 +        if (ret == nullptr) return error;
 +
@@ -289,147 +273,101 @@ index 0000000..7356feb
 +        return 0;
 +    }
 +
-+    int sys_tcb_set(void *pointer) {
-+        int res;
-+        asm volatile ("syscall" : "=a"(res)
-+        : "a"(300), "D"(pointer)
-+        : "rcx", "r11", "rdx");
-+        return res;
++    int sys_tcb_set(void* pointer)
++	{
++		asm volatile("int $0x80" : : "D"(6));
++		return 0;
 +    }
 +
-+    int sys_anon_allocate(size_t size, void **pointer) {
-+        void *ret;
-+        int sys_errno;
-+
-+        asm volatile ("syscall"
-+        : "=a"(ret), "=d"(sys_errno)
-+        : "a"(9), "D"(0), "S"(size)
-+        : "rcx", "r11");
-+
-+        if (!ret)
-+            return sys_errno;
-+
-+        *pointer = ret;
-+        return 0;
++    int sys_anon_allocate(size_t size, void** pointer)
++	{
++		return sys_vm_map(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0, pointer);
 +    }
 +
-+    int sys_anon_free(void *pointer, size_t size) {
-+        int unused_return;
-+        int sys_errno;
-+
-+        asm volatile ("syscall"
-+        : "=a"(unused_return), "=d"(sys_errno)
-+        : "a"(11), "D"(pointer), "S"(size)
-+        : "rcx", "r11");
-+
-+        if (unused_return)
-+            return sys_errno;
-+
-+        return 0;
++    int sys_anon_free(void* pointer, size_t size)
++	{
++		asm volatile("int $0x80" : : "D"(7));
++		return 0;
 +    }
 +
 +#ifndef MLIBC_BUILDING_RTDL
-+    void sys_exit(int status) {
-+        asm volatile ("syscall" :
-+        : "a"(12), "D"(status)
-+        : "rcx", "r11", "rdx");
++    void sys_exit(int status)
++	{
++		asm volatile("int $0x80" : : "D"(8));
 +    }
 +#endif
 +
 +#ifndef MLIBC_BUILDING_RTDL
-+    int sys_clock_get(int clock, time_t *secs, long *nanos) {
-+        return 0;
++    int sys_clock_get(int clock, time_t *secs, long *nanos)
++	{
++		asm volatile("int $0x80" : : "D"(9));
++		return 0;
 +    }
 +#endif
 +
-+    int sys_vm_unmap(void *pointer, size_t size) {
++    int sys_vm_unmap(void* pointer, size_t size)
++	{
 +        return sys_anon_free(pointer, size);
 +    }
 +
-+    int sys_futex_wait(int *pointer, int expected, const struct timespec *time) {
-+        uint64_t err;
-+        asm volatile ("syscall"
-+        : "=d"(err)
-+        : "a"(66), "D"(pointer), "S"(expected)
-+        : "rcx", "r11");
++    int sys_futex_wait(int* pointer, int expected, const timespec* time)
++    {
++	    asm volatile("int $0x80" : : "D"(10));
++	    return 0;
++	}
 +
-+        if (err) {
-+            return -1;
-+        }
-+
-+        return 0;
-+    }
-+
-+    int sys_futex_wake(int *pointer) {
-+        uint64_t err;
-+        asm volatile ("syscall"
-+        : "=d"(err)
-+        : "a"(65), "D"(pointer)
-+        : "rcx", "r11");
-+
-+        if (err) {
-+            return -1;
-+        }
-+
-+        return 0;
++    int sys_futex_wake(int* pointer)
++	{
++		asm volatile("int $0x80" : : "D"(11));
++	    return 0;
 +    }
 +
 +// All remaining functions are disabled in ldso.
 +#ifndef MLIBC_BUILDING_RTDL
 +
-+    int sys_clone(void *entry, void *user_arg, void *tcb, pid_t *tid_out) {
-+        return 0;
++    int sys_clone(void* entry, void* user_arg, void* tcb, pid_t* tid_out)
++	{
++		asm volatile("int $0x80" : : "D"(12));
++		return 0;
 +    }
 +
-+    void sys_thread_exit() {
-+        asm volatile ("syscall"
-+        :
-+        : "a"(68)
-+        : "rcx", "r11");
-+        __builtin_trap();
++    void sys_thread_exit()
++	{
++		asm volatile("int $0x80" : : "D"(13));
 +    }
 +
-+    int sys_sleep(time_t *secs, long *nanos) {
-+        return 0;
++    int sys_sleep(time_t* secs, long* nanos)
++	{
++		asm volatile("int $0x80" : : "D"(14));
++		return 0;
 +    }
 +
-+    int sys_fork(pid_t *child) {
-+        return 0;
++    int sys_fork(pid_t* child)
++	{
++		asm volatile("int $0x80" : : "D"(15));
++		return 0;
 +    }
 +
-+    int sys_execve(const char *path, char *const argv[], char *const envp[]) {
-+        int ret;
-+        int sys_errno;
-+
-+        asm volatile ("syscall"
-+        : "=a"(ret), "=d"(sys_errno)
-+        : "a"(59), "D"(path), "S"(argv), "d"(envp)
-+        : "rcx", "r11");
-+
-+        if (sys_errno != 0)
-+            return sys_errno;
-+
-+        return 0;
++    int sys_execve(const char* path, char* const argv[], char* const envp[])
++	{
++		asm volatile("int $0x80" : : "D"(16));
++		return 0;
 +    }
 +
-+    pid_t sys_getpid() {
-+        pid_t pid;
-+        asm volatile ("syscall" : "=a"(pid)
-+        : "a"(5)
-+        : "rcx", "r11", "rdx");
-+        return pid;
++    pid_t sys_getpid()
++	{
++		asm volatile("int $0x80" : : "D"(17));
++		return 0;
 +    }
-+    pid_t sys_getppid() {
-+        pid_t ppid;
-+        asm volatile ("syscall" : "=a"(ppid)
-+        : "a"(14)
-+        : "rcx", "r11", "rdx");
-+        return ppid;
++
++    pid_t sys_getppid()
++	{
++		asm volatile("int $0x80" : : "D"(18));
++		return 0;
 +    }
 +
 +#endif // MLIBC_BUILDING_RTDL
-+
-+} // namespace mlibc
++}
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/abi.h b/sysdeps/tonix/include/abi-bits/abi.h
 new file mode 120000

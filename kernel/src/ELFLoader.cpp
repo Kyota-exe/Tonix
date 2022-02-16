@@ -115,11 +115,12 @@ void ELFLoader::LoadELF(const String& path, Process* process)
             *--stackHigherHalf = elfHeader->entry;
             *--stackHigherHalf = 9;
 
-            // Environment (currently null)
+            // Environment
             *--stackHigherHalf = 0;
 
             // Argument vector (argv)
-            *--stackHigherHalf = reinterpret_cast<uintptr_t>("program name");
+			*--stackHigherHalf = 0; // NULL
+            *--stackHigherHalf = reinterpret_cast<uintptr_t>("program name"); // Program Name
 
             // Argument count (argc)
             *--stackHigherHalf = 1;
@@ -145,6 +146,8 @@ void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeade
 
     RepositionOffset(elfFile, programHeader.offsetInFile, VFSSeekType::Set);
 
+	uint64_t fileReadCount = 0;
+
     for (uint64_t page = 0; page < segmentPagesCount; ++page)
     {
         uint64_t baseAddr = programHeader.virtAddr;
@@ -157,6 +160,13 @@ void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeade
         void* higherHalfVirtAddr = reinterpret_cast<void*>(HigherHalf(physAddr));
 
         Memset(higherHalfVirtAddr, 0, 0x1000);
-        Read(elfFile, higherHalfVirtAddr, 0x1000);
+
+		uint64_t readCount = 0x1000;
+		if (fileReadCount + readCount > programHeader.segmentSizeInFile)
+		{
+			readCount = programHeader.segmentSizeInFile % 0x1000;
+		}
+
+        fileReadCount += Read(elfFile, higherHalfVirtAddr, readCount);
     }
 }

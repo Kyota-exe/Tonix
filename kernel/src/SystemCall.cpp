@@ -7,7 +7,7 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
 {
     // PLACEHOLDER
 
-    Serial::Print("syscall");
+    Serial::Printf("syscall %d", type);
 
     switch (type)
     {

@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include "VFS.h"
+#include "UserspaceAllocator.h"
 
 struct InterruptFrame
 {
@@ -37,4 +38,5 @@ struct Process
 
     InterruptFrame frame;
     PagingManager* pagingManager;
+	UserspaceAllocator* userspaceAllocator;
 };
