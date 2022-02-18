@@ -47,26 +47,26 @@ void ELFLoader::LoadELF(const String& path, Process* process)
             "Invalid ELF file: failed to read program header table.");
 
     bool hasDynamicLinking = false;
-	uintptr_t programHeaderTableAddr = 0;
+    uintptr_t programHeaderTableAddr = 0;
 
     for (uint16_t i = 0; i < elfHeader->programHeaderTableEntryCount; ++i)
-	{
+    {
         ProgramHeader programHeader = programHeaderTable[i];
 
         switch (programHeader.type)
-		{
-			case ProgramHeaderType::Load:
-			{
+        {
+            case ProgramHeaderType::Load:
+            {
                 LoadProgramHeader(elfFile, programHeader, elfHeader, pagingManager);
                 break;
             }
-			case ProgramHeaderType::ProgramHeaderTable:
-			{
-				programHeaderTableAddr = programHeader.virtAddr;
-				break;
-			}
+            case ProgramHeaderType::ProgramHeaderTable:
+            {
+                programHeaderTableAddr = programHeader.virtAddr;
+                break;
+            }
             case ProgramHeaderType::Interpreter:
-			{
+            {
                 char *rtdlPath = new char[programHeader.segmentSizeInFile + 1];
 
                 RepositionOffset(elfFile, programHeader.offsetInFile, VFSSeekType::Set);
@@ -83,26 +83,26 @@ void ELFLoader::LoadELF(const String& path, Process* process)
         }
     }
 
-	if (elfHeader->type == ELFType::Shared)
-	{
+    if (elfHeader->type == ELFType::Shared)
+    {
         process->frame.rip = RTDL_ADDR + elfHeader->entry;
     }
-	else if (elfHeader->type == ELFType::Executable)
-	{
+    else if (elfHeader->type == ELFType::Executable)
+    {
         process->frame.cs = USER_CODE_SEGMENT;
         process->frame.ss = USER_DATA_SEGMENT;
         process->frame.ds = USER_DATA_SEGMENT;
         process->frame.es = USER_DATA_SEGMENT;
         process->frame.rflags = USER_INITIAL_RFLAGS;
 
-		void* stackPageFramePhysAddr = RequestPageFrame();
+        void* stackPageFramePhysAddr = RequestPageFrame();
         pagingManager->MapMemory(reinterpret_cast<void*>(USER_STACK_BASE - 0x1000), stackPageFramePhysAddr, true);
 
-		uintptr_t stackHigherHalfAddr = HigherHalf(reinterpret_cast<uintptr_t>(stackPageFramePhysAddr)) + 0x1000;
-		auto stackHigherHalf = reinterpret_cast<uintptr_t*>(stackHigherHalfAddr);
+        uintptr_t stackHigherHalfAddr = HigherHalf(reinterpret_cast<uintptr_t>(stackPageFramePhysAddr)) + 0x1000;
+        auto stackHigherHalf = reinterpret_cast<uintptr_t*>(stackHigherHalfAddr);
 
-		if (hasDynamicLinking)
-		{
+        if (hasDynamicLinking)
+        {
             // Auxiliary vector
             *--stackHigherHalf = 0; // NULL
             *--stackHigherHalf = 0;
@@ -119,18 +119,18 @@ void ELFLoader::LoadELF(const String& path, Process* process)
             *--stackHigherHalf = 0;
 
             // Argument vector (argv)
-			*--stackHigherHalf = 0; // NULL
+            *--stackHigherHalf = 0; // NULL
             *--stackHigherHalf = reinterpret_cast<uintptr_t>("program name"); // Program Name
 
             // Argument count (argc)
             *--stackHigherHalf = 1;
         }
-		else
-		{
+        else
+        {
             process->frame.rip = elfHeader->entry;
         }
 
-		process->frame.rsp = USER_STACK_BASE - (stackHigherHalfAddr - reinterpret_cast<uintptr_t>(stackHigherHalf));
+        process->frame.rsp = USER_STACK_BASE - (stackHigherHalfAddr - reinterpret_cast<uintptr_t>(stackHigherHalf));
     }
 
     delete elfHeader;
@@ -146,26 +146,28 @@ void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeade
 
     RepositionOffset(elfFile, programHeader.offsetInFile, VFSSeekType::Set);
 
-	uint64_t fileReadCount = 0;
+    uint64_t baseAddr = programHeader.virtAddr - (programHeader.virtAddr % 0x1000);
+    if (elfHeader->type == ELFType::Shared) baseAddr += RTDL_ADDR;
+    Serial::Printf("> Virt: %x", elfHeader->type == ELFType::Shared ? programHeader.virtAddr + RTDL_ADDR : programHeader.virtAddr);
+    Serial::Printf("> Base: %x", baseAddr);
 
+    uint64_t fileReadCount = 0;
     for (uint64_t page = 0; page < segmentPagesCount; ++page)
     {
-        uint64_t baseAddr = programHeader.virtAddr;
-        if (elfHeader->type == ELFType::Shared) baseAddr += RTDL_ADDR;
-        void* virtAddr = reinterpret_cast<void*>(baseAddr + page * 0x1000);
-
         auto physAddr = reinterpret_cast<uintptr_t>(RequestPageFrame());
+
+        auto virtAddr = reinterpret_cast<void*>(baseAddr + page * 0x1000);
         pagingManager->MapMemory(virtAddr, reinterpret_cast<void*>(physAddr), true);
 
         void* higherHalfVirtAddr = reinterpret_cast<void*>(HigherHalf(physAddr));
 
         Memset(higherHalfVirtAddr, 0, 0x1000);
 
-		uint64_t readCount = 0x1000;
-		if (fileReadCount + readCount > programHeader.segmentSizeInFile)
-		{
-			readCount = programHeader.segmentSizeInFile % 0x1000;
-		}
+        uint64_t readCount = 0x1000;
+        if (fileReadCount + readCount > programHeader.segmentSizeInFile)
+        {
+            readCount = programHeader.segmentSizeInFile % 0x1000;
+        }
 
         fileReadCount += Read(elfFile, higherHalfVirtAddr, readCount);
     }

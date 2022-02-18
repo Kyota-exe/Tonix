@@ -24,6 +24,8 @@ void* FileMap(void* addr, uint64_t length, int protection, int flags, int descri
 		addr = process.userspaceAllocator->AllocatePages(pageCount);
 	}
 
+	KAssert(reinterpret_cast<uintptr_t>(addr) % 0x1000 == 0, "mmap must have page-size-aligned address.");
+
     for (uint64_t page = 0; page < pageCount; ++page)
     {
         void* physAddr = RequestPageFrame();
