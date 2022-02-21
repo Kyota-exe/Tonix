@@ -3,6 +3,7 @@
 #include "Memory/PageFrameAllocator.h"
 #include "Memory/Memory.h"
 #include "Scheduler.h"
+#include "Serial.h"
 
 enum FileMapFlag
 {

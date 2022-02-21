@@ -11,6 +11,9 @@ enum class SystemCallType
     Seek = 3,
     Close = 4,
     FileMap = 5,
+    TCBSet = 6,
+    Exit = 8,
+    IsTerminal = 19,
     Panic = 254,
     Log = 255,
     Special = 0x69

@@ -7,6 +7,7 @@
 #include "Serial.h"
 #include "Scheduler.h"
 #include "RAMDisk.h"
+#include "Memory/PagingManager.h"
 
 Vnode* root;
 Vnode* currentInCache = nullptr;
@@ -25,6 +26,7 @@ void InitializeVFS(void* ext2RamDisk)
     Error devMountPointError;
     int devDirectory = CreateDirectory(String("/dev"), &devMountPoint, devMountPointError);
     KAssert(devDirectory != -1, "Failed to create /dev directory.");
+
     FileSystem* deviceFileSystem;
     deviceFileSystem = new DeviceFS(nullptr);
     Mount(devMountPoint, deviceFileSystem->fileSystemRoot);
@@ -34,6 +36,29 @@ void CacheVNode(Vnode* vnode)
 {
     currentInCache->nextInCache = vnode;
     currentInCache = vnode;
+}
+
+Vector<FileDescriptor>* GetFileDescriptorsVector()
+{
+    return &taskList->Get(currentTaskIndex).fileDescriptors;
+}
+
+FileDescriptor* GetFileDescriptor(int descriptor)
+{
+    Vector<FileDescriptor>* fileDescriptors = GetFileDescriptorsVector();
+
+    if (descriptor >= (int)fileDescriptors->GetLength())
+    {
+        return nullptr;
+    }
+
+    FileDescriptor* fileDescriptor = &fileDescriptors->Get(descriptor);
+    if (!fileDescriptor->present)
+    {
+        return nullptr;
+    }
+
+    return fileDescriptor;
 }
 
 Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error)
@@ -128,7 +153,7 @@ void Mount(Vnode* mountPoint, Vnode* vnode)
 
 int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor)
 {
-    Vector<FileDescriptor>* fileDescriptors = &(*taskList)[currentTaskIndex].fileDescriptors;
+    Vector<FileDescriptor>* fileDescriptors = GetFileDescriptorsVector();
     int descriptorIndex = -1;
 
     for (int i = 0; (uint64_t)i < fileDescriptors->GetLength(); ++i)
@@ -207,7 +232,9 @@ int Open(const String& path, int flags, Error& error)
 
 uint64_t Read(int descriptor, void* buffer, uint64_t count)
 {
-    FileDescriptor* fileDescriptor =  &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
+    FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
+    KAssert(fileDescriptor != nullptr && fileDescriptor->present, "Invalid file descriptor.");
+
     Vnode* vnode = fileDescriptor->vnode;
 
     uint64_t readCount = vnode->fileSystem->Read(vnode, buffer, count, fileDescriptor->offset);
@@ -218,7 +245,9 @@ uint64_t Read(int descriptor, void* buffer, uint64_t count)
 
 uint64_t Write(int descriptor, const void* buffer, uint64_t count)
 {
-    FileDescriptor* fileDescriptor = &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
+    FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
+    KAssert(fileDescriptor != nullptr && fileDescriptor->present, "Invalid file descriptor.");
+
     Vnode* vnode = fileDescriptor->vnode;
 
     uint64_t wroteCount = vnode->fileSystem->Write(vnode, buffer, count, fileDescriptor->offset);
@@ -227,10 +256,12 @@ uint64_t Write(int descriptor, const void* buffer, uint64_t count)
     return wroteCount;
 }
 
-uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType)
+uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType, Error& error)
 {
     // TODO: Support files larger than 2^32 bytes
-    FileDescriptor* fileDescriptor = &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
+    FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
+    KAssert(fileDescriptor != nullptr && fileDescriptor->present, "Invalid file descriptor.");
+
     Vnode* vnode = fileDescriptor->vnode;
 
     switch (seekType)
@@ -244,6 +275,9 @@ uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType)
         case VFSSeekType::End:
             fileDescriptor->offset = vnode->fileSize + offset;
             break;
+        default:
+            error = Error::InvalidArgument;
+            return -1;
     }
 
     if (fileDescriptor->offset > vnode->fileSize)
@@ -260,15 +294,30 @@ uint64_t RepositionOffset(int descriptor, uint64_t offset, VFSSeekType seekType)
 
 void Close(int descriptor)
 {
-    FileDescriptor* fileDescriptor = &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
+    FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
+    KAssert(fileDescriptor != nullptr && fileDescriptor->present, "Invalid file descriptor.");
 
     fileDescriptor->present = false;
     fileDescriptor->offset = 0;
 }
 
+VnodeType GetVnodeType(int descriptor, Error& error)
+{
+    FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
+    if (fileDescriptor == nullptr || !fileDescriptor->present)
+    {
+        error = Error::InvalidFileDescriptor;
+        return VnodeType::VFSUnknown;
+    }
+
+    return fileDescriptor->vnode->type;
+}
+
 uint64_t CurrentOffset(int descriptor)
 {
-    FileDescriptor* fileDescriptor = &(*taskList)[currentTaskIndex].fileDescriptors[descriptor];
+    FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
+    KAssert(fileDescriptor != nullptr && fileDescriptor->present, "Invalid file descriptor.");
+
     return fileDescriptor->offset;
 }
 

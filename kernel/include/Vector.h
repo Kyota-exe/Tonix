@@ -15,6 +15,7 @@ public:
     void Push(const T& value);
     T Pop();
     T Pop(uint64_t index);
+    bool Contains(const T& value);
     uint64_t GetLength();
 
     typedef T* iterator;
@@ -108,6 +109,16 @@ T Vector<T>::Pop(uint64_t index)
 }
 
 template <typename T>
+bool Vector<T>::Contains(const T& value)
+{
+    for (uint64_t i = 0; i < length; ++i)
+    {
+        if (buffer[i] == value) return true;
+    }
+    return false;
+}
+
+template <typename T>
 uint64_t Vector<T>::GetLength()
 {
     return length;
@@ -128,6 +139,7 @@ typename Vector<T>::iterator Vector<T>::end()
 template <typename T>
 T& Vector<T>::operator[](uint64_t index)
 {
+    KAssert(index < GetLength(), "Vector index (%d) out of range.", index);
     return buffer[index];
 }
 

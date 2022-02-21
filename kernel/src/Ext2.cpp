@@ -187,7 +187,7 @@ uint64_t Ext2::Read(Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos
         uint32_t block = GetBlockAddr(vnode, currentReadPos / blockSize, false);
         uint64_t diskAddr = block * blockSize + offsetInBlock;
 
-        disk->Read(diskAddr, reinterpret_cast<void**>((uintptr_t)buffer + parsedCount), readSize);
+        disk->Read(diskAddr, reinterpret_cast<void*>((uintptr_t)buffer + parsedCount), readSize);
 
         parsedCount += readSize;
         currentReadPos += readSize;
@@ -344,6 +344,8 @@ void Ext2::WriteDirectoryEntry(Vnode* directory, uint32_t inodeNum, const String
 
 uint32_t Ext2::GetBlockAddr(Vnode* vnode, uint32_t requestedBlockIndex, bool allocateMissingBlock)
 {
+    // TODO: Refactor, make recursive
+
     auto context = reinterpret_cast<Ext2Inode*>(vnode->context);
 
     uint32_t blockPtr = 0;
@@ -355,15 +357,15 @@ uint32_t Ext2::GetBlockAddr(Vnode* vnode, uint32_t requestedBlockIndex, bool all
     }
     else if (requestedBlockIndex < (12 + pointersPerBlock))
     {
-        uint64_t readPos = sizeof(blockPtr) * (requestedBlockIndex % 12);
+        uint64_t readPos = sizeof(blockPtr) * (requestedBlockIndex - 12);
         Read(context->singlyIndirectBlockPtr, &blockPtr, sizeof(blockPtr), readPos);
         return blockPtr;
     }
-    else if (requestedBlockIndex < 12 + pointersPerBlock * pointersPerBlock)
+    else if (requestedBlockIndex < (12 + pointersPerBlock * pointersPerBlock))
     {
         Panic("Doubly indirect pointers are not yet supported.");
     }
-    else if (requestedBlockIndex < 12 + pointersPerBlock * pointersPerBlock * pointersPerBlock)
+    else if (requestedBlockIndex < (12 + pointersPerBlock * pointersPerBlock * pointersPerBlock))
     {
         Panic("Triply indirect pointers are not yet supported.");
     }

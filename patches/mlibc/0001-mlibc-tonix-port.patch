@@ -1,15 +1,15 @@
-From 7cf9d4ed10439c44cdcc52327553779bb9b6e40b Mon Sep 17 00:00:00 2001
+From b9503494104f52e368835dd712748400bc57bec0 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
-Date: Tue, 15 Feb 2022 21:13:47 -0500
+Date: Sun, 20 Feb 2022 17:32:20 -0500
 Subject: [PATCH] mlibc tonix port
 
 ---
  meson.build                                  |   4 +
- options/rtdl/generic/linker.cpp              |   6 +-
+ options/rtdl/generic/linker.cpp              |   8 +-
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++++
- sysdeps/tonix/generic/Generic.cpp            | 193 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 204 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -35,9 +35,9 @@ Subject: [PATCH] mlibc tonix port
  sysdeps/tonix/include/abi-bits/uid_t.h       |   1 +
  sysdeps/tonix/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
- sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 ++
+ sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
  sysdeps/tonix/meson.build                    |  51 +++++
- 33 files changed, 330 insertions(+), 5 deletions(-)
+ 33 files changed, 342 insertions(+), 6 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -70,10 +70,10 @@ Subject: [PATCH] mlibc tonix port
  create mode 100644 sysdeps/tonix/meson.build
 
 diff --git a/meson.build b/meson.build
-index b363aa3..6a1c4b5 100644
+index 6c7b4073..6a12e308 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -131,6 +131,10 @@ elif host_machine.system() == 'dripos'
+@@ -132,6 +132,10 @@ elif host_machine.system() == 'dripos'
  	rtdl_include_dirs += include_directories('sysdeps/dripos/include')
  	libc_include_dirs += include_directories('sysdeps/dripos/include')
  	subdir('sysdeps/dripos')
@@ -85,7 +85,7 @@ index b363aa3..6a1c4b5 100644
  	error('No sysdeps defined for OS: ' + host_machine.system())
  endif
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
-index 5326417..70d7758 100644
+index 53264175..14792616 100644
 --- a/options/rtdl/generic/linker.cpp
 +++ b/options/rtdl/generic/linker.cpp
 @@ -12,9 +12,9 @@
@@ -101,8 +101,17 @@ index 5326417..70d7758 100644
  bool eagerBinding = true;
  
  #if defined(__x86_64__)
+@@ -282,7 +282,7 @@ void ObjectRepository::_fetchFromPhdrs(SharedObject *object, void *phdr_pointer,
+ 	object->phdrEntrySize = phdr_entry_size;
+ 	object->phdrCount = phdr_count;
+ 	if(verbose)
+-		mlibc::infoLogger() << "rtdl: Loading " << object->name << frg::endlog;
++        mlibc::infoLogger() << "rtdl: Loading " << object->name << frg::endlog;
+ 
+ 	// Note: the entry pointer is absolute and not relative to the base address.
+ 	object->entry = entry_pointer;
 diff --git a/options/rtdl/generic/main.cpp b/options/rtdl/generic/main.cpp
-index bed8e11..322dbf7 100644
+index bed8e11d..322dbf77 100644
 --- a/options/rtdl/generic/main.cpp
 +++ b/options/rtdl/generic/main.cpp
 @@ -14,8 +14,8 @@
@@ -118,7 +127,7 @@ index bed8e11..322dbf7 100644
  extern HIDDEN void *_GLOBAL_OFFSET_TABLE_[];
 diff --git a/sysdeps/tonix/crt-x86_64/crt0.S b/sysdeps/tonix/crt-x86_64/crt0.S
 new file mode 100644
-index 0000000..0807ce2
+index 00000000..0807ce2b
 --- /dev/null
 +++ b/sysdeps/tonix/crt-x86_64/crt0.S
 @@ -0,0 +1,7 @@
@@ -131,7 +140,7 @@ index 0000000..0807ce2
 +.size _start, . - _start
 diff --git a/sysdeps/tonix/generic/Entry.cpp b/sysdeps/tonix/generic/Entry.cpp
 new file mode 100644
-index 0000000..57f881f
+index 00000000..cd1ef677
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Entry.cpp
 @@ -0,0 +1,34 @@
@@ -171,10 +180,10 @@ index 0000000..57f881f
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 0000000..80a8176
+index 00000000..964a7da9
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,193 @@
+@@ -0,0 +1,204 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -262,9 +271,9 @@ index 0000000..80a8176
 +        void* ret;
 +        int error;
 +
-+        register auto r8 asm("r8") = &flags;
-+		register auto r9 asm("r9") = &fd;
-+		register auto r10 asm("r10") = &offset;
++        register auto r8 asm("r8") = flags;
++		register auto r9 asm("r9") = fd;
++		register auto r10 asm("r10") = offset;
 +        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(5), "S"(hint), "d"(size), "c"(prot), "r"(r8), "r"(r9), "r"(r10));
 +
 +        if (ret == nullptr) return error;
@@ -275,7 +284,7 @@ index 0000000..80a8176
 +
 +    int sys_tcb_set(void* pointer)
 +	{
-+		asm volatile("int $0x80" : : "D"(6));
++		asm volatile("int $0x80" : : "D"(6), "S"(pointer));
 +		return 0;
 +    }
 +
@@ -290,10 +299,21 @@ index 0000000..80a8176
 +		return 0;
 +    }
 +
++    int sys_isatty(int fd)
++    {
++        int ret;
++        int error;
++        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(19), "S"(fd));
++
++        if (ret == -1) return error;
++
++        return 0;
++    }
++
 +#ifndef MLIBC_BUILDING_RTDL
 +    void sys_exit(int status)
 +	{
-+		asm volatile("int $0x80" : : "D"(8));
++		asm volatile("int $0x80" : : "D"(8), "S"(status));
 +    }
 +#endif
 +
@@ -371,7 +391,7 @@ index 0000000..80a8176
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/abi.h b/sysdeps/tonix/include/abi-bits/abi.h
 new file mode 120000
-index 0000000..c945860
+index 00000000..c9458601
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/abi.h
 @@ -0,0 +1 @@
@@ -379,7 +399,7 @@ index 0000000..c945860
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/auxv.h b/sysdeps/tonix/include/abi-bits/auxv.h
 new file mode 120000
-index 0000000..0f14415
+index 00000000..0f144153
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/auxv.h
 @@ -0,0 +1 @@
@@ -387,7 +407,7 @@ index 0000000..0f14415
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/blkcnt_t.h b/sysdeps/tonix/include/abi-bits/blkcnt_t.h
 new file mode 120000
-index 0000000..e9d9f1b
+index 00000000..e9d9f1b4
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/blkcnt_t.h
 @@ -0,0 +1 @@
@@ -395,7 +415,7 @@ index 0000000..e9d9f1b
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/blksize_t.h b/sysdeps/tonix/include/abi-bits/blksize_t.h
 new file mode 120000
-index 0000000..c6dfb6e
+index 00000000..c6dfb6e0
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/blksize_t.h
 @@ -0,0 +1 @@
@@ -403,7 +423,7 @@ index 0000000..c6dfb6e
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/dev_t.h b/sysdeps/tonix/include/abi-bits/dev_t.h
 new file mode 120000
-index 0000000..0c1143b
+index 00000000..0c1143b9
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/dev_t.h
 @@ -0,0 +1 @@
@@ -411,7 +431,7 @@ index 0000000..0c1143b
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/errno.h b/sysdeps/tonix/include/abi-bits/errno.h
 new file mode 120000
-index 0000000..589859f
+index 00000000..589859fb
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/errno.h
 @@ -0,0 +1 @@
@@ -419,7 +439,7 @@ index 0000000..589859f
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/fcntl.h b/sysdeps/tonix/include/abi-bits/fcntl.h
 new file mode 120000
-index 0000000..ea5323a
+index 00000000..ea5323ad
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/fcntl.h
 @@ -0,0 +1 @@
@@ -427,7 +447,7 @@ index 0000000..ea5323a
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/gid_t.h b/sysdeps/tonix/include/abi-bits/gid_t.h
 new file mode 120000
-index 0000000..6a77218
+index 00000000..6a772180
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/gid_t.h
 @@ -0,0 +1 @@
@@ -435,7 +455,7 @@ index 0000000..6a77218
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/in.h b/sysdeps/tonix/include/abi-bits/in.h
 new file mode 120000
-index 0000000..b58c683
+index 00000000..b58c683f
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/in.h
 @@ -0,0 +1 @@
@@ -443,7 +463,7 @@ index 0000000..b58c683
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/ino_t.h b/sysdeps/tonix/include/abi-bits/ino_t.h
 new file mode 120000
-index 0000000..10d644e
+index 00000000..10d644e7
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/ino_t.h
 @@ -0,0 +1 @@
@@ -451,7 +471,7 @@ index 0000000..10d644e
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/limits.h b/sysdeps/tonix/include/abi-bits/limits.h
 new file mode 120000
-index 0000000..1aa5894
+index 00000000..1aa58942
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/limits.h
 @@ -0,0 +1 @@
@@ -459,7 +479,7 @@ index 0000000..1aa5894
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/mode_t.h b/sysdeps/tonix/include/abi-bits/mode_t.h
 new file mode 120000
-index 0000000..29d7733
+index 00000000..29d77331
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/mode_t.h
 @@ -0,0 +1 @@
@@ -467,7 +487,7 @@ index 0000000..29d7733
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/nlink_t.h b/sysdeps/tonix/include/abi-bits/nlink_t.h
 new file mode 120000
-index 0000000..7618c27
+index 00000000..7618c27f
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/nlink_t.h
 @@ -0,0 +1 @@
@@ -475,7 +495,7 @@ index 0000000..7618c27
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/pid_t.h b/sysdeps/tonix/include/abi-bits/pid_t.h
 new file mode 120000
-index 0000000..3fd26a7
+index 00000000..3fd26a7f
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/pid_t.h
 @@ -0,0 +1 @@
@@ -483,7 +503,7 @@ index 0000000..3fd26a7
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/reboot.h b/sysdeps/tonix/include/abi-bits/reboot.h
 new file mode 120000
-index 0000000..ecc3ddb
+index 00000000..ecc3ddb9
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/reboot.h
 @@ -0,0 +1 @@
@@ -491,7 +511,7 @@ index 0000000..ecc3ddb
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/resource.h b/sysdeps/tonix/include/abi-bits/resource.h
 new file mode 120000
-index 0000000..3e59c75
+index 00000000..3e59c750
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/resource.h
 @@ -0,0 +1 @@
@@ -499,7 +519,7 @@ index 0000000..3e59c75
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/seek-whence.h b/sysdeps/tonix/include/abi-bits/seek-whence.h
 new file mode 120000
-index 0000000..d22e993
+index 00000000..d22e9933
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/seek-whence.h
 @@ -0,0 +1 @@
@@ -507,7 +527,7 @@ index 0000000..d22e993
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/signal.h b/sysdeps/tonix/include/abi-bits/signal.h
 new file mode 120000
-index 0000000..b20e511
+index 00000000..b20e5119
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/signal.h
 @@ -0,0 +1 @@
@@ -515,7 +535,7 @@ index 0000000..b20e511
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/socket.h b/sysdeps/tonix/include/abi-bits/socket.h
 new file mode 120000
-index 0000000..b754d70
+index 00000000..b754d701
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/socket.h
 @@ -0,0 +1 @@
@@ -523,7 +543,7 @@ index 0000000..b754d70
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/stat.h b/sysdeps/tonix/include/abi-bits/stat.h
 new file mode 120000
-index 0000000..82642c3
+index 00000000..82642c3c
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/stat.h
 @@ -0,0 +1 @@
@@ -531,7 +551,7 @@ index 0000000..82642c3
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/termios.h b/sysdeps/tonix/include/abi-bits/termios.h
 new file mode 120000
-index 0000000..cfcfe76
+index 00000000..cfcfe763
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/termios.h
 @@ -0,0 +1 @@
@@ -539,7 +559,7 @@ index 0000000..cfcfe76
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/time.h b/sysdeps/tonix/include/abi-bits/time.h
 new file mode 120000
-index 0000000..97f3d52
+index 00000000..97f3d52d
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/time.h
 @@ -0,0 +1 @@
@@ -547,7 +567,7 @@ index 0000000..97f3d52
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/uid_t.h b/sysdeps/tonix/include/abi-bits/uid_t.h
 new file mode 120000
-index 0000000..1113eba
+index 00000000..1113eba6
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/uid_t.h
 @@ -0,0 +1 @@
@@ -555,7 +575,7 @@ index 0000000..1113eba
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/vm-flags.h b/sysdeps/tonix/include/abi-bits/vm-flags.h
 new file mode 120000
-index 0000000..f1a985e
+index 00000000..f1a985e6
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/vm-flags.h
 @@ -0,0 +1 @@
@@ -563,7 +583,7 @@ index 0000000..f1a985e
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/wait.h b/sysdeps/tonix/include/abi-bits/wait.h
 new file mode 120000
-index 0000000..6d911c7
+index 00000000..6d911c7f
 --- /dev/null
 +++ b/sysdeps/tonix/include/abi-bits/wait.h
 @@ -0,0 +1 @@
@@ -571,7 +591,7 @@ index 0000000..6d911c7
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/mlibc/thread-entry.hpp b/sysdeps/tonix/include/mlibc/thread-entry.hpp
 new file mode 100644
-index 0000000..8fe16fe
+index 00000000..9bda0961
 --- /dev/null
 +++ b/sysdeps/tonix/include/mlibc/thread-entry.hpp
 @@ -0,0 +1,11 @@
@@ -589,7 +609,7 @@ index 0000000..8fe16fe
 \ No newline at end of file
 diff --git a/sysdeps/tonix/meson.build b/sysdeps/tonix/meson.build
 new file mode 100644
-index 0000000..7b27c38
+index 00000000..dc7bcbdd
 --- /dev/null
 +++ b/sysdeps/tonix/meson.build
 @@ -0,0 +1,51 @@

@@ -10,5 +10,6 @@ extern uint64_t currentTaskIndex;
 
 void InitializeTaskList();
 void StartScheduler();
-Process GetNextTask(InterruptFrame currentTaskFrame);
+Process GetNextTask(InterruptFrame* currentTaskFrame);
+void ExitCurrentTask(int status);
 void CreateProcess(const String& path);

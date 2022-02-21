@@ -1,6 +1,5 @@
 #include "Scheduler.h"
 #include "Memory/PagingManager.h"
-#include "Memory/PageFrameAllocator.h"
 #include "ELFLoader.h"
 #include "LAPIC.h"
 #include "Serial.h"
@@ -10,15 +9,15 @@ const uint64_t TIMER_FREQUENCY = 10;
 
 Vector<Process>* taskList = nullptr;
 uint64_t currentTaskIndex = 0;
-uint64_t currentTicks = 0;
-bool firstTask = true;
+uint64_t currentTicks = QUANTUM_IN_TICKS;
+bool recoverFromIdle = true;
 
 void InitializeTaskList()
 {
     taskList = new Vector<Process>();
 
-    //Process initProcess;
-    //taskList->Push(initProcess);
+    Process initProcess;
+    taskList->Push(initProcess);
 }
 
 void StartScheduler()
@@ -31,23 +30,45 @@ void StartScheduler()
     asm volatile("sti");
 }
 
-Process GetNextTask(InterruptFrame currentTaskFrame)
+Process GetNextTask(InterruptFrame* currentTaskFrame)
 {
     // TODO: Add scheduler spinlock
 
-    if (firstTask) firstTask = false;
-    else (*taskList)[currentTaskIndex].frame = currentTaskFrame;
-
-    currentTicks++;
+    if (!recoverFromIdle)
+    {
+        taskList->Get(currentTaskIndex).frame = *currentTaskFrame;
+        currentTicks++;
+    }
 
     if (currentTicks == QUANTUM_IN_TICKS)
     {
         currentTaskIndex++;
-        if (currentTaskIndex == taskList->GetLength()) currentTaskIndex = 0;
+        if (currentTaskIndex >= taskList->GetLength())
+        {
+            if (taskList->GetLength() == 1)
+            {
+                recoverFromIdle = true;
+                currentTicks = QUANTUM_IN_TICKS;
+                while (true) asm volatile("hlt");
+            }
+            currentTaskIndex = 1;
+        }
         currentTicks = 0;
     }
 
-    return (*taskList)[currentTaskIndex];
+    recoverFromIdle = false;
+    return taskList->Get(currentTaskIndex);
+}
+
+void ExitCurrentTask(int status)
+{
+    taskList->Pop(currentTaskIndex);
+    recoverFromIdle = true;
+    currentTicks = QUANTUM_IN_TICKS;
+
+    Serial::Printf("Process exited with status %d.", status);
+
+    while (true) asm volatile("hlt");
 }
 
 void CreateProcess(const String& path)
@@ -59,8 +80,24 @@ void CreateProcess(const String& path)
     process.pagingManager = pagingManager;
 	process.userspaceAllocator = new UserspaceAllocator();
 
-    // LoadELF will set the rip register and rsp
+    // LoadELF will initialize the registers
     ELFLoader::LoadELF(path, &process);
 
     taskList->Push(process);
+
+    auto originalTaskIndex = currentTaskIndex;
+    currentTaskIndex = taskList->GetLength() - 1;
+
+    Error error;
+    int desc;
+    desc = Open(String("/dev/tty"), 0, error);
+    KAssert(desc != -1, "Could not initialize stdin.");
+
+    desc = Open(String("/dev/tty"), 0, error);
+    KAssert(desc != -1, "Could not initialize stdout.");
+
+    desc = Open(String("/dev/tty"), 0, error);
+    KAssert(desc != -1, "Could not initialize stderr.");
+
+    currentTaskIndex = originalTaskIndex;
 }

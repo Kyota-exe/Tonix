@@ -21,11 +21,11 @@ void KeyboardInterruptHandler()
 void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 {
 	Serial::Print("Timer interrupt");
-    Process nextTask = GetNextTask(*interruptFrame);
+    Process nextTask = GetNextTask(interruptFrame);
     *interruptFrame = nextTask.frame;
     nextTask.pagingManager->SetCR3();
 
-	//LAPIC::SendEOI();
+    LAPIC::SendEOI();
 }
 
 void SystemCallHandler(InterruptFrame* interruptFrame)

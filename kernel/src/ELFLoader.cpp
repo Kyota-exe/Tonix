@@ -7,13 +7,14 @@
 #include "Serial.h"
 #include "ELF.h"
 
-constexpr uint64_t RTDL_ADDR = 0x40000000;
+constexpr uintptr_t RTDL_ADDR = 0x40000000;
 
 constexpr uint16_t USER_CODE_SEGMENT = 0b01'0'11;
 constexpr uint16_t USER_DATA_SEGMENT = 0b10'0'11;
 constexpr uint64_t USER_INITIAL_RFLAGS = 0b1000000010;
 
-const uint64_t USER_STACK_BASE = 0x0000'8000'0000'0000 - 0x1000;
+constexpr uintptr_t USER_STACK_BASE = 0x0000'8000'0000'0000 - 0x1000;
+constexpr uintptr_t USER_STACK_SIZE = 0x2000;
 
 void ELFLoader::LoadELF(const String& path, Process* process)
 {
@@ -34,15 +35,12 @@ void ELFLoader::LoadELF(const String& path, Process* process)
             "Invalid ELF file: magic bytes mismatch.");
 
     KAssert(elfHeader->programHeaderTableEntrySize == sizeof(ProgramHeader), "Invalid ELF file: invalid header.");
-
     KAssert(elfHeader->type == ELFType::Executable || elfHeader->type == ELFType::Shared, "Unsupported ELF type.");
 
     uint64_t programHeaderTableSize = elfHeader->programHeaderTableEntryCount * elfHeader->programHeaderTableEntrySize;
-
     auto programHeaderTable = new ProgramHeader[elfHeader->programHeaderTableEntryCount];
 
     uint64_t programHeaderTableSizeRead = Read(elfFile, programHeaderTable, programHeaderTableSize);
-
     KAssert(programHeaderTableSize == programHeaderTableSizeRead,
             "Invalid ELF file: failed to read program header table.");
 
@@ -67,9 +65,10 @@ void ELFLoader::LoadELF(const String& path, Process* process)
             }
             case ProgramHeaderType::Interpreter:
             {
-                char *rtdlPath = new char[programHeader.segmentSizeInFile + 1];
+                char* rtdlPath = new char[programHeader.segmentSizeInFile + 1];
 
-                RepositionOffset(elfFile, programHeader.offsetInFile, VFSSeekType::Set);
+                Error error;
+                RepositionOffset(elfFile, programHeader.offsetInFile, VFSSeekType::Set, error);
                 Read(elfFile, rtdlPath, programHeader.segmentSizeInFile);
 
                 rtdlPath[programHeader.segmentSizeInFile] = 0;
@@ -95,10 +94,18 @@ void ELFLoader::LoadELF(const String& path, Process* process)
         process->frame.es = USER_DATA_SEGMENT;
         process->frame.rflags = USER_INITIAL_RFLAGS;
 
-        void* stackPageFramePhysAddr = RequestPageFrame();
-        pagingManager->MapMemory(reinterpret_cast<void*>(USER_STACK_BASE - 0x1000), stackPageFramePhysAddr, true);
+        uint64_t stackPageCount = USER_STACK_SIZE / 0x1000;
+        uintptr_t stackLowestVirtAddr = USER_STACK_BASE - USER_STACK_SIZE;
+        auto stackLowestPhysAddr = reinterpret_cast<uintptr_t>(RequestPageFrames(stackPageCount));
+        void* stackPhysAddr = nullptr;
+        for (uint64_t page = 0; page < USER_STACK_SIZE; page += 0x1000)
+        {
+            stackPhysAddr = reinterpret_cast<void*>(stackLowestPhysAddr + page);
+            auto virtAddr = reinterpret_cast<void*>(stackLowestVirtAddr + page);
+            pagingManager->MapMemory(virtAddr, stackPhysAddr, true);
+        }
 
-        uintptr_t stackHigherHalfAddr = HigherHalf(reinterpret_cast<uintptr_t>(stackPageFramePhysAddr)) + 0x1000;
+        uintptr_t stackHigherHalfAddr = HigherHalf(reinterpret_cast<uintptr_t>(stackPhysAddr)) + 0x1000;
         auto stackHigherHalf = reinterpret_cast<uintptr_t*>(stackHigherHalfAddr);
 
         if (hasDynamicLinking)
@@ -120,10 +127,9 @@ void ELFLoader::LoadELF(const String& path, Process* process)
 
             // Argument vector (argv)
             *--stackHigherHalf = 0; // NULL
-            *--stackHigherHalf = reinterpret_cast<uintptr_t>("program name"); // Program Name
 
             // Argument count (argc)
-            *--stackHigherHalf = 1;
+            *--stackHigherHalf = 0;
         }
         else
         {
@@ -144,24 +150,25 @@ void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeade
 {
     uint64_t segmentPagesCount = (programHeader.segmentSizeInMemory - 1) / 0x1000 + 1;
 
-    RepositionOffset(elfFile, programHeader.offsetInFile, VFSSeekType::Set);
+    Error error;
+    RepositionOffset(elfFile, programHeader.offsetInFile, VFSSeekType::Set, error);
 
-    uint64_t baseAddr = programHeader.virtAddr - (programHeader.virtAddr % 0x1000);
+    uintptr_t baseAddr = programHeader.virtAddr;
     if (elfHeader->type == ELFType::Shared) baseAddr += RTDL_ADDR;
-    Serial::Printf("> Virt: %x", elfHeader->type == ELFType::Shared ? programHeader.virtAddr + RTDL_ADDR : programHeader.virtAddr);
-    Serial::Printf("> Base: %x", baseAddr);
 
     uint64_t fileReadCount = 0;
     for (uint64_t page = 0; page < segmentPagesCount; ++page)
     {
-        auto physAddr = reinterpret_cast<uintptr_t>(RequestPageFrame());
+        auto physAddr = RequestPageFrame();
+        auto virtAddr = reinterpret_cast<void*>(baseAddr + (page * 0x1000));
 
-        auto virtAddr = reinterpret_cast<void*>(baseAddr + page * 0x1000);
-        pagingManager->MapMemory(virtAddr, reinterpret_cast<void*>(physAddr), true);
+        void* pageAddr = (void*)((uintptr_t)virtAddr - ((uintptr_t)virtAddr % 0x1000));
+        pagingManager->MapMemory(pageAddr, physAddr, true);
 
-        void* higherHalfVirtAddr = reinterpret_cast<void*>(HigherHalf(physAddr));
+        auto higherHalfAddr = HigherHalf(reinterpret_cast<uintptr_t>(physAddr));
+        Memset(reinterpret_cast<void*>(higherHalfAddr), 0, 0x1000);
 
-        Memset(higherHalfVirtAddr, 0, 0x1000);
+        higherHalfAddr += baseAddr % 0x1000;
 
         uint64_t readCount = 0x1000;
         if (fileReadCount + readCount > programHeader.segmentSizeInFile)
@@ -169,6 +176,6 @@ void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeade
             readCount = programHeader.segmentSizeInFile % 0x1000;
         }
 
-        fileReadCount += Read(elfFile, higherHalfVirtAddr, readCount);
+        fileReadCount += Read(elfFile, reinterpret_cast<void*>(higherHalfAddr), readCount);
     }
 }
