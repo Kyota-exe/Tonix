@@ -15,8 +15,9 @@ enum class SystemCallType
     Exit = 8,
     IsTerminal = 19,
     Panic = 254,
-    Log = 255,
-    Special = 0x69
+    Log = 255
 };
 
-uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5, Error& error);
+struct InterruptFrame;
+
+uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5, InterruptFrame* interruptFrame, Error& error);

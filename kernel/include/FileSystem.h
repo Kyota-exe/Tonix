@@ -15,6 +15,7 @@ public:
     virtual void Truncate(Vnode* vnode) = 0;
     explicit FileSystem(Disk* disk);
     virtual ~FileSystem();
+    FileSystem& operator=(const FileSystem&) = delete;
     Vnode* fileSystemRoot;
 protected:
     Disk* disk;

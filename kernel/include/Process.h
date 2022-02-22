@@ -34,7 +34,7 @@ struct InterruptFrame
 
 struct Process
 {
-    Vector<FileDescriptor> fileDescriptors;
+    Vector<VFS::FileDescriptor> fileDescriptors;
 
     InterruptFrame frame;
     PagingManager* pagingManager;

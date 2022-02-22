@@ -2,7 +2,7 @@
 #include "Serial.h"
 
 const char* FONT_PATH = "/fonts/Uni2-Terminus20x10.psf";
-const int TEXT_CHARACTER_SPACING = 0;
+constexpr int TEXT_CHARACTER_SPACING = 0;
 
 uint64_t Terminal::Read(void* buffer, uint64_t count)
 {

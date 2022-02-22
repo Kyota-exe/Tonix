@@ -1,9 +1,11 @@
 #include "SystemCall.h"
-#include "Scheduler.h"
 #include "Serial.h"
 #include "FileMap.h"
+#include "VFS.h"
+#include "Scheduler.h"
 
-uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5, Error& error)
+uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3,
+                    uint64_t arg4, uint64_t arg5, InterruptFrame* interruptFrame, Error& error)
 {
     // PLACEHOLDER
 
@@ -15,19 +17,19 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
     switch (type)
     {
         case SystemCallType::Open:
-            return Open(String((const char*)arg0), (int)arg1, error);
+            return VFS::Open(String((const char*)arg0), (int)arg1, error);
 
         case SystemCallType::Read:
-            return Read((int)arg0, (void*)arg1, arg2);
+            return VFS::Read((int)arg0, (void*)arg1, arg2);
 
         case SystemCallType::Write:
-            return Write((int)arg0, (const void*)arg1, arg2);
+            return VFS::Write((int)arg0, (const void*)arg1, arg2);
 
         case SystemCallType::Seek:
-            return RepositionOffset((int)arg0, arg1, (VFSSeekType)arg2, error);
+            return VFS::RepositionOffset((int)arg0, arg1, (VFS::SeekType)arg2, error);
 
         case SystemCallType::Close:
-            Close((int)arg0); return 0;
+            VFS::Close((int)arg0); return 0;
 
         case SystemCallType::FileMap:
             return (uint64_t)FileMap((void*)arg0, arg1, (int)arg2,(int)arg3, (int)arg4, (int)arg5);
@@ -50,7 +52,7 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
 
         case SystemCallType::IsTerminal:
         {
-            VnodeType vnodeType = GetVnodeType((int)arg0, error);
+            VnodeType vnodeType = VFS::GetVnodeType((int)arg0, error);
 
             // Assuming all VFS character devices are terminals
             if (vnodeType != VnodeType::VFSCharacterDevice)
@@ -62,7 +64,7 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
         }
 
         case SystemCallType::Exit:
-            ExitCurrentTask((int)arg0); return 0;
+            ExitCurrentTask((int)arg0, interruptFrame); return 0;
 
         default:
             Panic("Invalid syscall (%d).", type); return 0;

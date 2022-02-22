@@ -3,6 +3,7 @@
 #include "ELFLoader.h"
 #include "LAPIC.h"
 #include "Serial.h"
+#include "SegmentSelectors.h"
 
 const uint64_t QUANTUM_IN_TICKS = 1;
 const uint64_t TIMER_FREQUENCY = 10;
@@ -49,6 +50,8 @@ Process GetNextTask(InterruptFrame* currentTaskFrame)
             {
                 recoverFromIdle = true;
                 currentTicks = QUANTUM_IN_TICKS;
+
+                asm volatile("sti");
                 while (true) asm volatile("hlt");
             }
             currentTaskIndex = 1;
@@ -60,7 +63,7 @@ Process GetNextTask(InterruptFrame* currentTaskFrame)
     return taskList->Get(currentTaskIndex);
 }
 
-void ExitCurrentTask(int status)
+void ExitCurrentTask(int status, InterruptFrame* interruptFrame)
 {
     taskList->Pop(currentTaskIndex);
     recoverFromIdle = true;
@@ -68,6 +71,7 @@ void ExitCurrentTask(int status)
 
     Serial::Printf("Process exited with status %d.", status);
 
+    asm volatile("sti");
     while (true) asm volatile("hlt");
 }
 
@@ -90,13 +94,13 @@ void CreateProcess(const String& path)
 
     Error error;
     int desc;
-    desc = Open(String("/dev/tty"), 0, error);
+    desc = VFS::Open(String("/dev/tty"), 0, error);
     KAssert(desc != -1, "Could not initialize stdin.");
 
-    desc = Open(String("/dev/tty"), 0, error);
+    desc = VFS::Open(String("/dev/tty"), 0, error);
     KAssert(desc != -1, "Could not initialize stdout.");
 
-    desc = Open(String("/dev/tty"), 0, error);
+    desc = VFS::Open(String("/dev/tty"), 0, error);
     KAssert(desc != -1, "Could not initialize stderr.");
 
     currentTaskIndex = originalTaskIndex;

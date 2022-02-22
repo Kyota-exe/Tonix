@@ -44,7 +44,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
 
         if (String(module.string).Equals("boot:///ext2-ramdisk-image.ext2"))
         {
-            InitializeVFS((void*)module.begin);
+            VFS::Initialize((void*) module.begin);
         }
     }
 

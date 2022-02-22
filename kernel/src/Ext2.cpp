@@ -97,7 +97,7 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
     fileSystemRoot->context = rootInode;
     fileSystemRoot->fileSize = rootInode->size0;
 
-    CacheVNode(fileSystemRoot);
+    VFS::CacheVNode(fileSystemRoot);
 }
 
 Vnode* Ext2::CacheDirectoryEntry(Ext2DirectoryEntry* directoryEntry)
@@ -122,7 +122,7 @@ Vnode* Ext2::CacheDirectoryEntry(Ext2DirectoryEntry* directoryEntry)
             vnode->type = VFSUnknown;
     }
 
-    CacheVNode(vnode);
+    VFS::CacheVNode(vnode);
 
     return vnode;
 }
@@ -139,7 +139,7 @@ Vnode* Ext2::FindInDirectory(Vnode* directory, const String& name)
 
         if (directoryEntry.inodeNum != 0)
         {
-            Vnode* child = SearchInCache(directoryEntry.inodeNum, this);
+            Vnode* child = VFS::SearchInCache(directoryEntry.inodeNum, this);
 
             // SearchInCache returns nullptr if it could not find vnode in cache
             if (child == nullptr)
@@ -312,7 +312,7 @@ void Ext2::Create(Vnode* vnode, Vnode* directory, const String& name)
         WriteDirectoryEntry(vnode, directory->inodeNum, String(".."), DEntryDirectory);
     }
 
-    CacheVNode(vnode);
+    VFS::CacheVNode(vnode);
 }
 
 void Ext2::Truncate(Vnode* vnode)

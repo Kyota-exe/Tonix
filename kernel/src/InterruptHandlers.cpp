@@ -6,10 +6,8 @@
 
 void ExceptionHandler(InterruptFrame* interruptFrame)
 {
-    Serial::Printf("Exception %x occurred.", interruptFrame->interruptNumber);
     Serial::Printf("Error code: %x", interruptFrame->errorCode);
-    Serial::Print("Hanging...");
-    while (true) asm("cli\n hlt");
+    Panic("Exception %x occurred.", interruptFrame->interruptNumber);
 }
 
 void KeyboardInterruptHandler()
@@ -21,11 +19,11 @@ void KeyboardInterruptHandler()
 void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 {
 	Serial::Print("Timer interrupt");
+    LAPIC::SendEOI();
+
     Process nextTask = GetNextTask(interruptFrame);
     *interruptFrame = nextTask.frame;
     nextTask.pagingManager->SetCR3();
-
-    LAPIC::SendEOI();
 }
 
 void SystemCallHandler(InterruptFrame* interruptFrame)
@@ -35,7 +33,7 @@ void SystemCallHandler(InterruptFrame* interruptFrame)
     interruptFrame->rax = SystemCall((SystemCallType)interruptFrame->rdi,
                                      interruptFrame->rsi,interruptFrame->rdx,
                                      interruptFrame->rcx,interruptFrame->r8,
-                                     interruptFrame->r9,interruptFrame->r10, error);
+                                     interruptFrame->r9,interruptFrame->r10, interruptFrame, error);
 
     interruptFrame->rbx = (uint64_t)error;
 }
@@ -57,8 +55,6 @@ extern "C" void ISRHandler(InterruptFrame* interruptFrame)
             SystemCallHandler(interruptFrame);
             break;
         default:
-            Serial::Printf("Could not find ISR for interrupt %x.", interruptFrame->interruptNumber);
-            Serial::Print("Hanging...");
-            while (true) asm("cli\n hlt");
+            Panic("Could not find ISR for interrupt %x.", interruptFrame->interruptNumber);
     }
 }

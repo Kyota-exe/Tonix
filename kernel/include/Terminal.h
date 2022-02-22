@@ -11,6 +11,7 @@ public:
     uint64_t Write(const void* buffer, uint64_t count) override;
     Terminal(const String& name, uint32_t inodeNum);
     ~Terminal();
+    Terminal& operator=(const Terminal&) = delete;
     TextRenderer* textRenderer;
     Colour textColour;
 private:

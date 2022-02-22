@@ -15,6 +15,7 @@ public:
 
     explicit PSF2Font(const String& path);
     ~PSF2Font();
+    PSF2Font& operator=(const PSF2Font&) = delete;
 
 private:
     struct PSF2Header

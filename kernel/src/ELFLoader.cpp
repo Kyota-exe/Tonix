@@ -6,26 +6,23 @@
 #include "VFS.h"
 #include "Serial.h"
 #include "ELF.h"
-
-constexpr uintptr_t RTDL_ADDR = 0x40000000;
-
-constexpr uint16_t USER_CODE_SEGMENT = 0b01'0'11;
-constexpr uint16_t USER_DATA_SEGMENT = 0b10'0'11;
-constexpr uint64_t USER_INITIAL_RFLAGS = 0b1000000010;
+#include "SegmentSelectors.h"
 
 constexpr uintptr_t USER_STACK_BASE = 0x0000'8000'0000'0000 - 0x1000;
 constexpr uintptr_t USER_STACK_SIZE = 0x2000;
+
+constexpr uintptr_t RTDL_ADDR = 0x40000000;
 
 void ELFLoader::LoadELF(const String& path, Process* process)
 {
     PagingManager* pagingManager = process->pagingManager;
 
     Error elfFileError;
-    int elfFile = Open(path, 0, elfFileError);
+    int elfFile = VFS::Open(path, 0, elfFileError);
     KAssert(elfFile != -1, "Failed to read ELF file. Error code: %d", elfFileError);
 
     auto elfHeader = new ELFHeader;
-    uint64_t elfHeaderSize = Read(elfFile, elfHeader, sizeof(ELFHeader));
+    uint64_t elfHeaderSize = VFS::Read(elfFile, elfHeader, sizeof(ELFHeader));
     KAssert(elfHeaderSize == sizeof(ELFHeader), "Invalid ELF file: failed to read header.");
 
     KAssert(elfHeader->eIdentMagic[0] == 0x7f &&
@@ -40,7 +37,7 @@ void ELFLoader::LoadELF(const String& path, Process* process)
     uint64_t programHeaderTableSize = elfHeader->programHeaderTableEntryCount * elfHeader->programHeaderTableEntrySize;
     auto programHeaderTable = new ProgramHeader[elfHeader->programHeaderTableEntryCount];
 
-    uint64_t programHeaderTableSizeRead = Read(elfFile, programHeaderTable, programHeaderTableSize);
+    uint64_t programHeaderTableSizeRead = VFS::Read(elfFile, programHeaderTable, programHeaderTableSize);
     KAssert(programHeaderTableSize == programHeaderTableSizeRead,
             "Invalid ELF file: failed to read program header table.");
 
@@ -68,8 +65,8 @@ void ELFLoader::LoadELF(const String& path, Process* process)
                 char* rtdlPath = new char[programHeader.segmentSizeInFile + 1];
 
                 Error error;
-                RepositionOffset(elfFile, programHeader.offsetInFile, VFSSeekType::Set, error);
-                Read(elfFile, rtdlPath, programHeader.segmentSizeInFile);
+                VFS::RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set, error);
+                VFS::Read(elfFile, rtdlPath, programHeader.segmentSizeInFile);
 
                 rtdlPath[programHeader.segmentSizeInFile] = 0;
 
@@ -142,7 +139,7 @@ void ELFLoader::LoadELF(const String& path, Process* process)
     delete elfHeader;
     delete[] programHeaderTable;
 
-    Close(elfFile);
+    VFS::Close(elfFile);
 }
 
 void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeader,
@@ -151,7 +148,7 @@ void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeade
     uint64_t segmentPagesCount = (programHeader.segmentSizeInMemory - 1) / 0x1000 + 1;
 
     Error error;
-    RepositionOffset(elfFile, programHeader.offsetInFile, VFSSeekType::Set, error);
+    VFS::RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set, error);
 
     uintptr_t baseAddr = programHeader.virtAddr;
     if (elfHeader->type == ELFType::Shared) baseAddr += RTDL_ADDR;
@@ -176,6 +173,6 @@ void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeade
             readCount = programHeader.segmentSizeInFile % 0x1000;
         }
 
-        fileReadCount += Read(elfFile, reinterpret_cast<void*>(higherHalfAddr), readCount);
+        fileReadCount += VFS::Read(elfFile, reinterpret_cast<void*>(higherHalfAddr), readCount);
     }
 }

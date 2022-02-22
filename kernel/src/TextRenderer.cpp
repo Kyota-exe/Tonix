@@ -25,14 +25,18 @@ void TextRenderer::Print(char c, unsigned int x, unsigned int y, Colour colour)
     }
 }
 
-void TextRenderer::Print(const String& string, unsigned int x, unsigned int y, Colour colour)
+void TextRenderer::Print(const String& string, unsigned int& x, unsigned int& y, Colour colour)
 {
-    unsigned int screenX = x;
-    unsigned int screenY = y;
-
     for (const char c : string)
     {
-        Print(c, screenX, screenY, colour);
-        screenX += font->Width() + characterSpacing;
+        if (c == '\n')
+        {
+            y += font->Height();
+            x = 0;
+            continue;
+        }
+
+        Print(c, x, y, colour);
+        x += font->Width() + characterSpacing;
     }
 }

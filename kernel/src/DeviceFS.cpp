@@ -9,7 +9,7 @@ DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
     fileSystemRoot->inodeNum = currentInodeNum++;
     fileSystemRoot->type = VFSDirectory;
     fileSystemRoot->fileSystem = this;
-    CacheVNode(fileSystemRoot);
+    VFS::CacheVNode(fileSystemRoot);
 
     Device* terminal = new Terminal(String("tty"), currentInodeNum++);
     devices.Push(terminal);
@@ -20,7 +20,7 @@ DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
     terminalVnode->context = terminal;
     terminalVnode->fileSize = 0;
     terminalVnode->type = VFSCharacterDevice;
-    CacheVNode(terminalVnode);
+    VFS::CacheVNode(terminalVnode);
 }
 
 uint64_t DeviceFS::Read(Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos)
@@ -50,7 +50,7 @@ Vnode* DeviceFS::FindInDirectory(Vnode* directory, const String& name)
 
         if (device->name.Equals(name))
         {
-            Vnode* file = SearchInCache(device->inodeNum, this);
+            Vnode* file = VFS::SearchInCache(device->inodeNum, this);
 
             KAssert(file != nullptr, "Device file not found.");
 
