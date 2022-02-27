@@ -12,8 +12,7 @@ enum FileMapFlag
 
 void* FileMap(void* addr, uint64_t length, int protection, int flags, int descriptor, int offset)
 {
-    KAssert(flags & FileMapAnonymous, "File-backed mmap is not supported.");
-    KAssert(!(flags & FileMapShared), "Shared mmap is not supported");
+    Assert(flags & FileMapAnonymous && !(flags & FileMapShared));
 
 	Task process = taskList->Get(currentTaskIndex);
 
@@ -24,7 +23,7 @@ void* FileMap(void* addr, uint64_t length, int protection, int flags, int descri
 		addr = process.userspaceAllocator->AllocatePages(pageCount);
 	}
 
-	KAssert(reinterpret_cast<uintptr_t>(addr) % 0x1000 == 0, "mmap must have page-size-aligned address.");
+	Assert(reinterpret_cast<uintptr_t>(addr) % 0x1000 == 0);
 
     for (uint64_t page = 0; page < pageCount; ++page)
     {

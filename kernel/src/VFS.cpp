@@ -25,7 +25,7 @@ void VFS::Initialize(void* ext2RamDisk)
     Vnode* devMountPoint = nullptr;
     Error devMountPointError;
     int devDirectory = CreateDirectory(String("/dev"), &devMountPoint, devMountPointError);
-    KAssert(devDirectory != -1, "Failed to create /dev directory.");
+    Assert(devDirectory != -1);
 
     FileSystem* deviceFileSystem;
     deviceFileSystem = new DeviceFS(nullptr);
@@ -189,7 +189,7 @@ int VFS::Open(const String& path, int flags, Error& error)
     {
         if (error == Error::NoFile)
         {
-            KAssert(vnode == nullptr, "VFS Traversing error");
+            Assert(vnode == nullptr);
 
             vnode = new Vnode();
             vnode->type = VFSRegularFile;
@@ -233,7 +233,7 @@ int VFS::Open(const String& path, int flags, Error& error)
 uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-    KAssert(fileDescriptor != nullptr && fileDescriptor->present, "Invalid file descriptor.");
+    Assert(fileDescriptor != nullptr && fileDescriptor->present);
 
     Vnode* vnode = fileDescriptor->vnode;
 
@@ -246,7 +246,7 @@ uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count)
 uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-    KAssert(fileDescriptor != nullptr && fileDescriptor->present, "Invalid file descriptor.");
+    Assert(fileDescriptor != nullptr && fileDescriptor->present);
 
     Vnode* vnode = fileDescriptor->vnode;
 
@@ -260,7 +260,7 @@ uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, VFS::SeekType se
 {
     // TODO: Support files larger than 2^32 bytes
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-    KAssert(fileDescriptor != nullptr && fileDescriptor->present, "Invalid file descriptor.");
+    Assert(fileDescriptor != nullptr && fileDescriptor->present);
 
     Vnode* vnode = fileDescriptor->vnode;
 
@@ -295,7 +295,7 @@ uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, VFS::SeekType se
 void VFS::Close(int descriptor)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-    KAssert(fileDescriptor != nullptr && fileDescriptor->present, "Invalid file descriptor.");
+    Assert(fileDescriptor != nullptr && fileDescriptor->present);
 
     fileDescriptor->present = false;
     fileDescriptor->offset = 0;
@@ -325,7 +325,7 @@ int VFS::CreateDirectory(const String& path, Vnode** directory, Error& error)
         return -1;
     }
 
-    KAssert(vnode == nullptr && error == Error::NoFile, "Fatal error while creating directory.");
+    Assert(vnode == nullptr && error == Error::NoFile);
 
     vnode = new Vnode();
     vnode->type = VFSDirectory;

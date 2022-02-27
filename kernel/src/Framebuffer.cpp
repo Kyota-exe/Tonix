@@ -1,7 +1,7 @@
 #include "Framebuffer.h"
 #include "Stivale2Interface.h"
 #include "Serial.h"
-#include "Panic.h"
+#include "Assert.h"
 #include "Memory/Memory.h"
 
 uint32_t* Framebuffer::virtAddr = nullptr;
@@ -15,8 +15,8 @@ void Framebuffer::Initialize()
 {
     auto framebufferStruct = (stivale2_struct_tag_framebuffer*)GetStivale2Tag(STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
 
-    KAssert(framebufferStruct->memory_model == 1, "Framebuffer is not using RGB.");
-    KAssert(framebufferStruct->framebuffer_bpp == 32, "Framebuffer is not 32-bit colour.");
+    Assert(framebufferStruct->memory_model == 1);
+    Assert(framebufferStruct->framebuffer_bpp == 32);
 
     Serial::Printf("Framebuffer width: %d", framebufferStruct->framebuffer_width);
     Serial::Printf("Framebuffer height: %d", framebufferStruct->framebuffer_height);

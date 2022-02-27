@@ -1,7 +1,6 @@
 #include "Ext2.h"
 #include <stdint.h>
 #include "Serial.h"
-#include "Panic.h"
 #include "Bitmap.h"
 #include "String.h"
 #include "RAMDisk.h"
@@ -48,8 +47,8 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
 
     disk->AllocateRead(EXT2_SUPERBLOCK_DISK_ADDR, reinterpret_cast<void**>(&superblock), sizeof(Ext2Superblock));
 
-    KAssert(superblock->ext2Signature == EXT2_SIGNATURE, "Invalid ext2 signature!");
-    KAssert(superblock->fileSystemState == 1, "File system state is not clean.");
+    Assert(superblock->ext2Signature == EXT2_SIGNATURE);
+    Assert(superblock->fileSystemState == 1);
 
     blockSize = 1024 << superblock->blockSizeLog2Minus10;
 
@@ -72,7 +71,7 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
     uint32_t blockGroupsCountCheck = superblock->inodesCount / superblock->inodesPerBlockGroup;
     if (superblock->inodesCount % superblock->inodesPerBlockGroup > 0) blockGroupsCountCheck += 1;
 
-    KAssert(blockGroupsCount == blockGroupsCountCheck, "Block group count could not be calculated.");
+    Assert(blockGroupsCount == blockGroupsCountCheck);
 
     Serial::Printf("Block group count: %d", blockGroupsCount);
 
@@ -240,7 +239,7 @@ void Ext2::Create(Vnode* vnode, Vnode* directory, const String& name)
 {
     auto directoryContext = reinterpret_cast<Ext2Inode*>(directory->context);
 
-    KAssert(directoryContext->typePermissions & Directory, "Inode must be a directory to create files in it.");
+    Assert(directoryContext->typePermissions & Directory);
 
     // Find unallocated inode
     Ext2Inode* inode = nullptr;
@@ -279,7 +278,7 @@ void Ext2::Create(Vnode* vnode, Vnode* directory, const String& name)
 
     FoundUnallocatedInode:
 
-    KAssert(inode != nullptr && inodeNum != 0, "Could not create new file, unallocated inode not found.");
+    Assert(inode != nullptr && inodeNum != 0);
 
     // TODO: Support file ACL and other fields in ext2 directory
     inode->hardLinksCount = 1;

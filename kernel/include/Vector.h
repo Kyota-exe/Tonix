@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include "Heap.h"
-#include "Panic.h"
+#include "Assert.h"
 
 template <typename T> class Vector
 {
@@ -41,7 +41,6 @@ Vector<T>::Vector()
     length = 0;
 }
 
-#include "Serial.h"
 template <typename T>
 Vector<T>::Vector(const Vector<T>& original)
 {
@@ -88,7 +87,7 @@ uint64_t Vector<T>::Push(const T& value)
 template <typename T>
 T Vector<T>::Pop()
 {
-    KAssert(length > 0, "[Vector] No more left to pop.");
+    Assert(length > 0);
 
     T value = buffer[length - 1];
     length--;
@@ -99,7 +98,7 @@ T Vector<T>::Pop()
 template <typename T>
 T Vector<T>::Pop(uint64_t index)
 {
-    KAssert(index < length, "[Vector] Index is out of bounds.");
+    Assert(index < length);
 
     T value = buffer[index];
     length--;
@@ -143,14 +142,14 @@ typename Vector<T>::iterator Vector<T>::end()
 template <typename T>
 T& Vector<T>::operator[](uint64_t index)
 {
-    KAssert(index < GetLength(), "Vector index (%d) out of range.", index);
+    Assert(index < GetLength());
     return buffer[index];
 }
 
 template <typename T>
 T& Vector<T>::Get(uint64_t index)
 {
-    KAssert(index < GetLength(), "Vector index (%d) out of range.", index);
+    Assert(index < GetLength());
     return buffer[index];
 }
 

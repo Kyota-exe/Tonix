@@ -130,13 +130,13 @@ void CreateTaskFromELF(const String& path, bool userTask)
     Error error;
     int desc;
     desc = VFS::Open(String("/dev/tty"), 0, error);
-    KAssert(desc != -1, "Could not initialize stdin.");
+    Assert(desc != -1);
 
     desc = VFS::Open(String("/dev/tty"), 0, error);
-    KAssert(desc != -1, "Could not initialize stdout.");
+    Assert(desc != -1);
 
     desc = VFS::Open(String("/dev/tty"), 0, error);
-    KAssert(desc != -1, "Could not initialize stderr.");
+    Assert(desc != -1);
 
     currentTaskIndex = originalTaskIndex;
 }

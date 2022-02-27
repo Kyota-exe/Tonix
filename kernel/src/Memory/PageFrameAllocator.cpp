@@ -2,7 +2,7 @@
 #include "Memory/PageFrameAllocator.h"
 #include "Serial.h"
 #include "Stivale2Interface.h"
-#include "Panic.h"
+#include "Assert.h"
 #include "Bitmap.h"
 
 static Bitmap pageFrameBitmap;
@@ -27,12 +27,12 @@ void InitializePageFrameAllocator()
 //        Serial::Print("---------------");
 //    }
 
-    KAssert(memorySize % 0x1000 == 0, "Memory size is not aligned to page size (4096).");
+    Assert(memorySize % 0x1000 == 0);
 
     pageFrameCount = memorySize / 0x1000;
     Serial::Printf("Physical memory contains %x page frames.", pageFrameCount);
 
-    KAssert(pageFrameCount % 8 == 0, "Page frame count is not a multiple of 8.");
+    Assert(pageFrameCount % 8 == 0);
 
     uint64_t bitmapSize = pageFrameCount / 8;
     pageFrameBitmap.size = bitmapSize;
@@ -48,7 +48,7 @@ void InitializePageFrameAllocator()
         }
     }
 
-    KAssert(bitmapBuffer != nullptr, "Could not find usable memory section large enough to insert page frame bitmap.");
+    Assert(bitmapBuffer != nullptr);
 
     pageFrameBitmap.buffer = bitmapBuffer;
     Memset(bitmapBuffer, 0xff, bitmapSize);
@@ -125,7 +125,7 @@ void* RequestPageFrames(uint64_t count)
 void FreePageFrame(void* ptr)
 {
     uint64_t pageFrame = (uint64_t)ptr / 0x1000;
-    KAssert(pageFrameBitmap.GetBit(pageFrame), "Physical double free!");
+    Assert(pageFrameBitmap.GetBit(pageFrame));
     pageFrameBitmap.SetBit(pageFrame, false);
 }
 

@@ -1,6 +1,6 @@
 #include "String.h"
 #include "Memory/Memory.h"
-#include "Panic.h"
+#include "Assert.h"
 
 String String::Split(char splitCharacter, unsigned int substringIndex) const
 {
@@ -128,7 +128,7 @@ bool String::IsEmpty() const
 
 String String::Substring(uint64_t index, uint64_t substringLength) const
 {
-    KAssert(index + substringLength <= GetLength(), "Substring exceeds bounds of substring.");
+    Assert(index + substringLength <= GetLength());
 
     char newBuffer[substringLength + 1];
     MemCopy(newBuffer, buffer + index, substringLength);

@@ -13,18 +13,17 @@ PSF2Font::PSF2Font(const String &path)
 {
     Error fontFileError = Error::None;
     int fontFile = VFS::Open(path, 0, fontFileError);
-    KAssert(fontFileError == Error::None, "Failed to open font file.");
+    Assert(fontFileError == Error::None);
 
     header = new PSF2Header;
     uint64_t headerSize = VFS::Read(fontFile, header, sizeof(PSF2Header));
 
-    KAssert(header->magic[0] == PSF2_MAGIC_0, "Invalid PSF2 file.");
-    KAssert(header->magic[1] == PSF2_MAGIC_1, "Invalid PSF2 file.");
-    KAssert(header->magic[2] == PSF2_MAGIC_2, "Invalid PSF2 file.");
-    KAssert(header->magic[3] == PSF2_MAGIC_3, "Invalid PSF2 file.");
+    Assert(header->magic[0] == PSF2_MAGIC_0 &&
+           header->magic[1] == PSF2_MAGIC_1 &&
+           header->magic[2] == PSF2_MAGIC_2 &&
+           header->magic[3] == PSF2_MAGIC_3);
 
-    KAssert(headerSize == sizeof(PSF2Header), "Invalid PSF2 file: Could not read PSF2 header.");
-    KAssert(headerSize == header->headerSize, "Header size does not match header size in PSF2 header.");
+    Assert(headerSize == sizeof(PSF2Header) && headerSize == header->headerSize);
 
     Serial::Printf("Width: %d", header->width);
     Serial::Printf("Height: %d", header->height);

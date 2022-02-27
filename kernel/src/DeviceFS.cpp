@@ -41,7 +41,7 @@ uint64_t DeviceFS::Write(Vnode* vnode, const void* buffer, uint64_t count, uint6
 
 Vnode* DeviceFS::FindInDirectory(Vnode* directory, const String& name)
 {
-    KAssert(directory == fileSystemRoot, "[/dev] Directory is not /dev.");
+    Assert(directory == fileSystemRoot);
 
     for (Device* device : devices)
     {
@@ -52,7 +52,7 @@ Vnode* DeviceFS::FindInDirectory(Vnode* directory, const String& name)
         {
             Vnode* file = VFS::SearchInCache(device->inodeNum, this);
 
-            KAssert(file != nullptr, "Device file not found.");
+            Assert(file != nullptr);
 
             return file;
         }

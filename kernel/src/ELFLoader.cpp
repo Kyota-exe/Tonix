@@ -16,27 +16,25 @@ void ELFLoader::LoadELF(const String& path, PagingManager* pagingManager, uintpt
 {
     Error elfFileError;
     int elfFile = VFS::Open(path, 0, elfFileError);
-    KAssert(elfFile != -1, "Failed to read ELF file. Error code: %d", elfFileError);
+    Assert(elfFile != -1);
 
     auto elfHeader = new ELFHeader;
     uint64_t elfHeaderSize = VFS::Read(elfFile, elfHeader, sizeof(ELFHeader));
-    KAssert(elfHeaderSize == sizeof(ELFHeader), "Invalid ELF file: failed to read header.");
+    Assert(elfHeaderSize == sizeof(ELFHeader));
 
-    KAssert(elfHeader->eIdentMagic[0] == 0x7f &&
-            elfHeader->eIdentMagic[1] == 0x45 &&
-            elfHeader->eIdentMagic[2] == 0x4c &&
-            elfHeader->eIdentMagic[3] == 0x46,
-            "Invalid ELF file: magic bytes mismatch.");
+    Assert(elfHeader->eIdentMagic[0] == 0x7f &&
+           elfHeader->eIdentMagic[1] == 0x45 &&
+           elfHeader->eIdentMagic[2] == 0x4c &&
+           elfHeader->eIdentMagic[3] == 0x46);
 
-    KAssert(elfHeader->programHeaderTableEntrySize == sizeof(ProgramHeader), "Invalid ELF file: invalid header.");
-    KAssert(elfHeader->type == ELFType::Executable || elfHeader->type == ELFType::Shared, "Unsupported ELF type.");
+    Assert(elfHeader->programHeaderTableEntrySize == sizeof(ProgramHeader));
+    Assert(elfHeader->type == ELFType::Executable || elfHeader->type == ELFType::Shared);
 
     uint64_t programHeaderTableSize = elfHeader->programHeaderTableEntryCount * elfHeader->programHeaderTableEntrySize;
     auto programHeaderTable = new ProgramHeader[elfHeader->programHeaderTableEntryCount];
 
     uint64_t programHeaderTableSizeRead = VFS::Read(elfFile, programHeaderTable, programHeaderTableSize);
-    KAssert(programHeaderTableSize == programHeaderTableSizeRead,
-            "Invalid ELF file: failed to read program header table.");
+    Assert(programHeaderTableSize == programHeaderTableSizeRead);
 
     bool hasDynamicLinking = false;
     uintptr_t programHeaderTableAddr = 0;
