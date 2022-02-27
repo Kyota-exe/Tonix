@@ -7,7 +7,6 @@
 #include "Serial.h"
 #include "Scheduler.h"
 #include "RAMDisk.h"
-#include "Memory/PagingManager.h"
 
 Vnode* root;
 Vnode* currentInCache = nullptr;
@@ -23,9 +22,9 @@ void VFS::Initialize(void* ext2RamDisk)
     Mount(root, ext2FileSystem->fileSystemRoot);
 
     Vnode* devMountPoint = nullptr;
-    Error devMountPointError;
-    int devDirectory = CreateDirectory(String("/dev"), &devMountPoint, devMountPointError);
-    Assert(devDirectory != -1);
+    Error devMountPointError = Error::None;
+    CreateDirectory(String("/dev"), &devMountPoint, devMountPointError);
+    Assert(devMountPointError == Error::None && devMountPoint != nullptr);
 
     FileSystem* deviceFileSystem;
     deviceFileSystem = new DeviceFS(nullptr);
@@ -334,5 +333,6 @@ int VFS::CreateDirectory(const String& path, Vnode** directory, Error& error)
 
     if (directory != nullptr) *directory = vnode;
 
+    error = Error::None;
     return 0;
 }

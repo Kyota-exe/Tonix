@@ -21,11 +21,3 @@ void Panic(const char* message, const char* file, unsigned int line, const char*
     Serial::Print("Hanging...");
     while (true) asm("cli\n hlt\n");
 }
-
-void KAssert(bool expression, const char* message)
-{
-    if (!expression)
-    {
-        Panic(message);
-    }
-}

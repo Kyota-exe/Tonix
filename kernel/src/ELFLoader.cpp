@@ -59,7 +59,7 @@ void ELFLoader::LoadELF(const String& path, PagingManager* pagingManager, uintpt
             {
                 char* rtdlPath = new char[programHeader.segmentSizeInFile + 1];
 
-                Error error;
+                Error error = Error::None;
                 VFS::RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set, error);
                 VFS::Read(elfFile, rtdlPath, programHeader.segmentSizeInFile);
 
