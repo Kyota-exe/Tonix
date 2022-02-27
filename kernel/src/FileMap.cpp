@@ -15,7 +15,7 @@ void* FileMap(void* addr, uint64_t length, int protection, int flags, int descri
     KAssert(flags & FileMapAnonymous, "File-backed mmap is not supported.");
     KAssert(!(flags & FileMapShared), "Shared mmap is not supported");
 
-	Process process = taskList->Get(currentTaskIndex);
+	Task process = taskList->Get(currentTaskIndex);
 
     uint64_t pageCount = (length - 1) / 0x1000 + 1;
 

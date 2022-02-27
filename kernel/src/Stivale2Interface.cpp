@@ -1,5 +1,4 @@
 #include "Stivale2Interface.h"
-#include "Serial.h"
 #include "StringUtilities.h"
 
 // Uninitialized static (stored in .bss) uint8_t array will act as stack to pass to stivale2

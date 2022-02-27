@@ -35,19 +35,24 @@ void LAPIC::Activate()
     *(volatile uint32_t*)(apicRegisterBase + APIC_DIVIDE_CONFIG) = 0;
 }
 
-void LAPIC::SetTimerMode(uint8_t mode)
+void LAPIC::SetTimerMode(LAPIC::TimerMode mode)
 {
     *(volatile uint32_t*)(apicRegisterBase + APIC_LVT_TIMER) &= ~0b11'0'000'0'0000'00000000;
-    *(volatile uint32_t*)(apicRegisterBase + APIC_LVT_TIMER) |= (mode << 17);
+    *(volatile uint32_t*)(apicRegisterBase + APIC_LVT_TIMER) |= ((uint8_t)mode << 17);
 }
 
-void LAPIC::SetTimerFrequency(uint64_t frequency)
+void LAPIC::SetTimeBetweenTimerFires(uint64_t milliseconds)
+{
+    *(volatile uint32_t*)(apicRegisterBase + APIC_INITIAL_COUNT) = (lapicTimerBaseFrequency / 1000) * milliseconds;
+}
+
+/*void LAPIC::SetTimerFrequency(uint64_t frequency)
 {
     uint64_t reloadValue = lapicTimerBaseFrequency / frequency;
     // Round up if the fractional part is greater than 0.5
     if (lapicTimerBaseFrequency % frequency > frequency / 2) reloadValue++;
     *(volatile uint32_t*)(apicRegisterBase + APIC_INITIAL_COUNT) = reloadValue;
-}
+}*/
 
 void LAPIC::SetTimerMask(bool mask)
 {

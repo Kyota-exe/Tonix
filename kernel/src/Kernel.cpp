@@ -48,7 +48,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
         }
     }
 
-    CreateProcess(String("/programs/test"));
+    CreateTaskFromELF(String("/programs/test"), true);
 	StartScheduler();
 
     while (true) asm("hlt");

@@ -6,13 +6,13 @@
 
 template <typename T> class Vector
 {
-private:
+public:
     T* buffer;
     uint64_t capacity;
     uint64_t length;
 
 public:
-    void Push(const T& value);
+    uint64_t Push(const T& value);
     T Pop();
     T Pop(uint64_t index);
     bool Contains(const T& value);
@@ -41,6 +41,7 @@ Vector<T>::Vector()
     length = 0;
 }
 
+#include "Serial.h"
 template <typename T>
 Vector<T>::Vector(const Vector<T>& original)
 {
@@ -61,7 +62,7 @@ Vector<T>::~Vector()
 }
 
 template <typename T>
-void Vector<T>::Push(const T& value)
+uint64_t Vector<T>::Push(const T& value)
 {
     if (length == capacity)
     {
@@ -77,8 +78,11 @@ void Vector<T>::Push(const T& value)
         buffer = newBuffer;
     }
 
-    buffer[length] = value;
+    uint64_t index = length;
+    buffer[index] = value;
     length++;
+
+    return index;
 }
 
 template <typename T>

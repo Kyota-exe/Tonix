@@ -65,7 +65,7 @@ void GDT::Initialize()
     gdt.entries[6].typeAttributes = KERNEL_DATA_TYPE_ATTRIBUTES;
     gdt.entries[6].limit1Attributes = LIMIT1_ATTRIBUTES;
 
-    gdtr.base = (uint64_t)&gdt;
+    gdtr.base = (uintptr_t)&gdt;
     gdtr.limit = sizeof(gdt) - 1;
 
     // No need to reload segment registers, since we use the same GDT entry indexes as limine (stivale2)
@@ -75,18 +75,19 @@ void GDT::InitializeTSS()
 {
     auto tss = new TSS();
     Memset(tss, 0, sizeof(TSS));
-    tss->rsp0 = (uint64_t)RequestPageFrame() + 0xffff'8000'0000'0000;
-    tss->ist1 = (uint64_t)RequestPageFrame() + 0xffff'8000'0000'0000; // Double Fault
-    tss->ist2 = (uint64_t)RequestPageFrame() + 0xffff'8000'0000'0000; // Non-Maskable Interrupt
-    tss->ist3 = (uint64_t)RequestPageFrame() + 0xffff'8000'0000'0000; // Machine Check
-    tss->ist4 = (uint64_t)RequestPageFrame() + 0xffff'8000'0000'0000; // Debug
+
+    tss->rsp0 = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrames(3)) + 0x3000);
+    tss->ist1 = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame()) + 0x1000); // Double Fault
+    tss->ist2 = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame()) + 0x1000); // Non-Maskable Interrupt
+    tss->ist3 = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame()) + 0x1000); // Machine Check
+    tss->ist4 = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame()) + 0x1000); // Debug
     tss->ioMapOffset = sizeof(TSS);
 
-    gdt.entries[3].base0 = (uint64_t)tss;
-    gdt.entries[3].base1 = (uint64_t)tss >> 16;
-    gdt.entries[3].base2 = (uint64_t)tss >> 24;
+    gdt.entries[3].base0 = (uintptr_t)tss;
+    gdt.entries[3].base1 = (uintptr_t)tss >> 16;
+    gdt.entries[3].base2 = (uintptr_t)tss >> 24;
     gdt.entries[3].limit0 = sizeof(TSS) - 1;
     gdt.entries[3].limit1Attributes = (sizeof(TSS) - 1) >> 16;
     gdt.entries[3].typeAttributes = TSS_TYPE_ATTRIBUTES;
-    *(uint64_t*)&gdt.entries[4] = (uint64_t)tss >> 32;
+    *(uint64_t*)&gdt.entries[4] = (uintptr_t)tss >> 32;
 }

@@ -6,17 +6,14 @@
 #include "VFS.h"
 #include "Serial.h"
 #include "ELF.h"
-#include "SegmentSelectors.h"
 
 constexpr uintptr_t USER_STACK_BASE = 0x0000'8000'0000'0000 - 0x1000;
 constexpr uintptr_t USER_STACK_SIZE = 0x2000;
 
 constexpr uintptr_t RTDL_ADDR = 0x40000000;
 
-void ELFLoader::LoadELF(const String& path, Process* process)
+void ELFLoader::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& entry, uintptr_t& stackPtr)
 {
-    PagingManager* pagingManager = process->pagingManager;
-
     Error elfFileError;
     int elfFile = VFS::Open(path, 0, elfFileError);
     KAssert(elfFile != -1, "Failed to read ELF file. Error code: %d", elfFileError);
@@ -70,7 +67,7 @@ void ELFLoader::LoadELF(const String& path, Process* process)
 
                 rtdlPath[programHeader.segmentSizeInFile] = 0;
 
-                LoadELF(String(rtdlPath), process);
+                LoadELF(String(rtdlPath), pagingManager, entry, stackPtr);
 
                 hasDynamicLinking = true;
                 break;
@@ -81,16 +78,10 @@ void ELFLoader::LoadELF(const String& path, Process* process)
 
     if (elfHeader->type == ELFType::Shared)
     {
-        process->frame.rip = RTDL_ADDR + elfHeader->entry;
+        entry = RTDL_ADDR + elfHeader->entry;
     }
     else if (elfHeader->type == ELFType::Executable)
     {
-        process->frame.cs = USER_CODE_SEGMENT;
-        process->frame.ss = USER_DATA_SEGMENT;
-        process->frame.ds = USER_DATA_SEGMENT;
-        process->frame.es = USER_DATA_SEGMENT;
-        process->frame.rflags = USER_INITIAL_RFLAGS;
-
         uint64_t stackPageCount = USER_STACK_SIZE / 0x1000;
         uintptr_t stackLowestVirtAddr = USER_STACK_BASE - USER_STACK_SIZE;
         auto stackLowestPhysAddr = reinterpret_cast<uintptr_t>(RequestPageFrames(stackPageCount));
@@ -130,10 +121,10 @@ void ELFLoader::LoadELF(const String& path, Process* process)
         }
         else
         {
-            process->frame.rip = elfHeader->entry;
+            entry = elfHeader->entry;
         }
 
-        process->frame.rsp = USER_STACK_BASE - (stackHigherHalfAddr - reinterpret_cast<uintptr_t>(stackHigherHalf));
+        stackPtr = USER_STACK_BASE - (stackHigherHalfAddr - reinterpret_cast<uintptr_t>(stackHigherHalf));
     }
 
     delete elfHeader;

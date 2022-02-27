@@ -32,7 +32,7 @@ struct InterruptFrame
     uint64_t ss;
 } __attribute__((packed));
 
-struct Process
+struct Task
 {
     Vector<VFS::FileDescriptor> fileDescriptors;
 

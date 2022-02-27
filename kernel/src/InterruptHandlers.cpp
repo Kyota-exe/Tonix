@@ -4,9 +4,21 @@
 #include "PIC.h"
 #include "SystemCall.h"
 
+void PageFaultHandler()
+{
+    Serial::Print("Page fault occurred.");
+
+    uint64_t cr2;
+    asm volatile("mov %%cr2, %0" : "=r"(cr2));
+    Serial::Printf("CR2: %x", cr2);
+}
+
 void ExceptionHandler(InterruptFrame* interruptFrame)
 {
     Serial::Printf("Error code: %x", interruptFrame->errorCode);
+    Serial::Printf("RIP: %x", interruptFrame->rip);
+
+    if (interruptFrame->interruptNumber == 0xe) PageFaultHandler();
     Panic("Exception %x occurred.", interruptFrame->interruptNumber);
 }
 
@@ -18,12 +30,9 @@ void KeyboardInterruptHandler()
 
 void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 {
-	Serial::Print("Timer interrupt");
+	Serial::Print("Timer interrupt---------------------------");
+    SwitchToNextTask(interruptFrame);
     LAPIC::SendEOI();
-
-    Process nextTask = GetNextTask(interruptFrame);
-    *interruptFrame = nextTask.frame;
-    nextTask.pagingManager->SetCR3();
 }
 
 void SystemCallHandler(InterruptFrame* interruptFrame)
@@ -45,14 +54,14 @@ extern "C" void ISRHandler(InterruptFrame* interruptFrame)
         case 48:
             LAPICTimerInterrupt(interruptFrame);
             break;
-        case 0 ... 31:
-            ExceptionHandler(interruptFrame);
-            break;
         case 32 + 1:
             KeyboardInterruptHandler();
             break;
         case 0x80:
             SystemCallHandler(interruptFrame);
+            break;
+        case 0 ... 31:
+            ExceptionHandler(interruptFrame);
             break;
         default:
             Panic("Could not find ISR for interrupt %x.", interruptFrame->interruptNumber);

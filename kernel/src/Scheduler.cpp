@@ -1,96 +1,131 @@
 #include "Scheduler.h"
+#include "Memory/Memory.h"
+#include "Memory/PageFrameAllocator.h"
 #include "Memory/PagingManager.h"
 #include "ELFLoader.h"
 #include "LAPIC.h"
 #include "Serial.h"
+#include "Assert.h"
 #include "SegmentSelectors.h"
 
-const uint64_t QUANTUM_IN_TICKS = 1;
-const uint64_t TIMER_FREQUENCY = 10;
-
-Vector<Process>* taskList = nullptr;
+Vector<Task>* taskList = nullptr;
+// TODO: Separate expiry list for each CPU core
+Vector<uint64_t>* timerFireTimes = nullptr;
 uint64_t currentTaskIndex = 0;
-uint64_t currentTicks = QUANTUM_IN_TICKS;
-bool recoverFromIdle = true;
+bool restoreFrame = false;
+
+uint64_t CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPtr, bool userTask)
+{
+    Task task {};
+    task.pagingManager = pagingManager;
+    task.userspaceAllocator = new UserspaceAllocator();
+
+    InterruptFrame frame {};
+    frame.cs = userTask ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
+    frame.ds = frame.ss = frame.es = userTask ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
+    frame.rflags = INITIAL_RFLAGS;
+    frame.rip = entry;
+    frame.rsp = stackPtr;
+    task.frame = frame;
+
+    return taskList->Push(task);
+}
+
+void Idle()
+{
+    asm volatile("sti");
+    while (true) asm("hlt");
+}
 
 void InitializeTaskList()
 {
-    taskList = new Vector<Process>();
+    taskList = new Vector<Task>();
 
-    Process initProcess;
-    taskList->Push(initProcess);
+    auto idlePagingManager = new PagingManager();
+    idlePagingManager->InitializePaging();
+    uintptr_t idleStack = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame()) + 0x1000);
+    CreateTask(idlePagingManager, reinterpret_cast<uintptr_t>(Idle), idleStack, false);
+}
+
+void ConfigureTimerClosestExpiry()
+{
+    uint64_t closestTime = UINT64_MAX;
+    uint64_t closestTimeIndex {};
+    for (uint64_t i = 0; i < timerFireTimes->GetLength(); ++i)
+    {
+        auto time = timerFireTimes->Get(i);
+        if (time < closestTime)
+        {
+            closestTime = time;
+            closestTimeIndex = i;
+        }
+    }
+    Assert(closestTime < UINT64_MAX);
+
+    timerFireTimes->Pop(closestTimeIndex);
+
+    LAPIC::SetTimeBetweenTimerFires(closestTime);
 }
 
 void StartScheduler()
 {
+    timerFireTimes = new Vector<uint64_t>();
+
     LAPIC::Activate();
     LAPIC::CalibrateTimer();
     LAPIC::SetTimerMask(false);
-    LAPIC::SetTimerMode(1);
-    LAPIC::SetTimerFrequency(TIMER_FREQUENCY);
+    LAPIC::SetTimerMode(LAPIC::TimerMode::OneShot);
+
+    timerFireTimes->Push(100);
+    ConfigureTimerClosestExpiry();
+
     asm volatile("sti");
 }
 
-Process GetNextTask(InterruptFrame* currentTaskFrame)
+void SwitchToNextTask(InterruptFrame* taskFrame)
 {
     // TODO: Add scheduler spinlock
 
-    if (!recoverFromIdle)
+    if (restoreFrame)
     {
-        taskList->Get(currentTaskIndex).frame = *currentTaskFrame;
-        currentTicks++;
+        taskList->Get(currentTaskIndex).frame = *taskFrame;
+    }
+    else restoreFrame = true;
+
+    if (++currentTaskIndex >= taskList->GetLength())
+    {
+        // If there are no more pending tasks, set to 0 (idle).
+        currentTaskIndex = taskList->GetLength() <= 1 ? 0 : 1;
     }
 
-    if (currentTicks == QUANTUM_IN_TICKS)
-    {
-        currentTaskIndex++;
-        if (currentTaskIndex >= taskList->GetLength())
-        {
-            if (taskList->GetLength() == 1)
-            {
-                recoverFromIdle = true;
-                currentTicks = QUANTUM_IN_TICKS;
+    timerFireTimes->Push(100);
+    ConfigureTimerClosestExpiry();
 
-                asm volatile("sti");
-                while (true) asm volatile("hlt");
-            }
-            currentTaskIndex = 1;
-        }
-        currentTicks = 0;
-    }
-
-    recoverFromIdle = false;
-    return taskList->Get(currentTaskIndex);
+    Task* task = &taskList->Get(currentTaskIndex);
+    *taskFrame = task->frame;
+    task->pagingManager->SetCR3();
 }
 
-void ExitCurrentTask(int status, InterruptFrame* interruptFrame)
+void ExitCurrentTask(int status, InterruptFrame* taskFrame)
 {
     taskList->Pop(currentTaskIndex);
-    recoverFromIdle = true;
-    currentTicks = QUANTUM_IN_TICKS;
+    Serial::Printf("Task exited with status %d.", status);
 
-    Serial::Printf("Process exited with status %d.", status);
-
-    asm volatile("sti");
-    while (true) asm volatile("hlt");
+    restoreFrame = false;
+    SwitchToNextTask(taskFrame);
 }
 
-void CreateProcess(const String& path)
+void CreateTaskFromELF(const String& path, bool userTask)
 {
     auto pagingManager = new PagingManager();
     pagingManager->InitializePaging();
 
-    Process process;
-    process.pagingManager = pagingManager;
-	process.userspaceAllocator = new UserspaceAllocator();
-
-    // LoadELF will initialize the registers
-    ELFLoader::LoadELF(path, &process);
-
-    taskList->Push(process);
+    uintptr_t entry;
+    uintptr_t stackPtr;
+    ELFLoader::LoadELF(path, pagingManager, entry, stackPtr);
 
     auto originalTaskIndex = currentTaskIndex;
-    currentTaskIndex = taskList->GetLength() - 1;
+    currentTaskIndex = CreateTask(pagingManager, entry, stackPtr, userTask);
 
     Error error;
     int desc;

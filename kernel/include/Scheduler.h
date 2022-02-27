@@ -3,13 +3,13 @@
 #include "Vector.h"
 #include "VFS.h"
 #include "Memory/PagingManager.h"
-#include "Process.h"
+#include "Task.h"
 
-extern Vector<Process>* taskList;
+extern Vector<Task>* taskList;
 extern uint64_t currentTaskIndex;
 
 void InitializeTaskList();
 void StartScheduler();
-Process GetNextTask(InterruptFrame* currentTaskFrame);
-void ExitCurrentTask(int status, InterruptFrame* interruptFrame);
-void CreateProcess(const String& path);
+void SwitchToNextTask(InterruptFrame* taskFrame);
+void ExitCurrentTask(int status, InterruptFrame* taskFrame);
+void CreateTaskFromELF(const String& path, bool userTask);
