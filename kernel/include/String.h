@@ -9,7 +9,8 @@ private:
     uint64_t length;
 
 public:
-    char& operator[](uint64_t index) const;
+    char& operator[](uint64_t index);
+    char Get(uint64_t index) const;
     String& operator=(const String& newString);
     uint64_t GetLength() const;
     String Split(char splitCharacter, unsigned int substringIndex) const;

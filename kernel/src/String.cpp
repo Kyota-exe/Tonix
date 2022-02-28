@@ -59,7 +59,12 @@ bool String::Equals(const char* other) const
     return *bufferPtr == 0 && *other == 0;
 }
 
-char& String::operator[](uint64_t index) const
+char& String::operator[](uint64_t index)
+{
+    return buffer[index];
+}
+
+char String::Get(uint64_t index) const
 {
     return buffer[index];
 }
