@@ -61,12 +61,43 @@ bool String::Equals(const char* other) const
 
 char& String::operator[](uint64_t index)
 {
+    Assert(index < length);
     return buffer[index];
 }
 
-char String::Get(uint64_t index) const
+const char& String::operator[](uint64_t index) const
 {
+    Assert(index < length);
     return buffer[index];
+}
+
+void String::Push(char c)
+{
+    length++;
+
+    char* newBuffer = new char[length + 1];
+    MemCopy(newBuffer, buffer, length - 1);
+    newBuffer[length - 1] = c;
+    newBuffer[length] = 0;
+
+    delete[] buffer;
+    buffer = newBuffer;
+}
+
+bool String::Match(uint64_t index, char c, bool assertValidIndex) const
+{
+    if (assertValidIndex && index >= length) return false;
+
+    Assert(index < length);
+    return buffer[index] == c;
+}
+
+bool String::IsNumeric(uint64_t index, bool assertValidIndex) const
+{
+    if (assertValidIndex && index >= length) return false;
+
+    Assert(index < length);
+    return buffer[index] >= '0' && buffer[index] <= '9';
 }
 
 String& String::operator=(const String& newString)
@@ -140,6 +171,20 @@ String String::Substring(uint64_t index, uint64_t substringLength) const
     newBuffer[substringLength] = 0;
 
     return String(newBuffer);
+}
+
+unsigned int String::ToUnsignedInt()
+{
+    unsigned int number = 0;
+
+    for (uint64_t i = 0; i < length; ++i)
+    {
+        Assert(IsNumeric(i, false));
+        number *= 10;
+        number += buffer[i] - '0';
+    }
+
+    return number;
 }
 
 const char* String::ToCString() const

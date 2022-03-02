@@ -14,7 +14,4 @@ public:
     Terminal& operator=(const Terminal&) = delete;
     TextRenderer* textRenderer;
     Colour textColour;
-private:
-    unsigned int cursorX = 0;
-    unsigned int cursorY = 0;
 };

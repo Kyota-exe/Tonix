@@ -6,10 +6,14 @@
 class TextRenderer
 {
 public:
-    void Print(char c, unsigned int x, unsigned int y, Colour colour);
-    void Print(const String& string, unsigned int& x, unsigned int& y, Colour colour);
-    explicit TextRenderer(const String& fontPath, int characterSpacing = 0);
+    void Print(char c, long x, long y, Colour colour);
+    void Print(const String& string);
+    explicit TextRenderer(const String& fontPath, Colour textColour, int characterSpacing, Colour backgroundColour);
     int characterSpacing;
+    Colour backgroundColour;
+    Colour textColour;
 private:
+    long cursorX;
+    long cursorY;
     PSF2Font* font;
 };

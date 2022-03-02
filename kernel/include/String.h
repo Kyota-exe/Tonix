@@ -10,7 +10,10 @@ private:
 
 public:
     char& operator[](uint64_t index);
-    char Get(uint64_t index) const;
+    const char& operator[](uint64_t index) const;
+    void Push(char c);
+    bool Match(uint64_t index, char c, bool assertValidIndex = false) const;
+    bool IsNumeric(uint64_t index, bool assertValidIndex = false) const;
     String& operator=(const String& newString);
     uint64_t GetLength() const;
     String Split(char splitCharacter, unsigned int substringIndex) const;
@@ -20,6 +23,7 @@ public:
     bool IsEmpty() const;
     String Substring(uint64_t index, uint64_t substringLength) const;
     const char* ToCString() const;
+    unsigned int ToUnsignedInt();
 
     const char* begin() const;
     const char* end() const;

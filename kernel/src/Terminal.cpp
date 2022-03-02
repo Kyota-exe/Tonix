@@ -13,13 +13,14 @@ uint64_t Terminal::Read(void* buffer, uint64_t count)
 
 uint64_t Terminal::Write(const void* buffer, uint64_t count)
 {
-    textRenderer->Print(String((const char*)buffer), cursorX, cursorY, textColour);
+    textRenderer->Print(String((const char*)buffer));
     return count;
 }
 
 Terminal::Terminal(const String& name, uint32_t inodeNum) :
     Device(name, inodeNum),
-    textRenderer(new TextRenderer(String(FONT_PATH), TEXT_CHARACTER_SPACING)),
+    textRenderer(new TextRenderer(String(FONT_PATH),Colour(255, 255, 255),
+                                  TEXT_CHARACTER_SPACING,Colour(0, 0, 0))),
     textColour(Colour(255, 255, 255)) { }
 
 Terminal::~Terminal()
