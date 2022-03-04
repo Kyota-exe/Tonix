@@ -42,6 +42,6 @@ Colour Colour::FromANSICode(unsigned int code)
             return {255, 255, 255};
 
         default:
-            Assert(false);
+            Panic();
     }
 }

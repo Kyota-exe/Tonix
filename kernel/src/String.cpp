@@ -1,5 +1,6 @@
 #include "String.h"
 #include "Memory/Memory.h"
+#include "Serial.h"
 #include "Assert.h"
 
 String String::Split(char splitCharacter, unsigned int substringIndex) const
@@ -24,7 +25,8 @@ String String::Split(char splitCharacter, unsigned int substringIndex) const
         substringLength++;
     }
 
-    Panic("Could not find substring from splitting string.");
+    Serial::Print("Failed to find substring from splitting string.");
+    Panic();
 }
 
 uint64_t String::Count(char character) const

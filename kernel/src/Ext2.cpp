@@ -362,15 +362,15 @@ uint32_t Ext2::GetBlockAddr(Vnode* vnode, uint32_t requestedBlockIndex, bool all
     }
     else if (requestedBlockIndex < (12 + pointersPerBlock * pointersPerBlock))
     {
-        Panic("Doubly indirect pointers are not yet supported.");
+        Panic();
     }
     else if (requestedBlockIndex < (12 + pointersPerBlock * pointersPerBlock * pointersPerBlock))
     {
-        Panic("Triply indirect pointers are not yet supported.");
+        Panic();
     }
     else
     {
-        Panic("Unsupported blockPtr pointer request (%d).", requestedBlockIndex);
+        Panic();
     }
 
     if (allocateMissingBlock && blockPtr == 0)

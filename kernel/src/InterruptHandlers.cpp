@@ -15,11 +15,13 @@ void PageFaultHandler()
 
 [[noreturn]] void ExceptionHandler(InterruptFrame* interruptFrame)
 {
+    Serial::Printf("Exception: %x", interruptFrame->interruptNumber);
     Serial::Printf("Error code: %x", interruptFrame->errorCode);
     Serial::Printf("RIP: %x", interruptFrame->rip);
 
     if (interruptFrame->interruptNumber == 0xe) PageFaultHandler();
-    Panic("Exception %x occurred.", interruptFrame->interruptNumber);
+
+    Panic();
 }
 
 void KeyboardInterruptHandler()
@@ -63,6 +65,7 @@ extern "C" void ISRHandler(InterruptFrame* interruptFrame)
         case 0 ... 31:
             ExceptionHandler(interruptFrame);
         default:
-            Panic("Could not find ISR for interrupt %x.", interruptFrame->interruptNumber);
+            Serial::Printf("Could not find ISR for interrupt %x.", interruptFrame->interruptNumber);
+            Panic();
     }
 }

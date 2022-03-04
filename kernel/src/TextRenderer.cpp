@@ -118,12 +118,12 @@ void TextRenderer::ProcessEscapeSequence(char command, bool hasCSI, const Vector
                             backgroundColour = Colour::FromANSICode(arg);
                             break;
                         default:
-                            Assert(false);
+                            Panic();
                     }
                 }
                 break;
             default:
-                Assert(false);
+                Panic();
         }
     }
     else
@@ -134,7 +134,7 @@ void TextRenderer::ProcessEscapeSequence(char command, bool hasCSI, const Vector
                 cursorY -= font->Height();
                 break;
             default:
-                Assert(false);
+                Panic();
         }
     }
 }
@@ -167,7 +167,7 @@ void TextRenderer::Print(const String& string)
             }
             case '\a': // Terminal Bell
             {
-                Assert(false);
+                Panic();
             }
             case '\033': // Escape
             {

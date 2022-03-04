@@ -2,7 +2,6 @@
 #include "Memory/PageFrameAllocator.h"
 #include "Memory/PagingManager.h"
 #include "ELFLoader.h"
-#include "Panic.h"
 #include "VFS.h"
 #include "Serial.h"
 #include "ELF.h"

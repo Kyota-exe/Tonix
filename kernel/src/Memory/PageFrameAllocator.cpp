@@ -88,9 +88,8 @@ void* RequestPageFrame()
         }
     }
 
-    // Free page frame could not be found.
-    Panic("Free page frame could not be found!");
-    return nullptr;
+    Serial::Print("Failed to find free page frame.");
+    Panic();
 }
 
 void* RequestPageFrames(uint64_t count)
@@ -117,9 +116,8 @@ void* RequestPageFrames(uint64_t count)
         }
     }
 
-    // Free page frame could not be found.
-    Panic("Could not find %d contiguous free pages.", count);
-    return nullptr;
+    Serial::Printf("Could not find %d continuous free pages.", count);
+    Panic();
 }
 
 void FreePageFrame(void* ptr)

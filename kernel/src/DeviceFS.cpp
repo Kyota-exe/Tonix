@@ -63,7 +63,7 @@ Vnode* DeviceFS::FindInDirectory(Vnode* directory, const String& name)
 
 void DeviceFS::Create(Vnode* vnode, Vnode* directory, const String& name)
 {
-    Panic("Cannot create device file.");
+    Panic();
 
     (void)vnode;
     (void)directory;
@@ -72,7 +72,7 @@ void DeviceFS::Create(Vnode* vnode, Vnode* directory, const String& name)
 
 void DeviceFS::Truncate(Vnode* vnode)
 {
-    Panic("Cannot truncate device file.");
+    Panic();
 
     (void)vnode;
 }

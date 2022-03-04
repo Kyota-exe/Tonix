@@ -1,5 +1,4 @@
 #include "FileMap.h"
-#include "Panic.h"
 #include "Memory/PageFrameAllocator.h"
 #include "Memory/Memory.h"
 #include "Scheduler.h"

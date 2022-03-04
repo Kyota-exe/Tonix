@@ -56,5 +56,6 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
 
 extern "C" __attribute__((unused)) void __cxa_pure_virtual()
 {
-    Panic("__cxa_pure_virtual called");
+    Serial::Print("__cxa_pure_virtual called");
+    Panic();
 }

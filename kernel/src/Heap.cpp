@@ -2,7 +2,7 @@
 #include "Heap.h"
 #include "Serial.h"
 #include "Math.h"
-#include "Panic.h"
+#include "Assert.h"
 
 uint64_t masterIndex = 0;
 uint64_t allocTable[1024];
@@ -118,9 +118,10 @@ void Slab::Free(void* ptr)
     }
     if (!foundAddr)
     {
+        Serial::Print("Double free!");
         Serial::Printf("DF addr: %x", (uint64_t)ptr);
         Serial::Printf("DF Slot size: %d", (uint64_t)slotSize);
-        Panic("Double free");
+        Panic();
     }
 }
 
@@ -156,7 +157,8 @@ void KFree(void* ptr)
         }
     }
 
-    Panic("Could not free.");
+    Serial::Printf("Failed to free address %x", ptr);
+    Panic();
 }
 
 void InitializeKernelHeap()

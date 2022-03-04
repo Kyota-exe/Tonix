@@ -2,7 +2,6 @@
 #include "Ext2.h"
 #include "DeviceFS.h"
 #include "StringUtilities.h"
-#include "Panic.h"
 #include "Vector.h"
 #include "Serial.h"
 #include "Scheduler.h"
@@ -69,7 +68,7 @@ Vnode* VFS::TraversePath(String path, String& fileName, Vnode*& containingDirect
         currentDirectory = root;
         path = path.Substring(1, path.GetLength() - 1);
     }
-    else Panic("Traversing using relative path is not supported.");
+    else Panic();
 
     unsigned int pathDepth = path.Count('/') + 1;
 

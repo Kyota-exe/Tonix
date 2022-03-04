@@ -1,16 +1,10 @@
 #include "Bitmap.h"
-#include "Serial.h"
+#include "Assert.h"
 
 bool Bitmap::GetBit(uint64_t index) const
 {
     uint64_t byteIndex = index / 8;
-
-    if (byteIndex > size - 1)
-    {
-        Serial::Printf("Bounds: %d", size);
-        Serial::Printf("Bitfield: Index %d exceeds bitmap bounds.", byteIndex);
-        while (true) asm("hlt");
-    }
+    Assert(byteIndex < size);
 
     uint8_t bitIndex = firstIsLeft ? 1 << (7 - (index % 8)) : 1 << (index % 8);
     return (buffer[byteIndex] & bitIndex);
@@ -19,12 +13,7 @@ bool Bitmap::GetBit(uint64_t index) const
 void Bitmap::SetBit(uint64_t index, bool value) const
 {
     uint64_t byteIndex = index / 8;
-
-    if (byteIndex > size - 1)
-    {
-        Serial::Printf("Bitfield: Index %x exceeds bitmap bounds.", index);
-        while (true) asm("hlt");
-    }
+    Assert(byteIndex < size);
 
     uint8_t bitIndex = firstIsLeft ? 1 << (7 - index % 8) : 1 << (index % 8);
     if (value)
