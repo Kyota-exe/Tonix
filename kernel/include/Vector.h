@@ -6,7 +6,7 @@
 
 template <typename T> class Vector
 {
-public:
+private:
     T* buffer;
     uint64_t capacity;
     uint64_t length;
@@ -15,15 +15,15 @@ public:
     uint64_t Push(const T& value);
     T Pop();
     T Pop(uint64_t index);
-    bool Contains(const T& value);
-    uint64_t GetLength();
+    uint64_t GetLength() const;
 
-    typedef T* iterator;
-    iterator begin();
-    iterator end();
+    T* begin();
+    T* end();
+    const T* begin() const;
+    const T* end() const;
 
     T& Get(uint64_t index);
-    T& operator[](uint64_t index);
+    const T& Get(uint64_t index) const;
     Vector<T>& operator=(const Vector<T>& newVector);
 
     Vector();
@@ -112,42 +112,44 @@ T Vector<T>::Pop(uint64_t index)
 }
 
 template <typename T>
-bool Vector<T>::Contains(const T& value)
-{
-    for (uint64_t i = 0; i < length; ++i)
-    {
-        if (buffer[i] == value) return true;
-    }
-    return false;
-}
-
-template <typename T>
-uint64_t Vector<T>::GetLength()
+uint64_t Vector<T>::GetLength() const
 {
     return length;
 }
 
 template <typename T>
-typename Vector<T>::iterator Vector<T>::begin()
+T* Vector<T>::begin()
 {
     return buffer;
 }
 
 template <typename T>
-typename Vector<T>::iterator Vector<T>::end()
+T* Vector<T>::end()
 {
     return buffer + GetLength();
 }
 
 template <typename T>
-T& Vector<T>::operator[](uint64_t index)
+const T* Vector<T>::begin() const
+{
+    return buffer;
+}
+
+template <typename T>
+const T* Vector<T>::end() const
+{
+    return buffer + GetLength();
+}
+
+template <typename T>
+T& Vector<T>::Get(uint64_t index)
 {
     Assert(index < GetLength());
     return buffer[index];
 }
 
 template <typename T>
-T& Vector<T>::Get(uint64_t index)
+const T& Vector<T>::Get(uint64_t index) const
 {
     Assert(index < GetLength());
     return buffer[index];

@@ -2,6 +2,7 @@
 #include "Framebuffer.h"
 #include "Serial.h"
 #include "Assert.h"
+#include "Vector.h"
 
 TextRenderer::TextRenderer(const String& fontPath, Colour textColour, int characterSpacing, Colour backgroundColour) :
                            characterSpacing(characterSpacing), backgroundColour(backgroundColour), textColour(textColour)
@@ -26,9 +27,122 @@ void TextRenderer::Print(char c, long x, long y, Colour colour)
     }
 }
 
+void TextRenderer::Erase(long x, long y)
+{
+    for (uint32_t glyphY = 0; glyphY < font->Height(); ++glyphY)
+    {
+        for (uint32_t glyphX = 0; glyphX < font->Width(); ++glyphX)
+        {
+            unsigned int screenX = x + glyphX;
+            unsigned int screenY = y + glyphY;
+            Framebuffer::PlotPixel(screenX, screenY,backgroundColour);
+        }
+    }
+}
+
+void TextRenderer::ProcessEscapeSequence(char command, bool hasCSI, const Vector<unsigned int>& arguments)
+{
+    uint64_t argCount = arguments.GetLength();
+
+    // Temporary printing of escape sequences
+    {
+        Serial::Print("ESCAPE--------------------------------------------------");
+        Serial::Print("Command: ", "");
+        char* commandBuffer = new char[2];
+        commandBuffer[0] = command; commandBuffer[1] = 0;
+        Serial::Print(commandBuffer);
+
+        Serial::Printf("hasCSI: %d", hasCSI);
+
+        Serial::Printf("Arguments (%d): ", arguments.GetLength());
+        for (const unsigned int argument : arguments)
+        {
+            Serial::Printf("%d ", argument);
+        }
+    }
+
+    if (hasCSI)
+    {
+        switch (command)
+        {
+            case 'H':
+                if (argCount == 0) { cursorX = cursorY = 0; break; }
+                Assert(argCount == 2);
+                cursorY = arguments.Get(0) * font->Height();
+                cursorX = arguments.Get(1) * font->Width();
+                break;
+            case 'f':
+                Assert(argCount == 2);
+                cursorY = arguments.Get(0) * font->Height();
+                cursorX = arguments.Get(1) * font->Width();
+                break;
+            case 'A':
+                Assert(argCount == 1);
+                cursorY -= arguments.Get(0) * font->Height();
+                break;
+            case 'B':
+                Assert(argCount == 1);
+                cursorY += arguments.Get(0) * font->Height();
+                break;
+            case 'C':
+                Assert(argCount == 1);
+                cursorX += arguments.Get(0) * font->Width();
+                break;
+            case 'D':
+                Assert(argCount == 1);
+                cursorX -= arguments.Get(0) * font->Width();
+                break;
+            case 'E':
+                Assert(argCount == 1);
+                cursorY += arguments.Get(0) * font->Height();
+                cursorX = 0;
+                break;
+            case 'F':
+                Assert(argCount == 1);
+                cursorY -= arguments.Get(0) * font->Height();
+                cursorX = 0;
+                break;
+            case 'G':
+                Assert(argCount == 1);
+                cursorX = arguments.Get(0) * font->Width();
+                break;
+            case 'm':
+                for (unsigned int arg : arguments)
+                {
+                    switch (arg)
+                    {
+                        case 30 ... 39:
+                            textColour = Colour::FromANSICode(arg);
+                            break;
+                        case 40 ... 49:
+                            backgroundColour = Colour::FromANSICode(arg);
+                            break;
+                        default:
+                            Assert(false);
+                    }
+                }
+                break;
+            default:
+                Assert(false);
+        }
+    }
+    else
+    {
+        switch (command)
+        {
+            case 'M':
+                cursorY -= font->Height();
+                break;
+            default:
+                Assert(false);
+        }
+    }
+}
+
 void TextRenderer::Print(const String& string)
 {
     uint64_t currentIndex = 0;
+
     while (currentIndex < string.GetLength())
     {
         char c = string[currentIndex++];
@@ -51,142 +165,37 @@ void TextRenderer::Print(const String& string)
                 cursorX += font->Width() * 4;
                 break;
             }
+            case '\a': // Terminal Bell
+            {
+                Assert(false);
+            }
             case '\033': // Escape
             {
-                if (string.Match(currentIndex, '[')) // Control Sequence Introducer
-                {
-                    currentIndex++;
-                    if (string.Match(currentIndex, 'H'))
-                    {
-                        cursorX = 0;
-                        cursorY = 0;
-                        currentIndex++;
-                    }
-                    else if (string.Match(currentIndex, '6'))
-                    {
-                        if (string.Match(currentIndex + 1, 'n'))
-                        {
-                            currentIndex += 2;
-                            Assert(false);
-                        }
-                    }
-                    else if (string.Match(currentIndex, 's'))
-                    {
-                        currentIndex++;
-                        Assert(false);
-                    }
-                    else if (string.Match(currentIndex, 'u'))
-                    {
-                        currentIndex++;
-                        Assert(false);
-                    }
-                    else if (string.Match(currentIndex, 'J'))
-                    {
-                        currentIndex++;
-                        Assert(false);
-                    }
-                    else if (string.Match(currentIndex, 'K'))
-                    {
-                        currentIndex++;
-                        Assert(false);
-                    }
-                    else if (string.Match(currentIndex, '='))
-                    {
-                        currentIndex++;
-                        Assert(false);
-                    }
-                    else if (string.Match(currentIndex, '?'))
-                    {
-                        currentIndex++;
-                        Assert(false);
-                    }
-                    else
-                    {
-                        String numberString;
-                        while (string.IsNumeric(currentIndex))
-                        {
-                            numberString.Push(string[currentIndex++]);
-                        }
-                        auto number = numberString.ToUnsignedInt();
+                bool hasCSI = string.Match(currentIndex, '[');
+                if (hasCSI) currentIndex++;
 
-                        if (string.Match(currentIndex, 'A'))
-                        {
-                            cursorY -= font->Height() * number;
-                            currentIndex++;
-                        }
-                        else if (string.Match(currentIndex, 'B'))
-                        {
-                            cursorY += font->Height() * number;
-                            currentIndex++;
-                        }
-                        else if (string.Match(currentIndex, 'C'))
-                        {
-                            cursorX += font->Width() * number;
-                            currentIndex++;
-                        }
-                        else if (string.Match(currentIndex, 'D'))
-                        {
-                            cursorX -= font->Width() * number;
-                            currentIndex++;
-                        }
-                        else if (string.Match(currentIndex, 'E'))
-                        {
-                            cursorY += font->Height() * number;
-                            cursorX = 0;
-                            currentIndex++;
-                        }
-                        else if (string.Match(currentIndex, 'F'))
-                        {
-                            cursorY -= font->Height() * number;
-                            cursorX = 0;
-                            currentIndex++;
-                        }
-                        else if (string.Match(currentIndex, 'G'))
-                        {
-                            cursorX = font->Width() * number;
-                            currentIndex++;
-                        }
-                        else if (string.Match(currentIndex, 'J'))
-                        {
-                            currentIndex++;
-                            Assert(false);
-                        }
-                        else if (string.Match(currentIndex, 'K'))
-                        {
-                            currentIndex++;
-                            Assert(false);
-                        }
-                        else if (string.Match(currentIndex, 'm'))
-                        {
-                            currentIndex++;
-                            Assert(false);
-                        }
-                        else if (string.Match(currentIndex, ';'))
-                        {
-                            currentIndex++;
-                            Assert(false);
-                        }
+                Vector<unsigned int> arguments;
+                do
+                {
+                    String numberString;
+                    while (string.IsNumeric(currentIndex))
+                    {
+                        numberString.Push(string[currentIndex++]);
                     }
-                }
-                else if (string.Match(currentIndex, 'M'))
-                {
-                    cursorY -= font->Height();
-                    currentIndex++;
-                }
-                else if (string.Match(currentIndex, '7'))
-                {
-                    currentIndex++;
-                    Assert(false);
-                }
-                else if (string.Match(currentIndex, '8'))
-                {
-                    currentIndex++;
-                    Assert(false);
-                }
 
+                    Assert(numberString.GetLength() > 0);
+                    arguments.Push(numberString.ToUnsignedInt());
+
+                } while (string.Match(currentIndex++, ';'));
+
+                currentIndex--;
+
+                Assert(currentIndex < string.GetLength());
+                char command = string[currentIndex++];
+
+                ProcessEscapeSequence(command, hasCSI, arguments);
                 break;
             }
-
             default:
             {
                 Print(c, cursorX, cursorY, textColour);

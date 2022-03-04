@@ -13,7 +13,7 @@ void PageFaultHandler()
     Serial::Printf("CR2: %x", cr2);
 }
 
-void ExceptionHandler(InterruptFrame* interruptFrame)
+[[noreturn]] void ExceptionHandler(InterruptFrame* interruptFrame)
 {
     Serial::Printf("Error code: %x", interruptFrame->errorCode);
     Serial::Printf("RIP: %x", interruptFrame->rip);
@@ -62,7 +62,6 @@ extern "C" void ISRHandler(InterruptFrame* interruptFrame)
             break;
         case 0 ... 31:
             ExceptionHandler(interruptFrame);
-            break;
         default:
             Panic("Could not find ISR for interrupt %x.", interruptFrame->interruptNumber);
     }

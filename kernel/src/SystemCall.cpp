@@ -38,7 +38,7 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             Serial::Print((const char*)arg0); return 0;
 
         case SystemCallType::Panic:
-            Panic((const char*)arg0); return 0;
+            Panic((const char*)arg0);
 
         case SystemCallType::TCBSet:
         {
@@ -67,6 +67,6 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             ExitCurrentTask((int)arg0, interruptFrame); return 0;
 
         default:
-            Panic("Invalid syscall (%d).", type); return 0;
+            Panic("Invalid syscall (%d).", type);
     }
 }

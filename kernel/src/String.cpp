@@ -25,7 +25,6 @@ String String::Split(char splitCharacter, unsigned int substringIndex) const
     }
 
     Panic("Could not find substring from splitting string.");
-    return {};
 }
 
 uint64_t String::Count(char character) const
@@ -179,7 +178,7 @@ unsigned int String::ToUnsignedInt()
 
     for (uint64_t i = 0; i < length; ++i)
     {
-        Assert(IsNumeric(i, false));
+        Assert(IsNumeric(i, true));
         number *= 10;
         number += buffer[i] - '0';
     }

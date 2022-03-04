@@ -1,7 +1,7 @@
 #include "Panic.h"
 #include "Serial.h"
 
-void Panic(const char* message)
+[[noreturn]] void Panic(const char* message)
 {
     Serial::Print("KERNEL PANIC!");
     Serial::Print(message);
@@ -9,7 +9,7 @@ void Panic(const char* message)
     while (true) asm("cli\n hlt\n");
 }
 
-void Panic(const char* message, const char* file, unsigned int line, const char* function)
+[[noreturn]] void Panic(const char* message, const char* file, unsigned int line, const char* function)
 {
     // TODO: Don't print strings directly
     Serial::Print("KERNEL PANIC!");
