@@ -41,12 +41,14 @@ void SystemCallHandler(InterruptFrame* interruptFrame)
 {
     Error error = Error::None;
 
-    interruptFrame->rax = SystemCall((SystemCallType)interruptFrame->rdi,
-                                     interruptFrame->rsi,interruptFrame->rdx,
-                                     interruptFrame->rcx,interruptFrame->r8,
-                                     interruptFrame->r9,interruptFrame->r10, interruptFrame, error);
+    interruptFrame->rax = SystemCall((SystemCallType)interruptFrame->rax, interruptFrame->rdi,
+                                     interruptFrame->rsi, interruptFrame->rdx,interruptFrame->rcx,
+                                     interruptFrame->r8,interruptFrame->r9, interruptFrame, error);
 
-    interruptFrame->rbx = (uint64_t)error;
+    if (error != Error::None)
+    {
+        interruptFrame->rax = -static_cast<int64_t>(error);
+    }
 }
 
 extern "C" void ISRHandler(InterruptFrame* interruptFrame)

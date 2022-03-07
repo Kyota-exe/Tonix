@@ -1,6 +1,6 @@
 #pragma once
 
-enum class Error
+enum class Error : int64_t
 {
     None = 0,
     Exists = 1019,

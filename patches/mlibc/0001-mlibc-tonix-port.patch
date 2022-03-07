@@ -1,15 +1,14 @@
-From b9503494104f52e368835dd712748400bc57bec0 Mon Sep 17 00:00:00 2001
+From 6a61b97d0df3b3d18dfcb470f382fdf68295918c Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
-Date: Sun, 20 Feb 2022 17:32:20 -0500
+Date: Sun, 6 Mar 2022 21:03:38 -0500
 Subject: [PATCH] mlibc tonix port
 
 ---
  meson.build                                  |   4 +
- options/rtdl/generic/linker.cpp              |   8 +-
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++++
- sysdeps/tonix/generic/Generic.cpp            | 204 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 188 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -35,9 +34,10 @@ Subject: [PATCH] mlibc tonix port
  sysdeps/tonix/include/abi-bits/uid_t.h       |   1 +
  sysdeps/tonix/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
- sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
+ sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 ++
+ sysdeps/tonix/include/tonix/SystemCall.h     |  79 ++++++++
  sysdeps/tonix/meson.build                    |  51 +++++
- 33 files changed, 342 insertions(+), 6 deletions(-)
+ 33 files changed, 401 insertions(+), 2 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -67,6 +67,7 @@ Subject: [PATCH] mlibc tonix port
  create mode 120000 sysdeps/tonix/include/abi-bits/vm-flags.h
  create mode 120000 sysdeps/tonix/include/abi-bits/wait.h
  create mode 100644 sysdeps/tonix/include/mlibc/thread-entry.hpp
+ create mode 100644 sysdeps/tonix/include/tonix/SystemCall.h
  create mode 100644 sysdeps/tonix/meson.build
 
 diff --git a/meson.build b/meson.build
@@ -84,32 +85,6 @@ index 6c7b4073..6a12e308 100644
  else
  	error('No sysdeps defined for OS: ' + host_machine.system())
  endif
-diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
-index 53264175..14792616 100644
---- a/options/rtdl/generic/linker.cpp
-+++ b/options/rtdl/generic/linker.cpp
-@@ -12,9 +12,9 @@
- 
- uintptr_t libraryBase = 0x41000000;
- 
--bool verbose = false;
--bool stillSlightlyVerbose = false;
--bool logBaseAddresses = false;
-+bool verbose = true;
-+bool stillSlightlyVerbose = true;
-+bool logBaseAddresses = true;
- bool eagerBinding = true;
- 
- #if defined(__x86_64__)
-@@ -282,7 +282,7 @@ void ObjectRepository::_fetchFromPhdrs(SharedObject *object, void *phdr_pointer,
- 	object->phdrEntrySize = phdr_entry_size;
- 	object->phdrCount = phdr_count;
- 	if(verbose)
--		mlibc::infoLogger() << "rtdl: Loading " << object->name << frg::endlog;
-+        mlibc::infoLogger() << "rtdl: Loading " << object->name << frg::endlog;
- 
- 	// Note: the entry pointer is absolute and not relative to the base address.
- 	object->entry = entry_pointer;
 diff --git a/options/rtdl/generic/main.cpp b/options/rtdl/generic/main.cpp
 index bed8e11d..322dbf77 100644
 --- a/options/rtdl/generic/main.cpp
@@ -180,10 +155,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..964a7da9
+index 00000000..5d1af8b5
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,204 @@
+@@ -0,0 +1,188 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -193,25 +168,25 @@ index 00000000..964a7da9
 +#include <fcntl.h>
 +#include <limits.h>
 +
++#include <tonix/SystemCall.h>
++
 +namespace mlibc
 +{
 +    void sys_libc_log(const char* message)
 +    {
-+        asm volatile("int $0x80" : : "D"(255), "S"(message));
++        SystemCall(SystemCallID::Log, message);
 +    }
 +
 +    void sys_libc_panic()
 +    {
-+        asm volatile("int $0x80" : : "D"(254), "S"("mlibc panic!"));
++        SystemCall(SystemCallID::Panic, "mlibc panic!");
 +    }
 +
 +    int sys_open(const char* path, int flags, int* fd)
 +    {
-+        int ret;
-+        int error;
-+        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(0), "S"(path), "d"(flags));
++        ssize_t ret = SystemCall(SystemCallID::Open, path, flags);
 +
-+        if (ret == -1) return error;
++        if (ret < 0) return -ret;
 +
 +        *fd = ret;
 +        return 0;
@@ -219,22 +194,18 @@ index 00000000..964a7da9
 +
 +    int sys_close(int fd)
 +    {
-+        int ret;
-+        int error;
-+        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(4), "S"(fd));
++        ssize_t ret = SystemCall(SystemCallID::Close, fd);
 +
-+        if (ret == -1) return error;
++        if (ret < 0) return -ret;
 +
 +        return 0;
 +    }
 +
 +    int sys_read(int fd, void* buf, size_t count, ssize_t* bytes_read)
 +    {
-+        ssize_t ret;
-+        int error;
-+        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(1), "S"(fd), "d"(buf), "c"(count));
++        ssize_t ret = SystemCall(SystemCallID::Read, fd, buf, count);
 +
-+        if (ret == -1) return error;
++        if (ret < 0) return -ret;
 +
 +        *bytes_read = ret;
 +        return 0;
@@ -243,11 +214,9 @@ index 00000000..964a7da9
 +#ifndef MLIBC_BUILDING_RTDL
 +    int sys_write(int fd, const void* buf, size_t count, ssize_t* bytes_written)
 +    {
-+        ssize_t ret;
-+        int error;
-+        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(2), "S"(fd), "d"(buf), "c"(count));
++        ssize_t ret = SystemCall(SystemCallID::Write, fd, buf, count);
 +
-+        if (ret == -1) return error;
++        if (ret < 0) return -ret;
 +
 +        *bytes_written = ret;
 +        return 0;
@@ -256,11 +225,9 @@ index 00000000..964a7da9
 +
 +    int sys_seek(int fd, off_t offset, int whence, off_t* new_offset)
 +    {
-+        off_t ret;
-+        int error;
-+        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(3), "S"(fd), "d"(offset));
++        off_t ret = SystemCall(SystemCallID::Seek, fd, offset, whence);
 +
-+        if (ret == -1) return error;
++        if (ret < 0) return -ret;
 +
 +        *new_offset = ret;
 +        return 0;
@@ -268,23 +235,17 @@ index 00000000..964a7da9
 +
 +    int sys_vm_map(void* hint, size_t size, int prot, int flags, int fd, off_t offset, void** window)
 +    {
-+        void* ret;
-+        int error;
++        auto ret = SystemCall(SystemCallID::FileMap, hint, size, prot, flags, fd, offset);
 +
-+        register auto r8 asm("r8") = flags;
-+		register auto r9 asm("r9") = fd;
-+		register auto r10 asm("r10") = offset;
-+        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(5), "S"(hint), "d"(size), "c"(prot), "r"(r8), "r"(r9), "r"(r10));
++        if (ret < 0) return -ret;
 +
-+        if (ret == nullptr) return error;
-+
-+        *window = ret;
++        *window = reinterpret_cast<void*>(ret);
 +        return 0;
 +    }
 +
 +    int sys_tcb_set(void* pointer)
 +	{
-+		asm volatile("int $0x80" : : "D"(6), "S"(pointer));
++        SystemCall(SystemCallID::TCBSet, pointer);
 +		return 0;
 +    }
 +
@@ -295,17 +256,15 @@ index 00000000..964a7da9
 +
 +    int sys_anon_free(void* pointer, size_t size)
 +	{
-+		asm volatile("int $0x80" : : "D"(7));
++        SystemCall(SystemCallID::NotImplemented, pointer, size);
 +		return 0;
 +    }
 +
 +    int sys_isatty(int fd)
 +    {
-+        int ret;
-+        int error;
-+        asm volatile("int $0x80" : "=a"(ret), "=b"(error) : "D"(19), "S"(fd));
++        int ret = SystemCall(SystemCallID::IsTerminal, fd);
 +
-+        if (ret == -1) return error;
++        if (ret < 0) return -ret;
 +
 +        return 0;
 +    }
@@ -313,14 +272,14 @@ index 00000000..964a7da9
 +#ifndef MLIBC_BUILDING_RTDL
 +    void sys_exit(int status)
 +	{
-+		asm volatile("int $0x80" : : "D"(8), "S"(status));
++        SystemCall(SystemCallID::Exit, status);
 +    }
 +#endif
 +
 +#ifndef MLIBC_BUILDING_RTDL
 +    int sys_clock_get(int clock, time_t *secs, long *nanos)
 +	{
-+		asm volatile("int $0x80" : : "D"(9));
++        SystemCall(SystemCallID::NotImplemented, secs, nanos);
 +		return 0;
 +    }
 +#endif
@@ -332,13 +291,13 @@ index 00000000..964a7da9
 +
 +    int sys_futex_wait(int* pointer, int expected, const timespec* time)
 +    {
-+	    asm volatile("int $0x80" : : "D"(10));
++	    SystemCall(SystemCallID::NotImplemented, pointer, expected, time);
 +	    return 0;
 +	}
 +
 +    int sys_futex_wake(int* pointer)
 +	{
-+		asm volatile("int $0x80" : : "D"(11));
++		SystemCall(SystemCallID::NotImplemented, pointer);
 +	    return 0;
 +    }
 +
@@ -347,42 +306,42 @@ index 00000000..964a7da9
 +
 +    int sys_clone(void* entry, void* user_arg, void* tcb, pid_t* tid_out)
 +	{
-+		asm volatile("int $0x80" : : "D"(12));
++        SystemCall(SystemCallID::NotImplemented, entry, user_arg, tcb, tid_out);
 +		return 0;
 +    }
 +
 +    void sys_thread_exit()
 +	{
-+		asm volatile("int $0x80" : : "D"(13));
++        SystemCall(SystemCallID::NotImplemented);
 +    }
 +
 +    int sys_sleep(time_t* secs, long* nanos)
 +	{
-+		asm volatile("int $0x80" : : "D"(14));
++        SystemCall(SystemCallID::NotImplemented, secs, nanos);
 +		return 0;
 +    }
 +
 +    int sys_fork(pid_t* child)
 +	{
-+		asm volatile("int $0x80" : : "D"(15));
++        SystemCall(SystemCallID::NotImplemented, child);
 +		return 0;
 +    }
 +
 +    int sys_execve(const char* path, char* const argv[], char* const envp[])
 +	{
-+		asm volatile("int $0x80" : : "D"(16));
++        SystemCall(SystemCallID::NotImplemented, path, argv, envp);
 +		return 0;
 +    }
 +
 +    pid_t sys_getpid()
 +	{
-+		asm volatile("int $0x80" : : "D"(17));
++        SystemCall(SystemCallID::NotImplemented);
 +		return 0;
 +    }
 +
 +    pid_t sys_getppid()
 +	{
-+		asm volatile("int $0x80" : : "D"(18));
++        SystemCall(SystemCallID::NotImplemented);
 +		return 0;
 +    }
 +
@@ -605,6 +564,92 @@ index 00000000..9bda0961
 +namespace mlibc
 +{
 +    void* prepare_stack(void* entry, void* user_arg, void* tcb);
++}
+\ No newline at end of file
+diff --git a/sysdeps/tonix/include/tonix/SystemCall.h b/sysdeps/tonix/include/tonix/SystemCall.h
+new file mode 100644
+index 00000000..cd572101
+--- /dev/null
++++ b/sysdeps/tonix/include/tonix/SystemCall.h
+@@ -0,0 +1,79 @@
++#pragma once
++
++#include <sys/types.h>
++
++enum class SystemCallID
++{
++    Open = 0,
++    Read = 1,
++    Write = 2,
++    Seek = 3,
++    Close = 4,
++    FileMap = 5,
++    TCBSet = 6,
++    Exit = 8,
++    IsTerminal = 19,
++    Panic = 254,
++    Log = 255,
++    NotImplemented = 253
++};
++
++static ssize_t SystemCallOverload(SystemCallID call)
++{
++    ssize_t ret;
++    asm volatile("int $0x80" : "=a"(ret) : "a"(call));
++    return ret;
++}
++
++static ssize_t SystemCallOverload(SystemCallID call, ssize_t arg0)
++{
++    ssize_t ret;
++    asm volatile("int $0x80" : "=a"(ret) : "a"(call), "D"(arg0));
++    return ret;
++}
++
++static ssize_t SystemCallOverload(SystemCallID call, ssize_t arg0, ssize_t arg1)
++{
++    ssize_t ret;
++    asm volatile("int $0x80" : "=a"(ret) : "a"(call), "D"(arg0), "S"(arg1));
++    return ret;
++}
++
++static ssize_t SystemCallOverload(SystemCallID call, ssize_t arg0, ssize_t arg1, ssize_t arg2)
++{
++    ssize_t ret;
++    asm volatile("int $0x80" : "=a"(ret) : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2));
++    return ret;
++}
++
++static ssize_t SystemCallOverload(SystemCallID call, ssize_t arg0, ssize_t arg1, ssize_t arg2, ssize_t arg3)
++{
++    ssize_t ret;
++    asm volatile("int $0x80" : "=a"(ret) : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2), "c"(arg3));
++    return ret;
++}
++
++static ssize_t SystemCallOverload(SystemCallID call, ssize_t arg0, ssize_t arg1, ssize_t arg2,
++                                  ssize_t arg3, ssize_t arg4)
++{
++    ssize_t ret;
++    register auto r8 asm("r8") = arg4;
++    asm volatile("int $0x80" : "=a"(ret) : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2), "c"(arg3), "r"(r8));
++    return ret;
++}
++
++static ssize_t SystemCallOverload(SystemCallID call, ssize_t arg0, ssize_t arg1, ssize_t arg2,
++                                  ssize_t arg3, ssize_t arg4, ssize_t arg5)
++{
++    ssize_t ret;
++    register auto r8 asm("r8") = arg4;
++    register auto r9 asm("r9") = arg5;
++    asm volatile("int $0x80" : "=a"(ret) : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2), "c"(arg3), "r"(r8), "r"(r9));
++    return ret;
++}
++
++template <typename...T>
++__attribute__((always_inline)) static inline ssize_t SystemCall(SystemCallID call, T... arguments)
++{
++    return SystemCallOverload(call, (ssize_t)arguments...);
 +}
 \ No newline at end of file
 diff --git a/sysdeps/tonix/meson.build b/sysdeps/tonix/meson.build

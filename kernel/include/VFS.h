@@ -40,7 +40,7 @@ public:
 
     enum class SeekType
     {
-        Set = 3,
+        Set = 0,
         Cursor = 1,
         End = 2
     };
