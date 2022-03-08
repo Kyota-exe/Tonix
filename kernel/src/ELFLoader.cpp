@@ -14,11 +14,11 @@ constexpr uintptr_t RTDL_ADDR = 0x40000000;
 void ELFLoader::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& entry, uintptr_t& stackPtr)
 {
     Error elfFileError;
-    int elfFile = VFS::Open(path, 0, elfFileError);
+    int elfFile = VFS::kernelVfs->Open(path, 0, elfFileError);
     Assert(elfFile != -1);
 
     auto elfHeader = new ELFHeader;
-    uint64_t elfHeaderSize = VFS::Read(elfFile, elfHeader, sizeof(ELFHeader));
+    uint64_t elfHeaderSize = VFS::kernelVfs->Read(elfFile, elfHeader, sizeof(ELFHeader));
     Assert(elfHeaderSize == sizeof(ELFHeader));
 
     Assert(elfHeader->eIdentMagic[0] == 0x7f &&
@@ -32,7 +32,7 @@ void ELFLoader::LoadELF(const String& path, PagingManager* pagingManager, uintpt
     uint64_t programHeaderTableSize = elfHeader->programHeaderTableEntryCount * elfHeader->programHeaderTableEntrySize;
     auto programHeaderTable = new ProgramHeader[elfHeader->programHeaderTableEntryCount];
 
-    uint64_t programHeaderTableSizeRead = VFS::Read(elfFile, programHeaderTable, programHeaderTableSize);
+    uint64_t programHeaderTableSizeRead = VFS::kernelVfs->Read(elfFile, programHeaderTable, programHeaderTableSize);
     Assert(programHeaderTableSize == programHeaderTableSizeRead);
 
     bool hasDynamicLinking = false;
@@ -59,8 +59,8 @@ void ELFLoader::LoadELF(const String& path, PagingManager* pagingManager, uintpt
                 char* rtdlPath = new char[programHeader.segmentSizeInFile + 1];
 
                 Error error = Error::None;
-                VFS::RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set, error);
-                VFS::Read(elfFile, rtdlPath, programHeader.segmentSizeInFile);
+                VFS::kernelVfs->RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set, error);
+                VFS::kernelVfs->Read(elfFile, rtdlPath, programHeader.segmentSizeInFile);
 
                 rtdlPath[programHeader.segmentSizeInFile] = 0;
 
@@ -127,7 +127,7 @@ void ELFLoader::LoadELF(const String& path, PagingManager* pagingManager, uintpt
     delete elfHeader;
     delete[] programHeaderTable;
 
-    VFS::Close(elfFile);
+    VFS::kernelVfs->Close(elfFile);
 }
 
 void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeader,
@@ -136,7 +136,7 @@ void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeade
     uint64_t segmentPagesCount = (programHeader.segmentSizeInMemory - 1) / 0x1000 + 1;
 
     Error error;
-    VFS::RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set, error);
+    VFS::kernelVfs->RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set, error);
 
     uintptr_t baseAddr = programHeader.virtAddr;
     if (elfHeader->type == ELFType::Shared) baseAddr += RTDL_ADDR;
@@ -161,6 +161,6 @@ void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeade
             readCount = programHeader.segmentSizeInFile % 0x1000;
         }
 
-        fileReadCount += VFS::Read(elfFile, reinterpret_cast<void*>(higherHalfAddr), readCount);
+        fileReadCount += VFS::kernelVfs->Read(elfFile, reinterpret_cast<void*>(higherHalfAddr), readCount);
     }
 }

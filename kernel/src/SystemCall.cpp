@@ -14,22 +14,24 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
         Serial::Printf("syscall %d", type);
     }
 
+    Task currentTask = taskList->Get(currentTaskIndex);
+
     switch (type)
     {
         case SystemCallType::Open:
-            return VFS::Open(String((const char*)arg0), (int)arg1, error);
+            return currentTask.vfs->Open(String((const char*)arg0), (int)arg1, error);
 
         case SystemCallType::Read:
-            return VFS::Read((int)arg0, (void*)arg1, arg2);
+            return currentTask.vfs->Read((int)arg0, (void*)arg1, arg2);
 
         case SystemCallType::Write:
-            return VFS::Write((int)arg0, (const void*)arg1, arg2);
+            return currentTask.vfs->Write((int)arg0, (const void*)arg1, arg2);
 
         case SystemCallType::Seek:
-            return VFS::RepositionOffset((int)arg0, arg1, (VFS::SeekType)arg2, error);
+            return currentTask.vfs->RepositionOffset((int)arg0, arg1, (VFS::SeekType)arg2, error);
 
         case SystemCallType::Close:
-            VFS::Close((int)arg0); return 0;
+            currentTask.vfs->Close((int)arg0); return 0;
 
         case SystemCallType::FileMap:
             return (uint64_t)FileMap((void*)arg0, arg1, (int)arg2,(int)arg3, (int)arg4, (int)arg5);
@@ -53,7 +55,7 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
 
         case SystemCallType::IsTerminal:
         {
-            VnodeType vnodeType = VFS::GetVnodeType((int)arg0, error);
+            VnodeType vnodeType = currentTask.vfs->GetVnodeType((int)arg0, error);
 
             // Assuming all VFS character devices are terminals
             if (vnodeType != VnodeType::VFSCharacterDevice)

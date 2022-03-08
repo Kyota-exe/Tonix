@@ -34,9 +34,9 @@ struct InterruptFrame
 
 struct Task
 {
-    Vector<VFS::FileDescriptor> fileDescriptors;
-
     InterruptFrame frame;
+
+    VFS* vfs;
     PagingManager* pagingManager;
 	UserspaceAllocator* userspaceAllocator;
 };

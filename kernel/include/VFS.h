@@ -31,13 +31,6 @@ struct Vnode
 class VFS
 {
 public:
-    struct FileDescriptor
-    {
-        bool present = false;
-        uint64_t offset = 0;
-        Vnode* vnode;
-    };
-
     enum class SeekType
     {
         Set = 0,
@@ -45,18 +38,29 @@ public:
         End = 2
     };
 
-    static void Initialize(void* ext2RamDisk);
+    static VFS* kernelVfs;
+
+    int Open(const String& path, int flags, Error& error);
+    uint64_t Read(int descriptor, void* buffer, uint64_t count);
+    uint64_t Write(int descriptor, const void* buffer, uint64_t count);
+    uint64_t RepositionOffset(int descriptor, uint64_t offset, SeekType seekType, Error& error);
+    void Close(int descriptor);
+    VnodeType GetVnodeType(int descriptor, Error& error);
+
     static void Mount(Vnode* mountPoint, Vnode* vnode);
-    static int Open(const String& path, int flags, Error& error);
-    static uint64_t Read(int descriptor, void* buffer, uint64_t count);
-    static uint64_t Write(int descriptor, const void* buffer, uint64_t count);
-    static uint64_t RepositionOffset(int descriptor, uint64_t offset, SeekType seekType, Error& error);
-    static void Close(int descriptor);
-    static int CreateDirectory(const String& path, Vnode** directory, Error& error);
-    static VnodeType GetVnodeType(int descriptor, Error& error);
+    static Vnode* CreateDirectory(const String& path, Error& error);
+
+    static void Initialize(void* ext2RamDisk);
     static void CacheVNode(Vnode* vnode);
     static Vnode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem);
 private:
+    struct FileDescriptor
+    {
+        bool present = false;
+        uint64_t offset = 0;
+        Vnode* vnode = nullptr;
+    };
+
     enum OpenFlag
     {
         Create = 0x10,
@@ -67,8 +71,10 @@ private:
         ReadWrite = 0x3
     };
 
-    static Vector<FileDescriptor>* GetFileDescriptorsVector();
-    static FileDescriptor* GetFileDescriptor(int descriptor);
+    Vector<FileDescriptor> fileDescriptors;
+
+    FileDescriptor* GetFileDescriptor(int descriptor);
+    int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor);
+
     static Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error);
-    static int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor);
 };

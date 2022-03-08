@@ -4,14 +4,16 @@
 #include "StringUtilities.h"
 #include "Vector.h"
 #include "Serial.h"
-#include "Scheduler.h"
 #include "RAMDisk.h"
 
 Vnode* root;
 Vnode* currentInCache = nullptr;
+VFS* VFS::kernelVfs = nullptr;
 
 void VFS::Initialize(void* ext2RamDisk)
 {
+    kernelVfs = new VFS();
+
     root = new Vnode();
     root->type = VFSDirectory;
     currentInCache = root;
@@ -20,9 +22,8 @@ void VFS::Initialize(void* ext2RamDisk)
     ext2FileSystem = new Ext2(new RAMDisk(ext2RamDisk));
     Mount(root, ext2FileSystem->fileSystemRoot);
 
-    Vnode* devMountPoint = nullptr;
     Error devMountPointError = Error::None;
-    CreateDirectory(String("/dev"), &devMountPoint, devMountPointError);
+    Vnode* devMountPoint = VFS::CreateDirectory(String("/dev"), devMountPointError);
     Assert(devMountPointError == Error::None && devMountPoint != nullptr);
 
     FileSystem* deviceFileSystem;
@@ -36,21 +37,14 @@ void VFS::CacheVNode(Vnode* vnode)
     currentInCache = vnode;
 }
 
-Vector<VFS::FileDescriptor>* VFS::GetFileDescriptorsVector()
-{
-    return &taskList->Get(currentTaskIndex).fileDescriptors;
-}
-
 VFS::FileDescriptor* VFS::GetFileDescriptor(int descriptor)
 {
-    Vector<FileDescriptor>* fileDescriptors = GetFileDescriptorsVector();
-
-    if (descriptor >= (int)fileDescriptors->GetLength())
+    if (descriptor >= (int)fileDescriptors.GetLength())
     {
         return nullptr;
     }
 
-    FileDescriptor* fileDescriptor = &fileDescriptors->Get(descriptor);
+    FileDescriptor* fileDescriptor = &fileDescriptors.Get(descriptor);
     if (!fileDescriptor->present)
     {
         return nullptr;
@@ -61,7 +55,7 @@ VFS::FileDescriptor* VFS::GetFileDescriptor(int descriptor)
 
 Vnode* VFS::TraversePath(String path, String& fileName, Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error)
 {
-    Vnode* currentDirectory = nullptr;
+    Vnode* currentDirectory;
 
     if (path.Split('/', 0).IsEmpty())
     {
@@ -151,12 +145,11 @@ void VFS::Mount(Vnode* mountPoint, Vnode* vnode)
 
 int VFS::FindFreeFileDescriptor(FileDescriptor*& fileDescriptor)
 {
-    Vector<FileDescriptor>* fileDescriptors = GetFileDescriptorsVector();
     int descriptorIndex = -1;
 
-    for (int i = 0; (uint64_t)i < fileDescriptors->GetLength(); ++i)
+    for (int i = 0; (uint64_t)i < fileDescriptors.GetLength(); ++i)
     {
-        if (!fileDescriptors->Get(i).present)
+        if (!fileDescriptors.Get(i).present)
         {
             descriptorIndex = i;
         }
@@ -164,11 +157,11 @@ int VFS::FindFreeFileDescriptor(FileDescriptor*& fileDescriptor)
 
     if (descriptorIndex == -1)
     {
-        descriptorIndex = (int)fileDescriptors->GetLength();
-        fileDescriptors->Push({false, 0, nullptr});
+        descriptorIndex = (int)fileDescriptors.GetLength();
+        fileDescriptors.Push({false, 0, nullptr});
     }
 
-    fileDescriptor = &fileDescriptors->Get(descriptorIndex);
+    fileDescriptor = &fileDescriptors.Get(descriptorIndex);
 
     return descriptorIndex;
 }
@@ -231,7 +224,7 @@ int VFS::Open(const String& path, int flags, Error& error)
 uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-    Assert(fileDescriptor != nullptr && fileDescriptor->present);
+    Assert(fileDescriptor != nullptr);
 
     Vnode* vnode = fileDescriptor->vnode;
 
@@ -244,7 +237,7 @@ uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count)
 uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-    Assert(fileDescriptor != nullptr && fileDescriptor->present);
+    Assert(fileDescriptor != nullptr);
 
     Vnode* vnode = fileDescriptor->vnode;
 
@@ -256,9 +249,8 @@ uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count)
 
 uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, VFS::SeekType seekType, Error& error)
 {
-    // TODO: Support files larger than 2^32 bytes
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-    Assert(fileDescriptor != nullptr && fileDescriptor->present);
+    Assert(fileDescriptor != nullptr);
 
     Vnode* vnode = fileDescriptor->vnode;
 
@@ -293,7 +285,7 @@ uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, VFS::SeekType se
 void VFS::Close(int descriptor)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-    Assert(fileDescriptor != nullptr && fileDescriptor->present);
+    Assert(fileDescriptor != nullptr);
 
     fileDescriptor->present = false;
     fileDescriptor->offset = 0;
@@ -302,7 +294,7 @@ void VFS::Close(int descriptor)
 VnodeType VFS::GetVnodeType(int descriptor, Error& error)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-    if (fileDescriptor == nullptr || !fileDescriptor->present)
+    if (fileDescriptor == nullptr)
     {
         error = Error::InvalidFileDescriptor;
         return VnodeType::VFSUnknown;
@@ -311,7 +303,7 @@ VnodeType VFS::GetVnodeType(int descriptor, Error& error)
     return fileDescriptor->vnode->type;
 }
 
-int VFS::CreateDirectory(const String& path, Vnode** directory, Error& error)
+Vnode* VFS::CreateDirectory(const String& path, Error& error)
 {
     String directoryName;
     Vnode* containingDirectory = nullptr;
@@ -320,7 +312,7 @@ int VFS::CreateDirectory(const String& path, Vnode** directory, Error& error)
 
     if (containingDirectory == nullptr)
     {
-        return -1;
+        return nullptr;
     }
 
     Assert(vnode == nullptr && error == Error::NoFile);
@@ -330,8 +322,7 @@ int VFS::CreateDirectory(const String& path, Vnode** directory, Error& error)
     vnode->fileSystem = fileSystem;
     fileSystem->Create(vnode, containingDirectory, directoryName);
 
-    if (directory != nullptr) *directory = vnode;
-
     error = Error::None;
-    return 0;
+
+    return vnode;
 }

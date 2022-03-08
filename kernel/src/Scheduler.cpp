@@ -14,11 +14,12 @@ Vector<uint64_t>* timerFireTimes = nullptr;
 uint64_t currentTaskIndex = 0;
 bool restoreFrame = false;
 
-uint64_t CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPtr, bool userTask)
+Task CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPtr, bool userTask)
 {
     Task task {};
     task.pagingManager = pagingManager;
     task.userspaceAllocator = new UserspaceAllocator();
+    task.vfs = new VFS();
 
     InterruptFrame frame {};
     frame.cs = userTask ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
@@ -28,7 +29,7 @@ uint64_t CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t sta
     frame.rsp = stackPtr;
     task.frame = frame;
 
-    return taskList->Push(task);
+    return task;
 }
 
 void Idle()
@@ -44,7 +45,7 @@ void InitializeTaskList()
     auto idlePagingManager = new PagingManager();
     idlePagingManager->InitializePaging();
     uintptr_t idleStack = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame()) + 0x1000);
-    CreateTask(idlePagingManager, reinterpret_cast<uintptr_t>(Idle), idleStack, false);
+    taskList->Push(CreateTask(idlePagingManager, reinterpret_cast<uintptr_t>(Idle), idleStack, false));
 }
 
 void ConfigureTimerClosestExpiry()
@@ -124,19 +125,18 @@ void CreateTaskFromELF(const String& path, bool userTask)
     uintptr_t stackPtr;
     ELFLoader::LoadELF(path, pagingManager, entry, stackPtr);
 
-    auto originalTaskIndex = currentTaskIndex;
-    currentTaskIndex = CreateTask(pagingManager, entry, stackPtr, userTask);
+    Task task = CreateTask(pagingManager, entry, stackPtr, userTask);
 
     Error error;
     int desc;
-    desc = VFS::Open(String("/dev/tty"), 0, error);
+    desc = task.vfs->Open(String("/dev/tty"), 0, error);
     Assert(desc != -1);
 
-    desc = VFS::Open(String("/dev/tty"), 0, error);
+    desc = task.vfs->Open(String("/dev/tty"), 0, error);
     Assert(desc != -1);
 
-    desc = VFS::Open(String("/dev/tty"), 0, error);
+    desc = task.vfs->Open(String("/dev/tty"), 0, error);
     Assert(desc != -1);
 
-    currentTaskIndex = originalTaskIndex;
+    taskList->Push(task);
 }

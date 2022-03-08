@@ -12,11 +12,11 @@ constexpr uint32_t PSF2_HEADER_FLAG_HAS_UNICODE_TABLE = 0x01;
 PSF2Font::PSF2Font(const String &path)
 {
     Error fontFileError = Error::None;
-    int fontFile = VFS::Open(path, 0, fontFileError);
+    int fontFile = VFS::kernelVfs->Open(path, 0, fontFileError);
     Assert(fontFileError == Error::None);
 
     header = new PSF2Header;
-    uint64_t headerSize = VFS::Read(fontFile, header, sizeof(PSF2Header));
+    uint64_t headerSize = VFS::kernelVfs->Read(fontFile, header, sizeof(PSF2Header));
 
     Assert(header->magic[0] == PSF2_MAGIC_0 &&
            header->magic[1] == PSF2_MAGIC_1 &&
@@ -35,9 +35,9 @@ PSF2Font::PSF2Font(const String &path)
 
     uint64_t glyphBufferSize = header->glyphCount * header->charSize;
     glyphBuffer = new uint8_t[glyphBufferSize];
-    VFS::Read(fontFile, glyphBuffer, glyphBufferSize);
+    VFS::kernelVfs->Read(fontFile, glyphBuffer, glyphBufferSize);
 
-    VFS::Close(fontFile);
+    VFS::kernelVfs->Close(fontFile);
 }
 
 PSF2Glyph PSF2Font::GetGlyphBitmap(char c)
