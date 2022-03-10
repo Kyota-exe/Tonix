@@ -9,10 +9,12 @@
 #include "SegmentSelectors.h"
 
 Vector<Task>* taskList = nullptr;
+Task idleTask;
 // TODO: Separate expiry list for each CPU core
 Vector<uint64_t>* timerFireTimes = nullptr;
 uint64_t currentTaskIndex = 0;
 bool restoreFrame = false;
+bool idle = true;
 
 Task CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPtr, bool userTask)
 {
@@ -44,8 +46,11 @@ void InitializeTaskList()
 
     auto idlePagingManager = new PagingManager();
     idlePagingManager->InitializePaging();
+
     uintptr_t idleStack = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame()) + 0x1000);
-    taskList->Push(CreateTask(idlePagingManager, reinterpret_cast<uintptr_t>(Idle), idleStack, false));
+    auto idleEntry = reinterpret_cast<uintptr_t>(Idle);
+
+    idleTask = CreateTask(idlePagingManager, idleEntry, idleStack, false);
 }
 
 void ConfigureTimerClosestExpiry()
@@ -83,26 +88,40 @@ void StartScheduler()
     asm volatile("sti");
 }
 
+Task* GetNextTask()
+{
+    uint64_t startIndex = currentTaskIndex + 1;
+    for (uint64_t i = 0; i < taskList->GetLength(); ++i)
+    {
+        uint64_t index = (i + startIndex) % taskList->GetLength();
+        Task* task = &taskList->Get(index);
+
+        if (!task->blocked)
+        {
+            idle = false;
+            currentTaskIndex = index;
+            return task;
+        }
+    }
+
+    idle = true;
+    return &idleTask;
+}
+
 void SwitchToNextTask(InterruptFrame* taskFrame)
 {
-    // TODO: Add scheduler spinlock
-
     if (restoreFrame)
     {
-        taskList->Get(currentTaskIndex).frame = *taskFrame;
+        Task* previousTask = idle ? &idleTask : &taskList->Get(currentTaskIndex);
+        previousTask->frame = *taskFrame;
     }
     else restoreFrame = true;
 
-    if (++currentTaskIndex >= taskList->GetLength())
-    {
-        // If there are no more pending tasks, set to 0 (idle).
-        currentTaskIndex = taskList->GetLength() <= 1 ? 0 : 1;
-    }
+    Task* task = GetNextTask();
 
     timerFireTimes->Push(100);
     ConfigureTimerClosestExpiry();
 
-    Task* task = &taskList->Get(currentTaskIndex);
     *taskFrame = task->frame;
     task->pagingManager->SetCR3();
 }

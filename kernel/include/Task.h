@@ -35,6 +35,7 @@ struct InterruptFrame
 struct Task
 {
     InterruptFrame frame;
+    bool blocked = false;
 
     VFS* vfs;
     PagingManager* pagingManager;
