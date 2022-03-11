@@ -16,6 +16,7 @@ public:
     T Pop();
     T Pop(uint64_t index);
     uint64_t GetLength() const;
+    bool IsEmpty() const;
 
     T* begin();
     T* end();
@@ -115,6 +116,12 @@ template <typename T>
 uint64_t Vector<T>::GetLength() const
 {
     return length;
+}
+
+template <typename T>
+bool Vector<T>::IsEmpty() const
+{
+    return GetLength() == 0;
 }
 
 template <typename T>

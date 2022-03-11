@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "VFS.h"
 #include "UserspaceAllocator.h"
+#include "Memory/PagingManager.h"
 
 struct InterruptFrame
 {

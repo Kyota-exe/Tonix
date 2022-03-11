@@ -32,9 +32,10 @@ void KeyboardInterruptHandler()
 
 void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 {
-	Serial::Print("Timer interrupt---------------------------");
-    SwitchToNextTask(interruptFrame);
-    LAPIC::SendEOI();
+    Serial::Print("Timer interrupt---------------------------");
+    Scheduler* scheduler = Scheduler::GetScheduler();
+    scheduler->SwitchToNextTask(interruptFrame);
+    scheduler->lapic->SendEOI();
 }
 
 void SystemCallHandler(InterruptFrame* interruptFrame)

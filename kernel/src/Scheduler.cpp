@@ -3,18 +3,19 @@
 #include "Memory/PageFrameAllocator.h"
 #include "Memory/PagingManager.h"
 #include "ELFLoader.h"
-#include "LAPIC.h"
 #include "Serial.h"
 #include "Assert.h"
 #include "SegmentSelectors.h"
+#include "CPU.h"
+#include "Spinlock.h"
 
-Vector<Task>* taskList = nullptr;
+Queue<Task>* taskQueue;
+Spinlock taskQueueLock;
+
+Vector<CPU>* cpuList;
+Spinlock cpuListLock;
+
 Task idleTask;
-// TODO: Separate expiry list for each CPU core
-Vector<uint64_t>* timerFireTimes = nullptr;
-uint64_t currentTaskIndex = 0;
-bool restoreFrame = false;
-bool idle = true;
 
 Task CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPtr, bool userTask)
 {
@@ -34,15 +35,11 @@ Task CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPt
     return task;
 }
 
-void Idle()
-{
-    asm volatile("sti");
-    while (true) asm("hlt");
-}
+void Idle() { while (true) asm("hlt"); }
 
-void InitializeTaskList()
+void Scheduler::InitializeQueue()
 {
-    taskList = new Vector<Task>();
+    taskQueue = new Queue<Task>();
 
     auto idlePagingManager = new PagingManager();
     idlePagingManager->InitializePaging();
@@ -53,13 +50,41 @@ void InitializeTaskList()
     idleTask = CreateTask(idlePagingManager, idleEntry, idleStack, false);
 }
 
-void ConfigureTimerClosestExpiry()
+void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
+{
+    if (restoreFrame)
+    {
+        currentTask.frame = *interruptFrame;
+        taskQueue->Enqueue(currentTask);
+    }
+    else restoreFrame = true;
+
+    if (!taskQueue->IsEmpty())
+    {
+        taskQueueLock.Acquire();
+        currentTask = taskQueue->Dequeue();
+        taskQueueLock.Release();
+    }
+    else
+    {
+        restoreFrame = false;
+        currentTask = idleTask;
+    }
+
+    timerFireTimes.Push(100);
+    ConfigureTimerClosestExpiry();
+
+    *interruptFrame = currentTask.frame;
+    currentTask.pagingManager->SetCR3();
+}
+
+void Scheduler::ConfigureTimerClosestExpiry()
 {
     uint64_t closestTime = UINT64_MAX;
     uint64_t closestTimeIndex {};
-    for (uint64_t i = 0; i < timerFireTimes->GetLength(); ++i)
+    for (uint64_t i = 0; i < timerFireTimes.GetLength(); ++i)
     {
-        auto time = timerFireTimes->Get(i);
+        auto time = timerFireTimes.Get(i);
         if (time < closestTime)
         {
             closestTime = time;
@@ -68,74 +93,34 @@ void ConfigureTimerClosestExpiry()
     }
     Assert(closestTime < UINT64_MAX);
 
-    timerFireTimes->Pop(closestTimeIndex);
-
-    LAPIC::SetTimeBetweenTimerFires(closestTime);
+    timerFireTimes.Pop(closestTimeIndex);
+    lapic->SetTimeBetweenTimerFires(closestTime);
 }
 
-void StartScheduler()
+void Scheduler::StartCores()
 {
-    timerFireTimes = new Vector<uint64_t>();
+    cpuList = new Vector<CPU>();
+    cpuList->Push({new Scheduler()});
 
-    LAPIC::Activate();
-    LAPIC::CalibrateTimer();
-    LAPIC::SetTimerMask(false);
-    LAPIC::SetTimerMode(LAPIC::TimerMode::OneShot);
+    // TODO: Start other cores
 
-    timerFireTimes->Push(100);
-    ConfigureTimerClosestExpiry();
+    Scheduler* bspScheduler = cpuList->Get(0).scheduler;
+    bspScheduler->timerFireTimes.Push(100);
+    bspScheduler->ConfigureTimerClosestExpiry();
 
+    Serial::Print("hi");
     asm volatile("sti");
 }
 
-Task* GetNextTask()
+void Scheduler::ExitCurrentTask(int status, InterruptFrame* interruptFrame)
 {
-    uint64_t startIndex = currentTaskIndex + 1;
-    for (uint64_t i = 0; i < taskList->GetLength(); ++i)
-    {
-        uint64_t index = (i + startIndex) % taskList->GetLength();
-        Task* task = &taskList->Get(index);
-
-        if (!task->blocked)
-        {
-            idle = false;
-            currentTaskIndex = index;
-            return task;
-        }
-    }
-
-    idle = true;
-    return &idleTask;
-}
-
-void SwitchToNextTask(InterruptFrame* taskFrame)
-{
-    if (restoreFrame)
-    {
-        Task* previousTask = idle ? &idleTask : &taskList->Get(currentTaskIndex);
-        previousTask->frame = *taskFrame;
-    }
-    else restoreFrame = true;
-
-    Task* task = GetNextTask();
-
-    timerFireTimes->Push(100);
-    ConfigureTimerClosestExpiry();
-
-    *taskFrame = task->frame;
-    task->pagingManager->SetCR3();
-}
-
-void ExitCurrentTask(int status, InterruptFrame* taskFrame)
-{
-    taskList->Pop(currentTaskIndex);
     Serial::Printf("Task exited with status %d.", status);
 
     restoreFrame = false;
-    SwitchToNextTask(taskFrame);
+    SwitchToNextTask(interruptFrame);
 }
 
-void CreateTaskFromELF(const String& path, bool userTask)
+void Scheduler::CreateTaskFromELF(const String& path, bool userTask)
 {
     auto pagingManager = new PagingManager();
     pagingManager->InitializePaging();
@@ -157,5 +142,17 @@ void CreateTaskFromELF(const String& path, bool userTask)
     desc = task.vfs->Open(String("/dev/tty"), 0, error);
     Assert(desc != -1);
 
-    taskList->Push(task);
+    taskQueue->Enqueue(task);
 }
+
+Scheduler* Scheduler::GetScheduler()
+{
+    uint32_t coreId;
+    asm volatile("rdtscp" : "=c"(coreId));
+
+    // This isn't a race condition, assuming all the cores have
+    // pushed their struct onto cpuList. (meaning more won't be added)
+    return cpuList->Get(coreId).scheduler;
+}
+
+Scheduler::Scheduler() : lapic(new LAPIC()) {}

@@ -1,15 +1,27 @@
 #pragma once
 
-#include "Vector.h"
 #include "VFS.h"
 #include "Memory/PagingManager.h"
 #include "Task.h"
+#include "Queue.h"
+#include "LAPIC.h"
 
-extern Vector<Task>* taskList;
-extern uint64_t currentTaskIndex;
+class Scheduler
+{
+public:
+    void SwitchToNextTask(InterruptFrame* interruptFrame);
+    void ExitCurrentTask(int status, InterruptFrame* interruptFrame);
+    static void InitializeQueue();
+    static void StartCores();
+    static void CreateTaskFromELF(const String& path, bool userTask);
+    static Scheduler* GetScheduler();
+    Scheduler();
+    Task currentTask;
+    LAPIC* lapic;
 
-void InitializeTaskList();
-void StartScheduler();
-void SwitchToNextTask(InterruptFrame* taskFrame);
-void ExitCurrentTask(int status, InterruptFrame* taskFrame);
-void CreateTaskFromELF(const String& path, bool userTask);
+private:
+    Vector<uint64_t> timerFireTimes;
+    bool restoreFrame = false;
+
+    void ConfigureTimerClosestExpiry();
+};

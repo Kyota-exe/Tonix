@@ -9,17 +9,15 @@ enum FileMapFlag
     FileMapShared = 0x02
 };
 
-void* FileMap(void* addr, uint64_t length, int protection, int flags, int descriptor, int offset)
+void* FileMap(Task* task, void* addr, uint64_t length, int protection, int flags, int descriptor, int offset)
 {
     Assert(flags & FileMapAnonymous && !(flags & FileMapShared));
-
-	Task process = taskList->Get(currentTaskIndex);
 
     uint64_t pageCount = (length - 1) / 0x1000 + 1;
 
 	if (addr == nullptr)
 	{
-		addr = process.userspaceAllocator->AllocatePages(pageCount);
+		addr = task->userspaceAllocator->AllocatePages(pageCount);
 	}
 
 	Assert(reinterpret_cast<uintptr_t>(addr) % 0x1000 == 0);
@@ -28,7 +26,7 @@ void* FileMap(void* addr, uint64_t length, int protection, int flags, int descri
     {
         void* physAddr = RequestPageFrame();
         void* virtAddr = (void*)((uint64_t)addr + page * 0x1000);
-        process.pagingManager->MapMemory(virtAddr, physAddr, true);
+        task->pagingManager->MapMemory(virtAddr, physAddr, true);
     }
 
     Memset(addr, 0, length);

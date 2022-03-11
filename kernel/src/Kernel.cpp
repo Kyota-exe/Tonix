@@ -33,7 +33,6 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
 
     InitializePIC();
     ActivatePICKeyboardInterrupts();
-    InitializeTaskList();
     Framebuffer::Initialize();
 
     auto modulesStruct = (stivale2_struct_tag_modules*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MODULES_ID);
@@ -44,12 +43,13 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
 
         if (String(module.string).Equals("boot:///ext2-ramdisk-image.ext2"))
         {
-            VFS::Initialize((void*) module.begin);
+            VFS::Initialize((void*)module.begin);
         }
     }
 
-    CreateTaskFromELF(String("/programs/test.elf"), true);
-	StartScheduler();
+    Scheduler::InitializeQueue();
+    Scheduler::CreateTaskFromELF(String("/programs/test.elf"), true);
+    Scheduler::StartCores();
 
     while (true) asm("hlt");
 }
