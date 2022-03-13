@@ -5,7 +5,7 @@
 #include "Assert.h"
 #include "Bitmap.h"
 
-static Bitmap pageFrameBitmap;
+Bitmap pageFrameBitmap;
 
 uint64_t pageFrameCount = 0;
 uint64_t latestAllocatedPageFrame = 0;
@@ -14,25 +14,9 @@ void InitializePageFrameAllocator()
 {
     auto memoryMapStruct = (stivale2_struct_tag_memmap*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MEMMAP_ID);
     stivale2_mmap_entry lastMemoryMapEntry = memoryMapStruct->memmap[memoryMapStruct->entries - 1];
+
     uint64_t memorySize = lastMemoryMapEntry.base + lastMemoryMapEntry.length;
-    Serial::Printf("Memory size: %x", memorySize);
-
-//    for (uint64_t entryIndex = 0; entryIndex < memoryMapStruct->entries; ++entryIndex)
-//    {
-//        stivale2_mmap_entry memoryMapEntry = memoryMapStruct->memmap[entryIndex];
-//        Serial::Print("---------------");
-//        Serial::Printf("Type: %x", memoryMapEntry.type);
-//        Serial::Printf("Base: %x", memoryMapEntry.base);
-//        Serial::Printf("Length: %x", memoryMapEntry.length);
-//        Serial::Print("---------------");
-//    }
-
-    Assert(memorySize % 0x1000 == 0);
-
     pageFrameCount = memorySize / 0x1000;
-    Serial::Printf("Physical memory contains %x page frames.", pageFrameCount);
-
-    Assert(pageFrameCount % 8 == 0);
 
     uint64_t bitmapSize = pageFrameCount / 8;
     pageFrameBitmap.size = bitmapSize;
@@ -72,8 +56,6 @@ void InitializePageFrameAllocator()
     {
         pageFrameBitmap.SetBit(bitmapBasePageFrame + bitmapPage, true);
     }
-
-    Serial::Print("Completed initialization of page frame allocator (physical memory allocator).");
 }
 
 void* RequestPageFrame()

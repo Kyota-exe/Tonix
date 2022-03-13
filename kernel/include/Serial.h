@@ -13,6 +13,6 @@ public:
     template <typename T>
     static void Printf(const char* string, T value, const char* end = "\n")
     {
-        Print(StringUtils::Format(string, (int64_t)value), end);
+        Print(StringUtils::Format(string, (uint64_t)value), end);
     }
 };

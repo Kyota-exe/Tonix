@@ -57,16 +57,6 @@ namespace StringUtils
         return bufferToString;
     }
 
-    uint64_t Length(const char* string, uint64_t max)
-    {
-        uint64_t length = 0;
-        while (*string++ != 0 && (length < max || max == 0))
-        {
-            length++;
-        }
-        return length;
-    }
-
     char bufferFormatString[128];
     const char* Format(const char* string, int64_t value)
     {
@@ -120,67 +110,5 @@ namespace StringUtils
         *bufferPtr = 0;
 
         return bufferFormatString;
-    }
-
-    // Behaves like strtok_r
-    char* Split(char* string, char splitCharacter, char** stringPtr)
-    {
-        char* end = string;
-        while (*end != splitCharacter && *end != 0) end++;
-        if (*end == 0)
-        {
-            *stringPtr = end;
-            return string;
-        }
-        *end = 0;
-        *stringPtr = end + 1;
-        return string;
-    }
-
-    bool Equals(const char* s1, const char* s2)
-    {
-        const char* ptr1 = s1;
-        const char* ptr2 = s2;
-
-        while (*ptr1 != 0 && *ptr2 != 0)
-        {
-            if (*ptr1++ != *ptr2++) return false;
-        }
-
-        return *ptr1 == 0 && *ptr2 == 0;
-    }
-
-    uint64_t Count(const char* string, char character)
-    {
-        uint64_t result = 0;
-        while (*string != 0)
-        {
-            if (*string++ == character) result++;
-        }
-        return result;
-    }
-
-    uint64_t ToUInt(const char* string)
-    {
-        uint64_t number = 0;
-        while (*string != 0)
-        {
-            number *= 10;
-            number += *string - '0';
-            string++;
-        }
-        return number;
-    }
-
-    uint64_t OctalToUInt(const char* string)
-    {
-        uint64_t number = 0;
-        while (*string != 0)
-        {
-            number *= 8;
-            number += *string - '0';
-            string++;
-        }
-        return number;
     }
 }

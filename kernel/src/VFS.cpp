@@ -1,7 +1,6 @@
 #include "VFS.h"
 #include "Ext2.h"
 #include "DeviceFS.h"
-#include "StringUtilities.h"
 #include "Vector.h"
 #include "Serial.h"
 #include "RAMDisk.h"

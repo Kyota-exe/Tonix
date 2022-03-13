@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "Assert.h"
 
 class String
 {
@@ -33,4 +34,6 @@ public:
     String(const String& original);
     String();
     ~String();
+
+    static String ToString(unsigned long n, int base);
 };

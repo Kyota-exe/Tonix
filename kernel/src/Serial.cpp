@@ -1,13 +1,12 @@
 #include "Serial.h"
 #include "IO.h"
-#include "StringUtilities.h"
 
 constexpr uint16_t PORT = 0xe9;
 
 void Serial::Print(const char* string, const char* end)
 {
-    outb(PORT, (uint8_t*)string, StringUtils::Length(string));
-    outb(PORT, (uint8_t*)end, StringUtils::Length(end));
+    while (*string != 0) outb(PORT, *string++);
+    while (*end != 0) outb(PORT, *end++);
 }
 
 void Serial::Print(const String& string, const char* end)
