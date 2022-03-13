@@ -1,69 +1,42 @@
 #include "Stivale2Interface.h"
-#include "StringUtilities.h"
 
 // Uninitialized static (stored in .bss) uint8_t array will act as stack to pass to stivale2
 static uint8_t stack[8192];
 
 stivale2_struct* stivale2Struct;
 
-static void (*terminalWrite)(const char* string, uint64_t size);
-
 void* GetStivale2Tag(uint64_t id)
 {
     // Loop through each tag supplied by stivale2 and compare its identifier to the identifier of the tag we want.
-    auto currentTag = (stivale2_tag*)stivale2Struct->tags;
-    while (true)
+    auto currentTag = reinterpret_cast<stivale2_tag*>(stivale2Struct->tags);
+    while (currentTag != nullptr)
     {
-        if (currentTag == nullptr)
-        {
-            return nullptr;
-        }
-
         if (currentTag->identifier == id)
         {
             return currentTag;
         }
 
-        currentTag = (stivale2_tag*)currentTag->next;
+        currentTag = reinterpret_cast<stivale2_tag*>(currentTag->next);
     }
+
+    return nullptr;
 }
 
 void InitializeStivale2Interface(stivale2_struct* _stivale2Struct)
 {
     stivale2Struct = _stivale2Struct;
-
-    auto terminalTag = (stivale2_struct_tag_terminal*)GetStivale2Tag(STIVALE2_STRUCT_TAG_TERMINAL_ID);
-    terminalWrite = (void(*)(const char*, uint64_t))terminalTag->term_write;
-}
-
-void Stivale2TerminalWrite(const char* string, const char* end)
-{
-    if (terminalWrite == nullptr) while (true) asm("hlt");
-    terminalWrite(string, StringUtils::Length(string));
-    terminalWrite(end, StringUtils::Length(end));
 }
 
 // Last node of linked list of stivale2 tags.
-// The next node added will be placed before this one and so on until the last node added will act as the head of the linked list.
-// This node requests stivale2 to load a terminal service for use by the kernel at runtime.
-static stivale2_header_tag_terminal terminalHeaderTag
-{
-    .tag
-    {
-        .identifier = STIVALE2_HEADER_TAG_TERMINAL_ID,
-        .next = 0
-    },
-    .flags = 0,
-    .callback = 0
-};
-
+// The next node added will be placed before this one and so on
+// until the last node added will act as the head of the linked list.
 // This node requests access to the framebuffer supplied by stivale2.
 static stivale2_header_tag_framebuffer framebufferHeaderTag
 {
     .tag
     {
         .identifier = STIVALE2_HEADER_TAG_FRAMEBUFFER_ID,
-        .next = (uint64_t)&terminalHeaderTag
+        .next = 0
     },
     // Setting these to 0 tells the bootloader it can pick the best it can.
     .framebuffer_width  = 0,
@@ -91,7 +64,7 @@ static stivale2_header stivale2Header
 
     // The stack grows downwards.
     // .stack is the base pointer of the stack, so we must add sizeof(stack) to it.
-    .stack = (uintptr_t)stack + sizeof(stack),
+    .stack = reinterpret_cast<uintptr_t>(stack + sizeof(stack)),
 
     // Bit 0: Reserved, formerly used to indicate whether to enable KASLR.
     // Bit 1: If this is set, virtual addresses in the higher half will point to physical addresses starting from 0.
@@ -101,5 +74,5 @@ static stivale2_header stivale2Header
     .flags = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4),
 
     // Points to head of linked list of tags, which is the last node we added.
-    .tags = (uintptr_t)&smpHeaderTag
+    .tags = reinterpret_cast<uintptr_t>(&smpHeaderTag)
 };
