@@ -2,16 +2,12 @@
 
 namespace StringUtils
 {
-    static char bufferToString[32];
-    const char* ToString(int64_t n)
+    uint64_t ToString(char* buffer, int64_t n)
     {
-        if (n == 0) return "0";
-
-        bool isNegative = n < 0;
-        if (isNegative)
+        if (n == 0)
         {
-            n = -n;
-            bufferToString[0] = '-';
+            buffer[0] = '0';
+            return 1;
         }
 
         uint8_t size = 0;
@@ -22,22 +18,22 @@ namespace StringUtils
             num /= 10;
         }
 
-        for (uint8_t i = size + isNegative; i > isNegative; --i)
+        for (uint8_t i = size; i > 0; --i)
         {
-            bufferToString[i - 1] = (char)(n % 10 + '0');
+            buffer[i - 1] = (char)(n % 10 + '0');
             n /= 10;
         }
-        bufferToString[size + isNegative] = 0;
 
-        return bufferToString;
+        return size;
     }
 
-    const char* ToHexString(uint64_t n)
+    uint64_t ToHexString(char* buffer, uint64_t n)
     {
-        if (n == 0) return "0";
-
-        bufferToString[0] = '0';
-        bufferToString[1] = 'x';
+        if (n == 0)
+        {
+            buffer[0] = '0';
+            return 1;
+        }
 
         uint8_t size = 0;
         uint64_t num = n;
@@ -47,21 +43,19 @@ namespace StringUtils
             num /= 16;
         }
 
-        for (uint8_t i = size + 2; i > 2; --i)
+        for (uint8_t i = size; i > 0; --i)
         {
-            bufferToString[i - 1] = "0123456789abcdef"[n % 16];
+            buffer[i - 1] = "0123456789abcdef"[n % 16];
             n /= 16;
         }
-        bufferToString[size + 2] = 0;
 
-        return bufferToString;
+        return size;
     }
 
-    char bufferFormatString[128];
-    const char* Format(const char* string, int64_t value)
+    void Format(char* buffer, const char* string, int64_t value)
     {
         const char* c = string;
-        char* bufferPtr = bufferFormatString;
+        char* bufferPtr = buffer;
 
         bool nextIsFormatCode = false;
         while (*c != 0)
@@ -72,21 +66,13 @@ namespace StringUtils
                 {
                     case 'd':
                     {
-                        const char* intString = ToString(value);
-                        while (*intString != 0)
-                        {
-                            *bufferPtr++ = *intString++;
-                        }
+                        bufferPtr += ToString(bufferPtr, value);
                         nextIsFormatCode = false;
                         continue;
                     }
                     case 'x':
                     {
-                        const char* hexString = ToHexString(value);
-                        while (*hexString != 0)
-                        {
-                            *bufferPtr++ = *hexString++;
-                        }
+                        bufferPtr += ToHexString(bufferPtr, value);
                         nextIsFormatCode = false;
                         continue;
                     }
@@ -108,7 +94,5 @@ namespace StringUtils
             *bufferPtr++ = *c++;
         }
         *bufferPtr = 0;
-
-        return bufferFormatString;
     }
 }

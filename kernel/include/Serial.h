@@ -13,6 +13,9 @@ public:
     template <typename T>
     static void Printf(const char* string, T value, const char* end = "\n")
     {
-        Print(StringUtils::Format(string, (uint64_t)value), end);
+        char* formattedString = new char[128];
+        StringUtils::Format(formattedString, string, (uint64_t)value);
+        Print(formattedString, end);
+        delete[] formattedString;
     }
 };

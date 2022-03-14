@@ -4,5 +4,5 @@
 
 namespace StringUtils
 {
-    const char* Format(const char* string, int64_t value);
+    void Format(char* buffer, const char* string, int64_t value);
 }
