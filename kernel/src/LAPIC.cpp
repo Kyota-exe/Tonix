@@ -1,6 +1,7 @@
 #include "LAPIC.h"
 #include "PIT.h"
 #include "Memory/Memory.h"
+#include "Assert.h"
 
 constexpr uint64_t APIC_EIO_OFFSET = 0xb0;
 constexpr uint64_t APIC_SPURIOUS_INTERRUPT_VECTOR = 0xf0;
@@ -28,11 +29,15 @@ LAPIC::LAPIC()
     *(volatile uint32_t*)(apicRegisterBase + APIC_LVT_TIMER) = 0b00'0'000'0'0000'00110000;
 
     lapicTimerBaseFrequency = GetTimerBaseFrequency();
+
+    *(volatile uint32_t*)(apicRegisterBase + APIC_INITIAL_COUNT) = 0;
 }
 
 void LAPIC::SetTimeBetweenTimerFires(uint64_t milliseconds)
 {
-    *(volatile uint32_t*)(apicRegisterBase + APIC_INITIAL_COUNT) = (lapicTimerBaseFrequency / 1000) * milliseconds;
+    uint64_t count = lapicTimerBaseFrequency * milliseconds;
+    Assert(count <= UINT32_MAX);
+    *(volatile uint32_t*)(apicRegisterBase + APIC_INITIAL_COUNT) = static_cast<uint32_t>(count);
 }
 
 uint64_t LAPIC::GetTimerBaseFrequency()
@@ -59,7 +64,7 @@ uint64_t LAPIC::GetTimerBaseFrequency()
     // Stop the LAPIC timer
     *initialCountRegister = 0;
 
-    return (lapicTicksCount / (initialPITTick - endPITTick)) * PIT_BASE_FREQUENCY;
+    return (lapicTicksCount / (initialPITTick - endPITTick)) * PIT_BASE_FREQUENCY / 1000;
 }
 
 uint64_t LAPIC::GetBaseMSR()
