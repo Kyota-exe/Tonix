@@ -133,6 +133,11 @@ unsigned int PagingManager::FlagMismatchLevel(const void* virtAddr, PagingFlag f
     return table->entries[pageIndexes[0]].GetFlag(flag) != enabled;
 }
 
+unsigned int PagingManager::PageNotPresentLevel(const void* virtAddr)
+{
+    return FlagMismatchLevel(virtAddr, PagingFlag::Present, true);
+}
+
 void PageTableEntry::SetFlag(PagingFlag flag, bool enable)
 {
     if (enable) value |= (1 << (uint64_t)flag);

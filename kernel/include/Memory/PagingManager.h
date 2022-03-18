@@ -35,6 +35,7 @@ public:
     void MapMemory(const void* virtAddr, const void* physAddr, bool user);
     void UnmapMemory(const void* virtAddr);
     unsigned int FlagMismatchLevel(const void* virtAddr, PagingFlag flag, bool enabled);
+    unsigned int PageNotPresentLevel(const void* virtAddr);
     uintptr_t pml4PhysAddr;
 private:
     PageTable* pml4;
