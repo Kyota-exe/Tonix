@@ -4,8 +4,10 @@
 #include "Stivale2Interface.h"
 #include "Assert.h"
 #include "Bitmap.h"
+#include "Spinlock.h"
 
 Bitmap pageFrameBitmap;
+Spinlock pageFrameBitmapLock;
 
 uint64_t pageFrameCount = 0;
 uint64_t latestAllocatedPageFrame = 0;
@@ -60,22 +62,28 @@ void InitializePageFrameAllocator()
 
 void* RequestPageFrame()
 {
+    pageFrameBitmapLock.Acquire();
+
     // Find first free page frame, starting from page frame with the lowest physical address (0)
     for (; latestAllocatedPageFrame < pageFrameBitmap.size * 8; ++latestAllocatedPageFrame)
     {
         if (!pageFrameBitmap.GetBit(latestAllocatedPageFrame))
         {
             pageFrameBitmap.SetBit(latestAllocatedPageFrame, true);
+            pageFrameBitmapLock.Release();
             return (void*)(latestAllocatedPageFrame * 0x1000);
         }
     }
 
+    pageFrameBitmapLock.Release();
     Serial::Print("Failed to find free page frame.");
     Panic();
 }
 
 void* RequestPageFrames(uint64_t count)
 {
+    pageFrameBitmapLock.Acquire();
+
     uint64_t contiguousCount = 0;
     for (; latestAllocatedPageFrame < pageFrameBitmap.size * 8; ++latestAllocatedPageFrame)
     {
@@ -89,6 +97,7 @@ void* RequestPageFrames(uint64_t count)
                 {
                     pageFrameBitmap.SetBit(pageFrame, true);
                 }
+                pageFrameBitmapLock.Release();
                 return (void*)(first * 0x1000);
             }
         }
@@ -98,6 +107,7 @@ void* RequestPageFrames(uint64_t count)
         }
     }
 
+    pageFrameBitmapLock.Release();
     Serial::Printf("Could not find %d continuous free pages.", count);
     Panic();
 }
@@ -105,8 +115,13 @@ void* RequestPageFrames(uint64_t count)
 void FreePageFrame(void* ptr)
 {
     uint64_t pageFrame = (uint64_t)ptr / 0x1000;
+
+    pageFrameBitmapLock.Acquire();
+
     Assert(pageFrameBitmap.GetBit(pageFrame));
     pageFrameBitmap.SetBit(pageFrame, false);
+
+    pageFrameBitmapLock.Release();
 }
 
 void FreePageFrames(void* ptr, uint64_t count)
