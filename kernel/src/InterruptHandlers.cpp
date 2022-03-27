@@ -3,6 +3,7 @@
 #include "LAPIC.h"
 #include "PIC.h"
 #include "SystemCall.h"
+#include "CPU.h"
 
 void PageFaultHandler()
 {
@@ -18,6 +19,7 @@ void PageFaultHandler()
     Serial::Printf("Exception: %x", interruptFrame->interruptNumber);
     Serial::Printf("Error code: %x", interruptFrame->errorCode);
     Serial::Printf("RIP: %x", interruptFrame->rip);
+    Serial::Printf("Core: %d", CPU::GetCoreID());
 
     if (interruptFrame->interruptNumber == 0xe) PageFaultHandler();
 

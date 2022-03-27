@@ -147,12 +147,9 @@ void Scheduler::CreateTaskFromELF(const String& path, bool userTask)
 
 Scheduler* Scheduler::GetScheduler()
 {
-    uint32_t coreId;
-    asm volatile("rdtscp" : "=c"(coreId));
-
     // This isn't a race condition, assuming all the cores have
     // pushed their struct onto cpuList. (meaning more won't be added)
-    return cpuList->Get(coreId).scheduler;
+    return cpuList->Get(CPU::GetCoreID()).scheduler;
 }
 
 Scheduler::Scheduler() : lapic(new LAPIC()) {}
