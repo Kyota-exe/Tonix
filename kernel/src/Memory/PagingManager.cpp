@@ -138,6 +138,22 @@ unsigned int PagingManager::PageNotPresentLevel(const void* virtAddr)
     return FlagMismatchLevel(virtAddr, PagingFlag::Present, true);
 }
 
+uintptr_t PagingManager::GetPageTableEntryVirtAddr(const void* virtAddr)
+{
+    uint16_t pageIndexes[PAGING_LEVELS];
+    GetPageTableIndexes(virtAddr, pageIndexes);
+
+    PageTable* table = pml4;
+    for (unsigned int level = PAGING_LEVELS - 1; level > 0; --level)
+    {
+        PageTableEntry entry = table->entries[pageIndexes[level]];
+        if (!entry.GetFlag(PagingFlag::Present)) return 0;
+        table = reinterpret_cast<PageTable*>(HigherHalf(entry.GetPhysicalAddress()));
+    }
+
+    return reinterpret_cast<uintptr_t>(&table->entries[pageIndexes[0]]);
+}
+
 void PageTableEntry::SetFlag(PagingFlag flag, bool enable)
 {
     if (enable) value |= (1 << (uint64_t)flag);
