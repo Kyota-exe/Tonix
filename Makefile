@@ -10,8 +10,8 @@ cleanbuild:
 .PHONY: all
 all: $(ISO_IMAGE)
 
-.PHONY: limine
 limine:
+	git clone https://github.com/limine-bootloader/limine.git --branch=v3.0-branch-binary --depth=1
 	make -C limine
 
 .PHONY: kernel
@@ -29,7 +29,7 @@ $(ISO_IMAGE): limine kernel
 		--efi-boot limine-eltorito-efi.bin \
 		-efi-boot-part --efi-boot-image --protective-msdos-label \
 		iso_root -o $(ISO_IMAGE)
-	limine/limine-install $(ISO_IMAGE)
+	limine/limine-s2deploy $(ISO_IMAGE)
 	rm -rf iso_root
 
 .PHONY: ramdisk
