@@ -7,7 +7,10 @@
 #include "Assert.h"
 #include "SegmentSelectors.h"
 #include "CPU.h"
+#include "Stivale2Interface.h"
 #include "Spinlock.h"
+#include "GDT.h"
+#include "IDT.h"
 
 Queue<Task>* taskQueue;
 Spinlock taskQueueLock;
@@ -59,17 +62,17 @@ void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
     }
     else restoreFrame = true;
 
+    taskQueueLock.Acquire();
     if (!taskQueue->IsEmpty())
     {
-        taskQueueLock.Acquire();
         currentTask = taskQueue->Dequeue();
-        taskQueueLock.Release();
     }
     else
     {
         restoreFrame = false;
         currentTask = idleTask;
     }
+    taskQueueLock.Release();
 
     timerFireTimes.Push(100);
     ConfigureTimerClosestExpiry();
@@ -97,18 +100,63 @@ void Scheduler::ConfigureTimerClosestExpiry()
     lapic->SetTimeBetweenTimerFires(closestTime);
 }
 
+void Scheduler::AddNewTimerEntry(uint64_t time)
+{
+    timerFireTimes.Push(time);
+}
+
+Spinlock tssInitLock;
+extern "C" void InitializeCore(stivale2_smp_info* smpInfoPtr)
+{
+    GDT::LoadGDTR();
+    IDT::Load();
+
+    tssInitLock.Acquire();
+    GDT::InitializeTSS();
+    GDT::LoadTSS();
+    tssInitLock.Release();
+
+    auto scheduler = new Scheduler();
+    scheduler->AddNewTimerEntry(100);
+    scheduler->ConfigureTimerClosestExpiry();
+
+    cpuListLock.Acquire();
+    cpuList->Get(smpInfoPtr->lapic_id) = {scheduler};
+    cpuListLock.Release();
+
+    // Write core ID in IA32_TSC_AUX so that CPU::GetCoreID can get it
+    asm volatile ("wrmsr" : : "c"(0xc0000103), "a"(smpInfoPtr->lapic_id), "d"(0));
+
+    asm volatile("sti");
+    while (true) asm("hlt");
+}
+
 void Scheduler::StartCores()
 {
+    Assert(cpuList == nullptr);
     cpuList = new Vector<CPU>();
-    cpuList->Push({new Scheduler()});
 
-    // TODO: Start other cores
+    auto bspScheduler = new Scheduler();
+    cpuList->Push({bspScheduler});
 
-    Scheduler* bspScheduler = cpuList->Get(0).scheduler;
-    bspScheduler->timerFireTimes.Push(100);
+    auto smpStruct = reinterpret_cast<stivale2_struct_tag_smp*>(GetStivale2Tag(STIVALE2_STRUCT_TAG_SMP_ID));
+    if (smpStruct->cpu_count > 1)
+    {
+        for (uint64_t coreIndex = 0; coreIndex < smpStruct->cpu_count; ++coreIndex)
+        {
+            stivale2_smp_info* smpInfo = &smpStruct->smp_info[coreIndex];
+            if (smpInfo->lapic_id == smpStruct->bsp_lapic_id) continue;
+
+            cpuList->Push({nullptr});
+
+            smpInfo->target_stack = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame())) + 0x1000;
+            smpStruct->smp_info[coreIndex].goto_address = reinterpret_cast<uintptr_t>(InitializeCore);
+        }
+    }
+
+    bspScheduler->AddNewTimerEntry(100);
     bspScheduler->ConfigureTimerClosestExpiry();
 
-    Serial::Print("hi");
     asm volatile("sti");
 }
 

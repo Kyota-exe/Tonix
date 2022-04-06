@@ -11,6 +11,8 @@ class Scheduler
 public:
     void SwitchToNextTask(InterruptFrame* interruptFrame);
     void ExitCurrentTask(int status, InterruptFrame* interruptFrame);
+    void AddNewTimerEntry(uint64_t time);
+    void ConfigureTimerClosestExpiry();
     static void InitializeQueue();
     static void StartCores();
     static void CreateTaskFromELF(const String& path, bool userTask);
@@ -22,6 +24,4 @@ public:
 private:
     Vector<uint64_t> timerFireTimes;
     bool restoreFrame = false;
-
-    void ConfigureTimerClosestExpiry();
 };
