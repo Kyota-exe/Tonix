@@ -40,5 +40,5 @@ struct Task
 
     VFS* vfs;
     PagingManager* pagingManager;
-	UserspaceAllocator* userspaceAllocator;
+    UserspaceAllocator* userspaceAllocator;
 };
