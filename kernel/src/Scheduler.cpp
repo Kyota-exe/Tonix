@@ -12,7 +12,7 @@
 #include "GDT.h"
 #include "IDT.h"
 
-Queue<Task>* taskQueue;
+Vector<Task>* taskQueue;
 Spinlock taskQueueLock;
 
 Vector<CPU>* cpuList;
@@ -42,7 +42,7 @@ void Idle() { while (true) asm("hlt"); }
 
 void Scheduler::InitializeQueue()
 {
-    taskQueue = new Queue<Task>();
+    taskQueue = new Vector<Task>();
 
     auto idlePagingManager = new PagingManager();
     idlePagingManager->InitializePaging();
@@ -58,20 +58,28 @@ void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
     if (restoreFrame)
     {
         currentTask.frame = *interruptFrame;
-        taskQueue->Enqueue(currentTask);
+        taskQueue->Push(currentTask);
     }
     else restoreFrame = true;
 
     taskQueueLock.Acquire();
-    if (!taskQueue->IsEmpty())
+
+    bool foundNewTask = false;
+    for (uint64_t i = 0; i < taskQueue->GetLength(); ++i)
     {
-        currentTask = taskQueue->Dequeue();
+        if (!taskQueue->Get(i).blocked)
+        {
+            currentTask = taskQueue->Pop(i);
+            foundNewTask = true;
+        }
     }
-    else
+
+    if (!foundNewTask)
     {
         restoreFrame = false;
         currentTask = idleTask;
     }
+
     taskQueueLock.Release();
 
     timerFireTimes.Push(100);
@@ -190,7 +198,7 @@ void Scheduler::CreateTaskFromELF(const String& path, bool userTask)
     desc = task.vfs->Open(String("/dev/tty"), 0, error);
     Assert(desc != -1);
 
-    taskQueue->Enqueue(task);
+    taskQueue->Push(task);
 }
 
 Scheduler* Scheduler::GetScheduler()

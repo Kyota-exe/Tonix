@@ -3,7 +3,6 @@
 #include "VFS.h"
 #include "Memory/PagingManager.h"
 #include "Task.h"
-#include "Queue.h"
 #include "LAPIC.h"
 
 class Scheduler
