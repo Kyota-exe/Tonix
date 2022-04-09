@@ -35,7 +35,8 @@ LAPIC::LAPIC()
 
 void LAPIC::SetTimeBetweenTimerFires(uint64_t milliseconds)
 {
-    uint64_t count = lapicTimerBaseFrequency * milliseconds;
+    uint64_t count = lapicTimerBaseFrequency * milliseconds / 1000;
+
     Assert(count <= UINT32_MAX);
     *(volatile uint32_t*)(apicRegisterBase + APIC_INITIAL_COUNT) = static_cast<uint32_t>(count);
 }
@@ -64,7 +65,7 @@ uint64_t LAPIC::GetTimerBaseFrequency()
     // Stop the LAPIC timer
     *initialCountRegister = 0;
 
-    return (lapicTicksCount / (initialPITTick - endPITTick)) * PIT_BASE_FREQUENCY / 1000;
+    return (lapicTicksCount / (initialPITTick - endPITTick)) * PIT_BASE_FREQUENCY;
 }
 
 uint64_t LAPIC::GetBaseMSR()
