@@ -59,6 +59,8 @@ void Scheduler::InitializeQueue()
 
 void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
 {
+    UpdateTimerEntries();
+
     if (restoreFrame)
     {
         currentTask.frame = *interruptFrame;
@@ -86,7 +88,7 @@ void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
 
     taskQueueLock.Release();
 
-    timerFireTimes.Push(100);
+    AddNewTimerEntry(100);
     ConfigureTimerClosestExpiry();
 
     *interruptFrame = currentTask.frame;
@@ -96,25 +98,56 @@ void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
 void Scheduler::ConfigureTimerClosestExpiry()
 {
     uint64_t closestTime = UINT64_MAX;
-    uint64_t closestTimeIndex {};
-    for (uint64_t i = 0; i < timerFireTimes.GetLength(); ++i)
+    for (uint64_t i = 0; i < timerEntries.GetLength(); ++i)
     {
-        auto time = timerFireTimes.Get(i);
-        if (time < closestTime)
+        auto time = timerEntries.Get(i);
+        if (time.milliseconds < closestTime)
         {
-            closestTime = time;
-            closestTimeIndex = i;
+            closestTime = time.milliseconds;
         }
     }
-    Assert(closestTime < UINT64_MAX);
 
-    timerFireTimes.Pop(closestTimeIndex);
-    lapic->SetTimeBetweenTimerFires(closestTime);
+    currentTimerTime = closestTime;
+    lapic->SetTimeBetweenTimerFires(currentTimerTime);
 }
 
-void Scheduler::AddNewTimerEntry(uint64_t time)
+void Scheduler::UpdateTimerEntries()
 {
-    timerFireTimes.Push(time);
+    for (uint64_t i = timerEntries.GetLength(); i-- > 0; )
+    {
+        TimerEntry timerEntry = timerEntries.Get(i);
+        if (timerEntry.milliseconds <= currentTimerTime)
+        {
+            if (timerEntry.unblockOnExpire)
+            {
+                Assert(timerEntry.pid != 0);
+                Scheduler::Unblock(timerEntry.pid);
+            }
+
+            timerEntries.Pop(i);
+        }
+        else
+        {
+            timerEntry.milliseconds -= currentTimerTime;
+        }
+    }
+}
+
+void Scheduler::Unblock(uint64_t pid)
+{
+    for (Task& task : *taskQueue)
+    {
+        if (task.pid == pid)
+        {
+            Assert(task.blocked);
+            task.blocked = false;
+        }
+    }
+}
+
+void Scheduler::AddNewTimerEntry(uint64_t milliseconds)
+{
+    timerEntries.Push({milliseconds});
 }
 
 Spinlock tssInitLock;
