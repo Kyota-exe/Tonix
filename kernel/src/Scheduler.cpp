@@ -35,6 +35,9 @@ Task CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPt
     frame.rsp = stackPtr;
     task.frame = frame;
 
+    static uint64_t pid = 0;
+    task.pid = __atomic_fetch_add(&pid, 1, __ATOMIC_RELAXED);
+
     return task;
 }
 
@@ -51,6 +54,7 @@ void Scheduler::InitializeQueue()
     auto idleEntry = reinterpret_cast<uintptr_t>(Idle);
 
     idleTask = CreateTask(idlePagingManager, idleEntry, idleStack, false);
+    Assert(idleTask.pid == 0);
 }
 
 void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)

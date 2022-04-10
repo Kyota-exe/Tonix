@@ -35,6 +35,8 @@ struct InterruptFrame
 
 struct Task
 {
+    uint64_t pid;
+
     InterruptFrame frame;
     bool blocked = false;
 
