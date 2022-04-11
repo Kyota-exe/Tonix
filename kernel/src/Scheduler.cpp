@@ -87,7 +87,6 @@ void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
 
     taskQueueLock.Release();
 
-    AddNewTimerEntry(100);
     ConfigureTimerClosestExpiry();
 
     *interruptFrame = currentTask.frame;
@@ -96,7 +95,7 @@ void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
 
 void Scheduler::ConfigureTimerClosestExpiry()
 {
-    uint64_t closestTime = UINT64_MAX;
+    uint64_t closestTime = 100;
     for (uint64_t i = 0; i < timerEntries.GetLength(); ++i)
     {
         auto time = timerEntries.Get(i);
@@ -163,7 +162,6 @@ extern "C" void InitializeCore(stivale2_smp_info* smpInfoPtr)
     tssInitLock.Release();
 
     auto scheduler = new Scheduler();
-    scheduler->AddNewTimerEntry(100);
     scheduler->ConfigureTimerClosestExpiry();
 
     cpuListLock.Acquire();
@@ -203,7 +201,6 @@ void Scheduler::StartCores()
         }
     }
 
-    bspScheduler->AddNewTimerEntry(100);
     bspScheduler->ConfigureTimerClosestExpiry();
 
     asm volatile("sti");
