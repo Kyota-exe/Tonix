@@ -60,6 +60,7 @@ void Scheduler::InitializeQueue()
 void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
 {
     UpdateTimerEntries();
+    taskQueueLock.Acquire();
 
     if (restoreFrame)
     {
@@ -67,8 +68,6 @@ void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
         taskQueue->Push(currentTask);
     }
     else restoreFrame = true;
-
-    taskQueueLock.Acquire();
 
     bool foundNewTask = false;
     for (uint64_t i = 0; i < taskQueue->GetLength(); ++i)
@@ -135,6 +134,7 @@ void Scheduler::UpdateTimerEntries()
 
 void Scheduler::Unblock(uint64_t pid)
 {
+    taskQueueLock.Acquire();
     for (Task& task : *taskQueue)
     {
         if (task.pid == pid)
@@ -143,6 +143,7 @@ void Scheduler::Unblock(uint64_t pid)
             task.blocked = false;
         }
     }
+    taskQueueLock.Release();
 }
 
 void Scheduler::AddNewTimerEntry(uint64_t milliseconds)
@@ -235,7 +236,9 @@ void Scheduler::CreateTaskFromELF(const String& path, bool userTask)
     desc = task.vfs->Open(String("/dev/tty"), 0, error);
     Assert(desc != -1);
 
+    taskQueueLock.Acquire();
     taskQueue->Push(task);
+    taskQueueLock.Release();
 }
 
 Scheduler* Scheduler::GetScheduler()
