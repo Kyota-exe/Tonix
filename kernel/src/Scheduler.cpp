@@ -111,10 +111,14 @@ void Scheduler::ConfigureTimerClosestExpiry()
 
 void Scheduler::UpdateTimerEntries()
 {
+    uint64_t remainingTime = lapic->GetTimeRemainingMilliseconds();
+    Assert(currentTimerTime > remainingTime);
+    uint64_t deltaTime = currentTimerTime - remainingTime;
+
     for (uint64_t i = timerEntries.GetLength(); i-- > 0; )
     {
         TimerEntry timerEntry = timerEntries.Get(i);
-        if (timerEntry.milliseconds <= currentTimerTime)
+        if (timerEntry.milliseconds <= deltaTime)
         {
             if (timerEntry.unblockOnExpire)
             {
@@ -126,7 +130,7 @@ void Scheduler::UpdateTimerEntries()
         }
         else
         {
-            timerEntry.milliseconds -= currentTimerTime;
+            timerEntry.milliseconds -= deltaTime;
         }
     }
 }

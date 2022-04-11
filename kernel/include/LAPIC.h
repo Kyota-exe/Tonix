@@ -6,6 +6,7 @@ class LAPIC
 {
 public:
     void SetTimeBetweenTimerFires(uint64_t milliseconds);
+    uint64_t GetTimeRemainingMilliseconds() const;
     void SendEOI();
     LAPIC();
 private:

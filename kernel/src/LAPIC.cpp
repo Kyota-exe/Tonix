@@ -41,6 +41,12 @@ void LAPIC::SetTimeBetweenTimerFires(uint64_t milliseconds)
     *(volatile uint32_t*)(apicRegisterBase + APIC_INITIAL_COUNT) = static_cast<uint32_t>(count);
 }
 
+uint64_t LAPIC::GetTimeRemainingMilliseconds() const
+{
+    uint64_t count = *(volatile uint32_t*)(apicRegisterBase + APIC_CURRENT_COUNT);
+    return count * 1000 / lapicTimerBaseFrequency;
+}
+
 uint64_t LAPIC::GetTimerBaseFrequency()
 {
     // Initialize variables and pointers here to make instructions as fast as possible while calibrating.
