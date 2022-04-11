@@ -188,12 +188,15 @@ void Scheduler::StartCores()
     auto smpStruct = reinterpret_cast<stivale2_struct_tag_smp*>(GetStivale2Tag(STIVALE2_STRUCT_TAG_SMP_ID));
     if (smpStruct->cpu_count > 1)
     {
+        for (uint64_t i = 0; i < smpStruct->cpu_count - 1; ++i)
+        {
+            cpuList->Push({nullptr});
+        }
+
         for (uint64_t coreIndex = 0; coreIndex < smpStruct->cpu_count; ++coreIndex)
         {
             stivale2_smp_info* smpInfo = &smpStruct->smp_info[coreIndex];
             if (smpInfo->lapic_id == smpStruct->bsp_lapic_id) continue;
-
-            cpuList->Push({nullptr});
 
             smpInfo->target_stack = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame())) + 0x1000;
             smpStruct->smp_info[coreIndex].goto_address = reinterpret_cast<uintptr_t>(InitializeCore);
