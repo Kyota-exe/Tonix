@@ -149,11 +149,6 @@ void Scheduler::Unblock(uint64_t pid)
     taskQueueLock.Release();
 }
 
-void Scheduler::AddNewTimerEntry(uint64_t milliseconds)
-{
-    timerEntries.Push({milliseconds});
-}
-
 Spinlock tssInitLock;
 extern "C" void InitializeCore(stivale2_smp_info* smpInfoPtr)
 {

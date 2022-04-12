@@ -11,7 +11,6 @@ class Scheduler
 public:
     void SwitchToNextTask(InterruptFrame* interruptFrame);
     void ExitCurrentTask(int status, InterruptFrame* interruptFrame);
-    void AddNewTimerEntry(uint64_t milliseconds);
     void ConfigureTimerClosestExpiry();
     static void InitializeQueue();
     static void StartCores();
