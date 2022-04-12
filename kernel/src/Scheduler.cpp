@@ -175,6 +175,7 @@ extern "C" void InitializeCore(stivale2_smp_info* smpInfoPtr)
     // Write core ID in IA32_TSC_AUX so that CPU::GetCoreID can get it
     asm volatile ("wrmsr" : : "c"(0xc0000103), "a"(smpInfoPtr->lapic_id), "d"(0));
 
+    CPU::EnableSSE();
     asm volatile("sti");
     while (true) asm("hlt");
 }
@@ -207,6 +208,7 @@ void Scheduler::StartCores()
 
     bspScheduler->ConfigureTimerClosestExpiry();
 
+    CPU::EnableSSE();
     asm volatile("sti");
 }
 

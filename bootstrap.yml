@@ -203,7 +203,7 @@ packages:
           - '@SOURCE_ROOT@/cross_file.txt'
           - '--prefix=/usr'
           - '--libdir=lib'
-          - '--buildtype=debug'
+          - '--buildtype=debugoptimized'
           - '-Dmlibc_no_headers=true'
           - '@THIS_SOURCE_DIR@'
     build:

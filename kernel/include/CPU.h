@@ -6,4 +6,5 @@ struct CPU
 {
     Scheduler* scheduler;
     static uint32_t GetCoreID();
+    static void EnableSSE();
 };
