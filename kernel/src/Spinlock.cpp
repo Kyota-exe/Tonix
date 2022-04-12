@@ -2,13 +2,12 @@
 
 void Spinlock::Acquire()
 {
-    while (__atomic_test_and_set(&locked, __ATOMIC_ACQUIRE))
-    {
-        asm volatile("pause");
-    }
+    auto ticket = __atomic_fetch_add(&nextTicket, 1, __ATOMIC_RELAXED);
+    while (__atomic_load_n(&servingTicket, __ATOMIC_ACQUIRE) != ticket);
 }
 
 void Spinlock::Release()
 {
-    __atomic_clear(&locked, __ATOMIC_RELEASE);
+    auto current = __atomic_load_n(&servingTicket, __ATOMIC_RELAXED);
+    __atomic_store_n(&servingTicket, current + 1, __ATOMIC_RELEASE);
 }
