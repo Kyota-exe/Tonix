@@ -117,7 +117,7 @@ void Scheduler::UpdateTimerEntries()
 
     for (uint64_t i = timerEntries.GetLength(); i-- > 0; )
     {
-        TimerEntry timerEntry = timerEntries.Get(i);
+        TimerEntry& timerEntry = timerEntries.Get(i);
         if (timerEntry.milliseconds <= deltaTime)
         {
             if (timerEntry.unblockOnExpire)
