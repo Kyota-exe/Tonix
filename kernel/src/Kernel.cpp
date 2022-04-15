@@ -25,9 +25,9 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     InitializeKernelHeap();
 
     GDT::Initialize();
-    TSS* tss = GDT::InitializeTSS();
+    TSS* tss = TSS::Initialize();
     GDT::LoadGDTR();
-    GDT::LoadTSS();
+    GDT::LoadTSS(tss);
     IDT::Initialize();
     IDT::Load();
 

@@ -156,8 +156,8 @@ extern "C" void InitializeCore(stivale2_smp_info* smpInfoPtr)
     IDT::Load();
 
     tssInitLock.Acquire();
-    TSS* tss = GDT::InitializeTSS();
-    GDT::LoadTSS();
+    TSS* tss = TSS::Initialize();
+    GDT::LoadTSS(tss);
     tssInitLock.Release();
 
     auto scheduler = new Scheduler();
