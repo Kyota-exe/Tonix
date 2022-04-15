@@ -6,9 +6,6 @@
 #include "Assert.h"
 #include "Spinlock.h"
 
-uint64_t masterIndex = 0;
-uint64_t allocTable[1024];
-
 struct FreeSlot
 {
     FreeSlot* next;
@@ -31,14 +28,11 @@ public:
     Slab(const Slab& original) = delete;
 };
 
-const uint64_t SLABS_COUNT = 10;
+constexpr uint64_t SLABS_COUNT = 10;
 
-struct SlabsPool
-{
-    Slab slabs[SLABS_COUNT];
-};
-
-SlabsPool slabsPool;
+Slab slabs[SLABS_COUNT];
+uint64_t masterIndex = 0;
+uint64_t allocTable[1024];
 
 void Slab::InitializeSlab(uint64_t _slotSize)
 {
@@ -47,9 +41,9 @@ void Slab::InitializeSlab(uint64_t _slotSize)
 
     uint64_t slotCount = 0x1000 / slotSize;
     FreeSlot* previous = nullptr;
-    for (int slotIndex = (int)(slotCount - 1); slotIndex >= 0; --slotIndex)
+    for (uint64_t slotIndex = slotCount; slotIndex-- > 0; )
     {
-        auto freeSlot = (FreeSlot*)(slabBase + slotIndex * slotSize);
+        auto freeSlot = reinterpret_cast<FreeSlot*>(slabBase + slotIndex * slotSize);
         freeSlot->next = previous;
         previous = freeSlot;
     }
@@ -57,37 +51,16 @@ void Slab::InitializeSlab(uint64_t _slotSize)
     head = previous;
 }
 
-static uint64_t allocationsInEffect = 0;
 void* Slab::Alloc()
 {
     lock.Acquire();
 
     void* addr = head;
-
-    if (addr == nullptr)
-    {
-        Serial::Printf("No more %d byte slots left in heap slab.", slotSize);
-        Serial::Print("Hanging...");
-        while (true) asm("hlt");
-    }
-
-//    if (slotSize == 9)
-//    {
-//        Serial::Printf("ALLOC -------------------------------------------------------> %x", (uint64_t)addr, "");
-//        Serial::Printf(" - %d", slotSize);
-//        Serial::Print("==============================================");
-//        Serial::Printf("Allocations in effect: %d", allocationsInEffect);
-//        Serial::Printf("Alloc return addr      %x", (uint64_t)addr);
-//        Serial::Printf("New head               %x", (uint64_t)head->next);
-//        Serial::Printf("New head->next         %x", (uint64_t)head->next->next);
-//        Serial::Printf("nullptr                %x", (uint64_t)nullptr);
-//        Serial::Print("==============================================");
-//    }
-
-    allocTable[masterIndex++] = (uint64_t)addr;
-
+    Assert(addr != nullptr);
     head = head->next;
-    allocationsInEffect++;
+
+    Assert(masterIndex < 1024);
+    allocTable[masterIndex++] = reinterpret_cast<uintptr_t>(addr);
 
     lock.Release();
 
@@ -99,22 +72,8 @@ void Slab::Free(void* ptr)
     lock.Acquire();
 
     FreeSlot* previousHead = head;
-    head = (FreeSlot*)ptr;
+    head = reinterpret_cast<FreeSlot*>(ptr);
     head->next = previousHead;
-
-    allocationsInEffect--;
-
-//    if (slotSize == 9)
-//    {
-//        Serial::Printf("FREE --------------------------------------------------------> %x", (uint64_t)ptr, "");
-//        Serial::Printf(" - %d", slotSize);
-//        Serial::Print("==============================================");
-//        Serial::Printf("Allocations in effect: %d", allocationsInEffect);
-//        Serial::Printf("Freed addr:                 %x", (uint64_t)ptr);
-//        Serial::Printf("New head:                   %x", (uint64_t)head);
-//        Serial::Printf("(prev head) New head->next: %x", (uint64_t)previousHead);
-//        Serial::Print("==============================================");
-//    }
 
     bool foundAddr = false;
     for (uint64_t i = 0; i < masterIndex + 1; ++i)
@@ -140,7 +99,7 @@ void Slab::Free(void* ptr)
 void* LargeKMalloc(uint64_t size)
 {
     uint64_t pageCount = size / 0x1000;
-    return (void*)((uint64_t)RequestPageFrames(pageCount) + 0xffff'8000'0000'0000);
+    return reinterpret_cast<void*>(HigherHalf(RequestPageFrames(pageCount)));
 }
 
 void* KMalloc(uint64_t size)
@@ -153,38 +112,32 @@ void* KMalloc(uint64_t size)
         return LargeKMalloc(size);
     }
 
-    return slabsPool.slabs[slabIndex].Alloc();
+    return slabs[slabIndex].Alloc();
 }
 
 void KFree(void* ptr)
 {
-    if (ptr == nullptr) return;
+    Assert(ptr != nullptr);
 
-    for (auto& slab : slabsPool.slabs)
+    auto address = reinterpret_cast<uintptr_t>(ptr);
+    for (auto& slab : slabs)
     {
-        if (slab.slabBase <= (uint64_t)ptr && (uint64_t)ptr < slab.slabBase + 0x1000)
+        if (slab.slabBase <= address && address < slab.slabBase + 0x1000)
         {
             slab.Free(ptr);
             return;
         }
     }
 
-    Serial::Printf("Failed to free address %x", ptr);
     Panic();
 }
 
 void InitializeKernelHeap()
 {
-    slabsPool.slabs[0].InitializeSlab(8);
-    slabsPool.slabs[1].InitializeSlab(16);
-    slabsPool.slabs[2].InitializeSlab(32);
-    slabsPool.slabs[3].InitializeSlab(64);
-    slabsPool.slabs[4].InitializeSlab(128);
-    slabsPool.slabs[5].InitializeSlab(256);
-    slabsPool.slabs[6].InitializeSlab(512);
-    slabsPool.slabs[7].InitializeSlab(1024);
-    slabsPool.slabs[8].InitializeSlab(2048);
-    slabsPool.slabs[9].InitializeSlab(4096);
+    for (uint64_t i = 0; i < SLABS_COUNT; ++i)
+    {
+        slabs[i].InitializeSlab(Pow(2, 3 + i));
+    }
 }
 
 void* operator new(uint64_t, void* ptr) { return ptr; }

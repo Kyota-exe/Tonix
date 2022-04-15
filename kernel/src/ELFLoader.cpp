@@ -81,7 +81,7 @@ void ELFLoader::LoadELF(const String& path, PagingManager* pagingManager, uintpt
     {
         uint64_t stackPageCount = USER_STACK_SIZE / 0x1000;
         uintptr_t stackLowestVirtAddr = USER_STACK_BASE - USER_STACK_SIZE;
-        auto stackLowestPhysAddr = reinterpret_cast<uintptr_t>(RequestPageFrames(stackPageCount));
+        uintptr_t stackLowestPhysAddr = RequestPageFrames(stackPageCount);
         void* stackPhysAddr = nullptr;
         for (uint64_t page = 0; page < USER_STACK_SIZE; page += 0x1000)
         {
