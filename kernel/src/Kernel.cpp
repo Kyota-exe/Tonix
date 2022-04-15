@@ -25,7 +25,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     InitializeKernelHeap();
 
     GDT::Initialize();
-    GDT::InitializeTSS();
+    TSS* tss = GDT::InitializeTSS();
     GDT::LoadGDTR();
     GDT::LoadTSS();
     IDT::Initialize();
@@ -49,7 +49,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
 
     Scheduler::InitializeQueue();
     Scheduler::CreateTaskFromELF(String("/programs/test.elf"), true);
-    Scheduler::StartCores();
+    Scheduler::StartCores(tss);
 
     while (true) asm("hlt");
 }

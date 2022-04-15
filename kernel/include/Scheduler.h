@@ -5,6 +5,7 @@
 #include "Task.h"
 #include "LAPIC.h"
 #include "TimerEntry.h"
+#include "GDT.h"
 
 class Scheduler
 {
@@ -13,7 +14,7 @@ public:
     void ExitCurrentTask(int status, InterruptFrame* interruptFrame);
     void ConfigureTimerClosestExpiry();
     static void InitializeQueue();
-    static void StartCores();
+    static void StartCores(TSS* bspTss);
     static void CreateTaskFromELF(const String& path, bool userTask);
     static Scheduler* GetScheduler();
     Scheduler();

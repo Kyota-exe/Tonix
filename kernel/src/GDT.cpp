@@ -8,25 +8,6 @@ struct GDTR
     uint64_t base;
 } __attribute__((packed));
 
-struct TSS
-{
-    uint32_t reserved0;
-    uint64_t rsp0;
-    uint64_t rsp1;
-    uint64_t rsp2;
-    uint64_t reserved1;
-    uint64_t ist1;
-    uint64_t ist2;
-    uint64_t ist3;
-    uint64_t ist4;
-    uint64_t ist5;
-    uint64_t ist6;
-    uint64_t ist7;
-    uint64_t reserved2;
-    uint16_t reserved3;
-    uint16_t ioMapOffset;
-} __attribute__((packed));
-
 constexpr uint8_t KERNEL_CODE_TYPE_ATTRIBUTES = 0b1'00'1'1010;
 constexpr uint8_t KERNEL_DATA_TYPE_ATTRIBUTES = 0b1'00'1'0010;
 constexpr uint8_t USER_CODE_TYPE_ATTRIBUTES = 0b1'11'1'1010;
@@ -71,7 +52,7 @@ void GDT::Initialize()
     // No need to reload segment registers, since we use the same GDT entry indexes as limine (stivale2)
 }
 
-void GDT::InitializeTSS()
+TSS* GDT::InitializeTSS()
 {
     auto tss = new TSS();
     Memset(tss, 0, sizeof(TSS));
@@ -90,4 +71,6 @@ void GDT::InitializeTSS()
     gdt.entries[3].limit1Attributes = (sizeof(TSS) - 1) >> 16;
     gdt.entries[3].typeAttributes = TSS_TYPE_ATTRIBUTES;
     *(uint64_t*)&gdt.entries[4] = (uintptr_t)tss >> 32;
+
+    return tss;
 }
