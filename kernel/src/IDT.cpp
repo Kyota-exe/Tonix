@@ -50,6 +50,7 @@ extern "C" void ISRWrapper255();
 
 // Miscellaneous
 extern "C" void ISRWrapper128();
+extern "C" void ISRWrapper129();
 
 struct IDTGateDescriptor
 {
@@ -123,6 +124,7 @@ void IDT::InitializeInterruptHandlers()
 
     // Miscellaneous
     SetInterruptHandler(0x80, reinterpret_cast<uint64_t>(ISRWrapper128), 3, 5); // System Call
+    SetInterruptHandler(0x81, reinterpret_cast<uint64_t>(ISRWrapper129));
 }
 
 void IDT::Initialize()

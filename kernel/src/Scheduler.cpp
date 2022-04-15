@@ -142,6 +142,12 @@ void Scheduler::UpdateTimerEntries()
     }
 }
 
+void Scheduler::SuspendSystemCall()
+{
+    currentTask.blocked = true;
+    asm volatile("int $0x81");
+}
+
 void Scheduler::Unblock(uint64_t pid)
 {
     taskQueueLock.Acquire();

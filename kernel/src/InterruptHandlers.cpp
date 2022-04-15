@@ -67,6 +67,9 @@ extern "C" void ISRHandler(InterruptFrame* interruptFrame)
         case 0x80:
             SystemCallHandler(interruptFrame);
             break;
+        case 0x81:
+            Scheduler::GetScheduler()->SwitchToNextTask(interruptFrame);
+            break;
         case 0 ... 31:
             ExceptionHandler(interruptFrame);
         default:

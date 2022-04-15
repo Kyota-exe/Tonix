@@ -132,3 +132,4 @@ ISRWrapperNoErrorCode 255 ; Spurious Interrupt Vector
 
 ; Miscellaneous
 ISRWrapperNoErrorCode 128 ; System Call
+ISRWrapperNoErrorCode 129 ; Suspend System Call

@@ -13,6 +13,7 @@ public:
     void SwitchToNextTask(InterruptFrame* interruptFrame);
     void ExitCurrentTask(int status, InterruptFrame* interruptFrame);
     void ConfigureTimerClosestExpiry();
+    void SuspendSystemCall();
     static void InitializeQueue();
     static void StartCores(TSS* bspTss);
     static void CreateTaskFromELF(const String& path, bool userTask);
