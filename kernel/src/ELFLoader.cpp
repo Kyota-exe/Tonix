@@ -148,9 +148,9 @@ void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeade
         auto virtAddr = reinterpret_cast<void*>(baseAddr + (page * 0x1000));
 
         void* pageAddr = (void*)((uintptr_t)virtAddr - ((uintptr_t)virtAddr % 0x1000));
-        pagingManager->MapMemory(pageAddr, physAddr, true);
+        pagingManager->MapMemory(pageAddr, reinterpret_cast<void*>(physAddr), true);
 
-        auto higherHalfAddr = HigherHalf(reinterpret_cast<uintptr_t>(physAddr));
+        auto higherHalfAddr = HigherHalf(physAddr);
         Memset(reinterpret_cast<void*>(higherHalfAddr), 0, 0x1000);
 
         higherHalfAddr += baseAddr % 0x1000;

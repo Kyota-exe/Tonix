@@ -30,7 +30,7 @@ void PagingManager::PopulatePagingStructureEntry(PageTableEntry* entry, uintptr_
 
 PageTable* PagingManager::AllocatePagingStructure(PageTableEntry* entry, bool user)
 {
-    auto physAddr = reinterpret_cast<uintptr_t>(RequestPageFrame());
+    auto physAddr = RequestPageFrame();
 
     auto pagingStruct = reinterpret_cast<PageTable*>(HigherHalf(physAddr));
     Memset(pagingStruct, 0, 0x1000);
@@ -42,7 +42,7 @@ PageTable* PagingManager::AllocatePagingStructure(PageTableEntry* entry, bool us
 
 void PagingManager::InitializePaging()
 {
-    pml4PhysAddr = reinterpret_cast<uintptr_t>(RequestPageFrame());
+    pml4PhysAddr = RequestPageFrame();
     pml4 = reinterpret_cast<PageTable*>(HigherHalf(pml4PhysAddr));
     Memset(pml4, 0, 0x1000);
 

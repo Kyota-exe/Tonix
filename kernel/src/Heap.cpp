@@ -1,4 +1,5 @@
 #include "Memory/PageFrameAllocator.h"
+#include "Memory/Memory.h"
 #include "Heap.h"
 #include "Serial.h"
 #include "Math.h"
@@ -40,7 +41,7 @@ SlabsPool slabsPool;
 void Slab::InitializeSlab(uint64_t _slotSize)
 {
     slotSize = _slotSize;
-    slabBase = (uint64_t)RequestPageFrame() + 0xffff'8000'0000'0000;
+    slabBase = HigherHalf(RequestPageFrame());
 
     uint64_t slotCount = 0x1000 / slotSize;
     FreeSlot* previous = nullptr;

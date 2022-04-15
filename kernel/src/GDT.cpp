@@ -57,11 +57,11 @@ TSS* GDT::InitializeTSS()
     auto tss = new TSS();
     Memset(tss, 0, sizeof(TSS));
 
-    tss->rsp0 = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrames(3)) + 0x3000);
-    tss->ist1 = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame()) + 0x1000); // Double Fault
-    tss->ist2 = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame()) + 0x1000); // Non-Maskable Interrupt
-    tss->ist3 = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame()) + 0x1000); // Machine Check
-    tss->ist4 = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame()) + 0x1000); // Debug
+    tss->rsp0 = HigherHalf(RequestPageFrames(3) + 0x3000);
+    tss->ist1 = HigherHalf(RequestPageFrame() + 0x1000); // Double Fault
+    tss->ist2 = HigherHalf(RequestPageFrame() + 0x1000); // Non-Maskable Interrupt
+    tss->ist3 = HigherHalf(RequestPageFrame() + 0x1000); // Machine Check
+    tss->ist4 = HigherHalf(RequestPageFrame() + 0x1000); // Debug
     tss->ioMapOffset = sizeof(TSS);
 
     gdt.entries[3].base0 = (uintptr_t)tss;

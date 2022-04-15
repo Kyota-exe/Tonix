@@ -24,8 +24,8 @@ void* FileMap(Task* task, void* addr, uint64_t length, int protection, int flags
 
     for (uint64_t page = 0; page < pageCount; ++page)
     {
-        void* physAddr = RequestPageFrame();
-        void* virtAddr = (void*)((uint64_t)addr + page * 0x1000);
+        auto physAddr = reinterpret_cast<void*>(RequestPageFrame());
+        auto virtAddr = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(addr) + page * 0x1000));
         task->pagingManager->MapMemory(virtAddr, physAddr, true);
     }
 

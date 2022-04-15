@@ -50,7 +50,7 @@ void Scheduler::InitializeQueue()
     auto idlePagingManager = new PagingManager();
     idlePagingManager->InitializePaging();
 
-    uintptr_t idleStack = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame()) + 0x1000);
+    uintptr_t idleStack = HigherHalf(RequestPageFrame() + 0x1000);
     auto idleEntry = reinterpret_cast<uintptr_t>(Idle);
 
     idleTask = CreateTask(idlePagingManager, idleEntry, idleStack, false);
@@ -196,7 +196,7 @@ void Scheduler::StartCores(TSS* bspTss)
             stivale2_smp_info* smpInfo = &smpStruct->smp_info[coreIndex];
             if (smpInfo->lapic_id == smpStruct->bsp_lapic_id) continue;
 
-            smpInfo->target_stack = HigherHalf(reinterpret_cast<uintptr_t>(RequestPageFrame())) + 0x1000;
+            smpInfo->target_stack = HigherHalf(RequestPageFrame()) + 0x1000;
             smpStruct->smp_info[coreIndex].goto_address = reinterpret_cast<uintptr_t>(InitializeCore);
         }
     }

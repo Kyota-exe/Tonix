@@ -60,7 +60,7 @@ void InitializePageFrameAllocator()
     }
 }
 
-void* RequestPageFrame()
+uintptr_t RequestPageFrame()
 {
     pageFrameBitmapLock.Acquire();
 
@@ -71,7 +71,7 @@ void* RequestPageFrame()
         {
             pageFrameBitmap.SetBit(latestAllocatedPageFrame, true);
             pageFrameBitmapLock.Release();
-            return (void*)(latestAllocatedPageFrame * 0x1000);
+            return latestAllocatedPageFrame * 0x1000;
         }
     }
 
@@ -80,7 +80,7 @@ void* RequestPageFrame()
     Panic();
 }
 
-void* RequestPageFrames(uint64_t count)
+uintptr_t RequestPageFrames(uint64_t count)
 {
     pageFrameBitmapLock.Acquire();
 
@@ -98,7 +98,7 @@ void* RequestPageFrames(uint64_t count)
                     pageFrameBitmap.SetBit(pageFrame, true);
                 }
                 pageFrameBitmapLock.Release();
-                return (void*)(first * 0x1000);
+                return first * 0x1000;
             }
         }
         else
