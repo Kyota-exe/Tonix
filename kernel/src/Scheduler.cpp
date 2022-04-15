@@ -12,6 +12,8 @@
 #include "GDT.h"
 #include "IDT.h"
 
+constexpr uint64_t SYSCALL_STACK_PAGE_COUNT = 3;
+
 Vector<Task>* taskQueue;
 Spinlock taskQueueLock;
 
@@ -34,6 +36,10 @@ Task CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPt
     frame.rip = entry;
     frame.rsp = stackPtr;
     task.frame = frame;
+
+    uintptr_t syscallStackSize = SYSCALL_STACK_PAGE_COUNT * 0x1000;
+    uintptr_t syscallStackPhysAddr = RequestPageFrames(SYSCALL_STACK_PAGE_COUNT) + syscallStackSize;
+    task.syscallStackAddr = reinterpret_cast<void*>(HigherHalf(syscallStackPhysAddr));
 
     static uint64_t pid = 0;
     task.pid = __atomic_fetch_add(&pid, 1, __ATOMIC_RELAXED);
@@ -89,6 +95,7 @@ void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
 
     ConfigureTimerClosestExpiry();
 
+    tss->SetSystemCallStack(currentTask.syscallStackAddr);
     *interruptFrame = currentTask.frame;
     currentTask.pagingManager->SetCR3();
 }

@@ -38,6 +38,7 @@ struct Task
     uint64_t pid;
 
     InterruptFrame frame;
+    void* syscallStackAddr;
     bool blocked = false;
 
     VFS* vfs;

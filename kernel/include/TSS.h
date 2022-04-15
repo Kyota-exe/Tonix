@@ -6,6 +6,7 @@ class TSS
 {
 public:
     static TSS* Initialize();
+    void SetSystemCallStack(void* syscallStack);
 private:
     uint32_t reserved0;
     uint64_t rsp0;

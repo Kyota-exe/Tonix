@@ -16,3 +16,8 @@ TSS* TSS::Initialize()
 
     return tss;
 }
+
+void TSS::SetSystemCallStack(void* syscallStack)
+{
+    ist5 = reinterpret_cast<uintptr_t>(syscallStack);
+}

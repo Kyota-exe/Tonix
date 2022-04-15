@@ -122,7 +122,7 @@ void IDT::InitializeInterruptHandlers()
     SetInterruptHandler(255, reinterpret_cast<uint64_t>(ISRWrapper255));
 
     // Miscellaneous
-    SetInterruptHandler(0x80, reinterpret_cast<uint64_t>(ISRWrapper128), 3);
+    SetInterruptHandler(0x80, reinterpret_cast<uint64_t>(ISRWrapper128), 3, 5); // System Call
 }
 
 void IDT::Initialize()
