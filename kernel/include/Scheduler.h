@@ -5,7 +5,7 @@
 #include "Task.h"
 #include "LAPIC.h"
 #include "TimerEntry.h"
-#include "GDT.h"
+#include "TSS.h"
 
 class Scheduler
 {
@@ -17,7 +17,7 @@ public:
     static void StartCores(TSS* bspTss);
     static void CreateTaskFromELF(const String& path, bool userTask);
     static Scheduler* GetScheduler();
-    Scheduler();
+    explicit Scheduler(TSS* tss);
     Task currentTask;
     LAPIC* lapic;
 
@@ -25,7 +25,8 @@ private:
     void UpdateTimerEntries();
     static void Unblock(uint64_t pid);
 
+    TSS* tss;
     Vector<TimerEntry> timerEntries;
-    uint64_t currentTimerTime;
+    uint64_t currentTimerTime = 0;
     bool restoreFrame = false;
 };

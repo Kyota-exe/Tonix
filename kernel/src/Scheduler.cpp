@@ -160,11 +160,11 @@ extern "C" void InitializeCore(stivale2_smp_info* smpInfoPtr)
     GDT::LoadTSS(tss);
     tssInitLock.Release();
 
-    auto scheduler = new Scheduler();
+    auto scheduler = new Scheduler(tss);
     scheduler->ConfigureTimerClosestExpiry();
 
     cpuListLock.Acquire();
-    cpuList->Get(smpInfoPtr->lapic_id) = {scheduler, tss};
+    cpuList->Get(smpInfoPtr->lapic_id) = {scheduler};
     cpuListLock.Release();
 
     // Write core ID in IA32_TSC_AUX so that CPU::GetCoreID can get it
@@ -180,15 +180,15 @@ void Scheduler::StartCores(TSS* bspTss)
     Assert(cpuList == nullptr);
     cpuList = new Vector<CPU>();
 
-    auto bspScheduler = new Scheduler();
-    cpuList->Push({bspScheduler, bspTss});
+    auto bspScheduler = new Scheduler(bspTss);
+    cpuList->Push({bspScheduler});
 
     auto smpStruct = reinterpret_cast<stivale2_struct_tag_smp*>(GetStivale2Tag(STIVALE2_STRUCT_TAG_SMP_ID));
     if (smpStruct->cpu_count > 1)
     {
         for (uint64_t i = 0; i < smpStruct->cpu_count - 1; ++i)
         {
-            cpuList->Push({nullptr, nullptr});
+            cpuList->Push({nullptr});
         }
 
         for (uint64_t coreIndex = 0; coreIndex < smpStruct->cpu_count; ++coreIndex)
@@ -249,4 +249,4 @@ Scheduler* Scheduler::GetScheduler()
     return cpuList->Get(CPU::GetCoreID()).scheduler;
 }
 
-Scheduler::Scheduler() : lapic(new LAPIC()) {}
+Scheduler::Scheduler(TSS* tss) : lapic(new LAPIC()), tss(tss) {}
