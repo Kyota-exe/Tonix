@@ -4,6 +4,7 @@
 #include "Serial.h"
 #include "Math.h"
 #include "Assert.h"
+#include "Spinlock.h"
 
 uint64_t masterIndex = 0;
 uint64_t allocTable[1024];
@@ -18,6 +19,7 @@ class Slab
 private:
     uint64_t slotSize;
     FreeSlot* head;
+    Spinlock lock;
 
 public:
     uint64_t slabBase;
@@ -58,6 +60,8 @@ void Slab::InitializeSlab(uint64_t _slotSize)
 static uint64_t allocationsInEffect = 0;
 void* Slab::Alloc()
 {
+    lock.Acquire();
+
     void* addr = head;
 
     if (addr == nullptr)
@@ -84,11 +88,16 @@ void* Slab::Alloc()
 
     head = head->next;
     allocationsInEffect++;
+
+    lock.Release();
+
     return addr;
 }
 
 void Slab::Free(void* ptr)
 {
+    lock.Acquire();
+
     FreeSlot* previousHead = head;
     head = (FreeSlot*)ptr;
     head->next = previousHead;
@@ -124,6 +133,8 @@ void Slab::Free(void* ptr)
         Serial::Printf("DF Slot size: %d", (uint64_t)slotSize);
         Panic();
     }
+
+    lock.Release();
 }
 
 void* LargeKMalloc(uint64_t size)
