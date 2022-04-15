@@ -2,9 +2,13 @@
 
 uint64_t Pow(uint64_t base, uint64_t exponent)
 {
-    if (exponent == 1) return base;
-    if (exponent == 0) return 1;
-    return base * Pow(base, exponent - 1);
+    uint64_t result = 1;
+    for (uint64_t i = exponent; i-- > 0; )
+    {
+        result *= base;
+    }
+
+    return result;
 }
 
 uint64_t CeilLog2(uint64_t value)
