@@ -9,5 +9,6 @@ enum class Error : int64_t
     InvalidArgument = 1026,
     InvalidFileDescriptor = 1081,
     NotTerminal = 1058,
-    NotDirectory = 1053
+    NotDirectory = 1053,
+    IsPipe = 1069
 };

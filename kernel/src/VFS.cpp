@@ -253,6 +253,12 @@ uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, VFS::SeekType se
 
     Vnode* vnode = fileDescriptor->vnode;
 
+    if (vnode->type == VFSCharacterDevice)
+    {
+        error = Error::IsPipe;
+        return -1;
+    }
+
     switch (seekType)
     {
         case VFS::SeekType::Set:
