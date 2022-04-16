@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "Spinlock.h"
 
 enum class PagingFlag : uint64_t
 {
@@ -41,7 +42,8 @@ public:
     uintptr_t pml4PhysAddr;
 private:
     PageTable* pml4;
+    Spinlock lock;
 	static void GetPageTableIndexes(const void* virtAddr, uint16_t* pageIndexes);
-	static void PopulatePagingStructureEntry(PageTableEntry* entry, uintptr_t physAddr, bool user);
-	static PageTable* AllocatePagingStructure(PageTableEntry* entry, bool user);
+	static void PopulatePagingStructureEntry(PageTableEntry& entry, uintptr_t physAddr, bool user);
+	static PageTable* AllocatePagingStructure(PageTableEntry& entry, bool user);
 };
