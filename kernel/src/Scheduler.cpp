@@ -41,7 +41,7 @@ Task CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPt
 
     if (setPid)
     {
-        static uint64_t pid = 0;
+        static uint64_t pid = 1;
         task.pid = __atomic_fetch_add(&pid, 1, __ATOMIC_RELAXED);
     }
 
