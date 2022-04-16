@@ -147,6 +147,14 @@ String::String()
     buffer = nullptr;
 }
 
+String::String(char c)
+{
+    length = 1;
+    buffer = new char[2];
+    buffer[0] = c;
+    buffer[1] = 0;
+}
+
 String::~String()
 {
     delete[] buffer;

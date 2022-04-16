@@ -32,6 +32,7 @@ public:
     explicit String(const char* original);
     String(const char* original, uint64_t stringLength);
     String(const String& original);
+    String(char c);
     String();
     ~String();
 
