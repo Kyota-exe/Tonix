@@ -20,9 +20,7 @@ Spinlock taskQueueLock;
 Vector<CPU>* cpuList;
 Spinlock cpuListLock;
 
-Task idleTask;
-
-Task CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPtr, bool userTask)
+Task CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPtr, bool userTask, bool setPid)
 {
     Task task {};
     task.pagingManager = pagingManager;
@@ -41,8 +39,11 @@ Task CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPt
     uintptr_t syscallStackPhysAddr = RequestPageFrames(SYSCALL_STACK_PAGE_COUNT) + syscallStackSize;
     task.syscallStackAddr = reinterpret_cast<void*>(HigherHalf(syscallStackPhysAddr));
 
-    static uint64_t pid = 0;
-    task.pid = __atomic_fetch_add(&pid, 1, __ATOMIC_RELAXED);
+    if (setPid)
+    {
+        static uint64_t pid = 0;
+        task.pid = __atomic_fetch_add(&pid, 1, __ATOMIC_RELAXED);
+    }
 
     return task;
 }
@@ -52,15 +53,6 @@ void Idle() { while (true) asm("hlt"); }
 void Scheduler::InitializeQueue()
 {
     taskQueue = new Vector<Task>();
-
-    auto idlePagingManager = new PagingManager();
-    idlePagingManager->InitializePaging();
-
-    uintptr_t idleStack = HigherHalf(RequestPageFrame() + 0x1000);
-    auto idleEntry = reinterpret_cast<uintptr_t>(Idle);
-
-    idleTask = CreateTask(idlePagingManager, idleEntry, idleStack, false);
-    Assert(idleTask.pid == 0);
 }
 
 void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
@@ -245,7 +237,7 @@ void Scheduler::CreateTaskFromELF(const String& path, bool userTask)
     uintptr_t stackPtr;
     ELFLoader::LoadELF(path, pagingManager, entry, stackPtr);
 
-    Task task = CreateTask(pagingManager, entry, stackPtr, userTask);
+    Task task = CreateTask(pagingManager, entry, stackPtr, userTask, true);
 
     Error error;
     int desc;
@@ -270,4 +262,14 @@ Scheduler* Scheduler::GetScheduler()
     return cpuList->Get(CPU::GetCoreID()).scheduler;
 }
 
-Scheduler::Scheduler(TSS* tss) : lapic(new LAPIC()), tss(tss) {}
+Scheduler::Scheduler(TSS* tss) : lapic(new LAPIC()), tss(tss)
+{
+    auto idlePagingManager = new PagingManager();
+    idlePagingManager->InitializePaging();
+
+    uintptr_t idleStack = HigherHalf(RequestPageFrame() + 0x1000);
+    auto idleEntry = reinterpret_cast<uintptr_t>(Idle);
+
+    idleTask = CreateTask(idlePagingManager, idleEntry, idleStack, false, false);
+    idleTask.pid = 0;
+}

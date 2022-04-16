@@ -28,6 +28,7 @@ private:
     static void Unblock(uint64_t pid);
 
     TSS* tss;
+    Task idleTask;
     Vector<TimerEntry> timerEntries;
     uint64_t currentTimerTime = 0;
     bool restoreFrame = false;
