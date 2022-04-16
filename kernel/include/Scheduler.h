@@ -18,6 +18,7 @@ public:
     static void InitializeQueue();
     static void StartCores(TSS* bspTss);
     static void CreateTaskFromELF(const String& path, bool userTask);
+    static void Unblock(uint64_t pid);
     static Scheduler* GetScheduler();
     explicit Scheduler(TSS* tss);
     Task currentTask;
@@ -25,7 +26,6 @@ public:
 
 private:
     void UpdateTimerEntries();
-    static void Unblock(uint64_t pid);
 
     TSS* tss;
     Task idleTask;
