@@ -29,10 +29,11 @@ public:
 };
 
 constexpr uint64_t SLABS_COUNT = 10;
-
 Slab slabs[SLABS_COUNT];
-uint64_t masterIndex = 0;
-uint64_t allocTable[1024];
+
+uint64_t allocTableIndex = 0;
+constexpr uint64_t ALLOC_TABLE_SIZE = 4096;
+uint64_t allocTable[ALLOC_TABLE_SIZE];
 
 void Slab::InitializeSlab(uint64_t _slotSize)
 {
@@ -59,8 +60,8 @@ void* Slab::Alloc()
     Assert(addr != nullptr);
     head = head->next;
 
-    Assert(masterIndex < 1024);
-    allocTable[masterIndex++] = reinterpret_cast<uintptr_t>(addr);
+    Assert(allocTableIndex < ALLOC_TABLE_SIZE);
+    allocTable[allocTableIndex++] = reinterpret_cast<uintptr_t>(addr);
 
     lock.Release();
 
@@ -76,7 +77,7 @@ void Slab::Free(void* ptr)
     head->next = previousHead;
 
     bool foundAddr = false;
-    for (uint64_t i = 0; i < masterIndex + 1; ++i)
+    for (uint64_t i = 0; i < allocTableIndex + 1; ++i)
     {
         if (allocTable[i] == (uint64_t)ptr)
         {
