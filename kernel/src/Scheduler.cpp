@@ -85,13 +85,13 @@ void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
         }
     }
 
+    taskQueueLock.Release();
+
     if (!foundNewTask)
     {
         restoreFrame = false;
         currentTask = idleTask;
     }
-
-    taskQueueLock.Release();
 
     ConfigureTimerClosestExpiry();
 
@@ -206,11 +206,11 @@ void Scheduler::StartCores(TSS* bspTss)
 
         for (uint64_t coreIndex = 0; coreIndex < smpStruct->cpu_count; ++coreIndex)
         {
-            stivale2_smp_info* smpInfo = &smpStruct->smp_info[coreIndex];
-            if (smpInfo->lapic_id == smpStruct->bsp_lapic_id) continue;
+            stivale2_smp_info& smpInfo = smpStruct->smp_info[coreIndex];
+            if (smpInfo.lapic_id == smpStruct->bsp_lapic_id) continue;
 
-            smpInfo->target_stack = HigherHalf(RequestPageFrame()) + 0x1000;
-            smpStruct->smp_info[coreIndex].goto_address = reinterpret_cast<uintptr_t>(InitializeCore);
+            smpInfo.target_stack = HigherHalf(RequestPageFrame()) + 0x1000;
+            smpInfo.goto_address = reinterpret_cast<uintptr_t>(InitializeCore);
         }
     }
 
@@ -230,6 +230,8 @@ void Scheduler::ExitCurrentTask(int status, InterruptFrame* interruptFrame)
 
 void Scheduler::SleepCurrentTask(uint64_t milliseconds)
 {
+    Assert(currentTask.pid != 0);
+    Assert(milliseconds > 0);
     timerEntries.Push({milliseconds, true, currentTask.pid});
     SuspendSystemCall();
 }
