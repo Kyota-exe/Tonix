@@ -13,6 +13,7 @@ enum class SystemCallType
     FileMap = 5,
     TCBSet = 6,
     Exit = 8,
+    Sleep = 9,
     IsTerminal = 19,
     Panic = 254,
     Log = 255

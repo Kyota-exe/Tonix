@@ -14,6 +14,7 @@ public:
     void ExitCurrentTask(int status, InterruptFrame* interruptFrame);
     void ConfigureTimerClosestExpiry();
     void SuspendSystemCall();
+    void SleepCurrentTask(uint64_t milliseconds);
     static void InitializeQueue();
     static void StartCores(TSS* bspTss);
     static void CreateTaskFromELF(const String& path, bool userTask);

@@ -70,6 +70,14 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
         case SystemCallType::Exit:
             scheduler->ExitCurrentTask((int)arg0, interruptFrame); return 0;
 
+        case SystemCallType::Sleep:
+        {
+            auto nanoseconds = static_cast<int64_t>(arg1);
+            Assert(nanoseconds == 0);
+            scheduler->SleepCurrentTask(arg0 * 1000 + nanoseconds / 1'000'000);
+            return 0;
+        }
+
         default:
             Panic();
     }

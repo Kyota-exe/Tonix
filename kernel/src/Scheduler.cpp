@@ -228,6 +228,12 @@ void Scheduler::ExitCurrentTask(int status, InterruptFrame* interruptFrame)
     SwitchToNextTask(interruptFrame);
 }
 
+void Scheduler::SleepCurrentTask(uint64_t milliseconds)
+{
+    timerEntries.Push({milliseconds, true, currentTask.pid});
+    SuspendSystemCall();
+}
+
 void Scheduler::CreateTaskFromELF(const String& path, bool userTask)
 {
     auto pagingManager = new PagingManager();
