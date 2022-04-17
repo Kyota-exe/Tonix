@@ -42,10 +42,17 @@ uint64_t Terminal::Write(const void* buffer, uint64_t count)
 
 void Terminal::InputCharacter(char c)
 {
-    Assert(currentBufferLength < BUFFER_SIZE);
-    inputBuffer[currentBufferLength++] = c;
+    if (c == '\b')
+    {
+        if (currentBufferLength == 0) return;
+        currentBufferLength--;
+    }
+    else
+    {
+        Assert(currentBufferLength < BUFFER_SIZE);
+        inputBuffer[currentBufferLength++] = c;
+    }
 
-    Serial::Print(String(c));
     textRenderer->Print(String(c));
 
     if (c == '\n' && unblockQueue.GetLength() > 0)
