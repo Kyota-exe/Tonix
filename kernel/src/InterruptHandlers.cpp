@@ -4,6 +4,8 @@
 #include "PIC.h"
 #include "SystemCall.h"
 #include "CPU.h"
+#include "Keyboard.h"
+#include "IO.h"
 
 void PageFaultHandler()
 {
@@ -19,6 +21,7 @@ void PageFaultHandler()
     Serial::Printf("Exception: %x", interruptFrame->interruptNumber);
     Serial::Printf("Error code: %x", interruptFrame->errorCode);
     Serial::Printf("RIP: %x", interruptFrame->rip);
+    Serial::Printf("RSP: %x", interruptFrame->rsp);
     Serial::Printf("Core: %d", CPU::GetCoreID());
 
     if (interruptFrame->interruptNumber == 0xe) PageFaultHandler();
@@ -28,13 +31,13 @@ void PageFaultHandler()
 
 void KeyboardInterruptHandler()
 {
-    Serial::Printf("Keyboard interrupt: %x", inb(0x60));
+    Keyboard::SendKeyToTerminal(inb(0x60));
     PICSendEIO(1);
 }
 
 void LAPICTimerInterrupt(InterruptFrame* interruptFrame)
 {
-    Serial::Print("Timer interrupt---------------------------");
+    outb(0xe9, '0' + CPU::GetCoreID());
     Scheduler* scheduler = Scheduler::GetScheduler();
     scheduler->SwitchToNextTask(interruptFrame);
     scheduler->lapic->SendEOI();
