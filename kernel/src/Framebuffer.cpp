@@ -34,7 +34,19 @@ void Framebuffer::Initialize()
 
 void Framebuffer::PlotPixel(unsigned int x, unsigned int y, Colour colour)
 {
+    Assert(x < width);
+    Assert(y < height);
     uint32_t* addr = virtAddr + (y * width) + x;
     uint32_t rgb = colour.red << redShift | colour.green << greenShift | colour.blue << blueShift;
     *addr = rgb;
+}
+
+long Framebuffer::Width()
+{
+    return width;
+}
+
+long Framebuffer::Height()
+{
+    return height;
 }

@@ -4,15 +4,18 @@
 #include "Assert.h"
 #include "Vector.h"
 
-TextRenderer::TextRenderer(const String& fontPath, Colour textColour, int characterSpacing, Colour backgroundColour) :
-                           characterSpacing(characterSpacing), backgroundColour(backgroundColour), textColour(textColour)
+TextRenderer::TextRenderer(const String& fontPath, Colour textColour, Colour textBackgroundColour,
+                           Colour backgroundColour, int characterSpacing) :
+                           characterSpacing(characterSpacing), backgroundColour(backgroundColour),
+                           textColour(textColour), textBgColour(textBackgroundColour)
+
 {
     font = new PSF2Font(fontPath);
     cursorX = 0;
     cursorY = 0;
 }
 
-void TextRenderer::Print(char c, long x, long y, Colour colour)
+void TextRenderer::Print(char c, long x, long y, Colour colour, Colour bgColour)
 {
     PSF2Glyph glyph = font->GetGlyphBitmap(c);
 
@@ -22,12 +25,12 @@ void TextRenderer::Print(char c, long x, long y, Colour colour)
         {
             unsigned int screenX = x + glyphX;
             unsigned int screenY = y + glyphY;
-            Framebuffer::PlotPixel(screenX, screenY,glyph.GetPixel(glyphX, glyphY) ? colour : backgroundColour);
+            Framebuffer::PlotPixel(screenX, screenY, glyph.GetPixel(glyphX, glyphY) ? colour : bgColour);
         }
     }
 }
 
-void TextRenderer::Erase(long x, long y)
+void TextRenderer::Paint(long x, long y, Colour colour)
 {
     for (uint32_t glyphY = 0; glyphY < font->Height(); ++glyphY)
     {
@@ -35,7 +38,7 @@ void TextRenderer::Erase(long x, long y)
         {
             unsigned int screenX = x + glyphX;
             unsigned int screenY = y + glyphY;
-            Framebuffer::PlotPixel(screenX, screenY,backgroundColour);
+            Framebuffer::PlotPixel(screenX, screenY, colour);
         }
     }
 }
@@ -141,11 +144,15 @@ void TextRenderer::ProcessEscapeSequence(char command, bool hasCSI, const Vector
 
 void TextRenderer::Print(const String& string)
 {
-    uint64_t currentIndex = 0;
+    // Erase previous cursor
+    Paint(cursorX, cursorY, backgroundColour);
 
+    uint64_t currentIndex = 0;
     while (currentIndex < string.GetLength())
     {
         char c = string[currentIndex++];
+
+        bool eraseCharacter = false;
 
         switch (c)
         {
@@ -158,6 +165,7 @@ void TextRenderer::Print(const String& string)
             case '\b': // Backspace
             {
                 cursorX -= font->Width();
+                eraseCharacter = true;
                 break;
             }
             case '\t': // Horizontal Tab
@@ -198,12 +206,21 @@ void TextRenderer::Print(const String& string)
             }
             default:
             {
-                Print(c, cursorX, cursorY, textColour);
+                Print(c, cursorX, cursorY, textColour, textBgColour);
                 cursorX += font->Width() + characterSpacing;
             }
         }
+
+        Assert(cursorX >= 0);
+        Assert(cursorY >= 0);
+        Assert(cursorY < Framebuffer::Height());
+
+        if (eraseCharacter)
+        {
+            Paint(cursorX, cursorY, backgroundColour);
+        }
     }
 
-    Assert(cursorX >= 0);
-    Assert(cursorY >= 0);
+    // Render cursor
+    Paint(cursorX, cursorY, textColour);
 }

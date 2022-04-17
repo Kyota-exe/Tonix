@@ -71,7 +71,8 @@ Terminal::Terminal(const String& name, uint32_t inodeNum) : Device(name, inodeNu
 
     auto textColour = Colour(255, 255, 255);
     auto backgroundColour = Colour(0, 0, 0);
-    textRenderer = new TextRenderer(String(FONT_PATH), textColour, CHARACTER_SPACING, backgroundColour);
+    textRenderer = new TextRenderer(String(FONT_PATH), textColour, backgroundColour,
+                                    backgroundColour, CHARACTER_SPACING);
 }
 
 Terminal::~Terminal()

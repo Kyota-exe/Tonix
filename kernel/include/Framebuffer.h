@@ -7,6 +7,8 @@ class Framebuffer
 public:
     static void PlotPixel(unsigned int x, unsigned int y, Colour colour);
     static void Initialize();
+    static long Width();
+    static long Height();
 private:
     static uint32_t* virtAddr;
     static uint16_t width;
