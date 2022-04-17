@@ -40,17 +40,17 @@ PSF2Font::PSF2Font(const String &path)
     VFS::kernelVfs->Close(fontFile);
 }
 
-PSF2Glyph PSF2Font::GetGlyphBitmap(char c)
+PSF2Glyph PSF2Font::GetGlyphBitmap(char c) const
 {
-    return {glyphBuffer + (c * header->charSize), header->charSize, this};
+    return {glyphBuffer + (c * header->charSize), header->charSize, Width(), Height()};
 }
 
-uint32_t PSF2Font::Height()
+uint32_t PSF2Font::Height() const
 {
     return header->height;
 }
 
-uint32_t PSF2Font::Width()
+uint32_t PSF2Font::Width() const
 {
     return header->width;
 }

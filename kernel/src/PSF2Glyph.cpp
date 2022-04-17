@@ -1,17 +1,17 @@
 #include "PSF2Glyph.h"
 
-PSF2Glyph::PSF2Glyph(uint8_t* glyphBuffer, uint32_t size_, PSF2Font* psf2Font)
+PSF2Glyph::PSF2Glyph(uint8_t* buffer, uint32_t size, unsigned int width, unsigned int height) :
+    width(width), height(height)
 {
-    buffer = glyphBuffer;
-    size = size_;
-    firstIsLeft = true;
-    font = psf2Font;
+    bitmap.buffer = buffer;
+    bitmap.size = size;
+    bitmap.firstIsLeft = true;
 }
 
-bool PSF2Glyph::GetPixel(unsigned int x, unsigned int y)
+bool PSF2Glyph::GetPixel(unsigned int x, unsigned int y) const
 {
-    uint64_t padding = font->Width() % 8;
+    uint64_t padding = width % 8;
     uint64_t accumulatedPadding = padding == 0 ? 0 : (8 - padding) * y;
-    uint64_t index = y * font->Width() + x + accumulatedPadding;
-    return GetBit(index);
+    uint64_t index = y * width + x + accumulatedPadding;
+    return bitmap.GetBit(index);
 }

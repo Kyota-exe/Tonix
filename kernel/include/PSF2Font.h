@@ -9,9 +9,9 @@ class PSF2Font;
 class PSF2Font
 {
 public:
-    PSF2Glyph GetGlyphBitmap(char c);
-    uint32_t Height();
-    uint32_t Width();
+    PSF2Glyph GetGlyphBitmap(char c) const;
+    uint32_t Height() const;
+    uint32_t Width() const;
 
     explicit PSF2Font(const String& path);
     ~PSF2Font();

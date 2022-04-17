@@ -1,15 +1,14 @@
 #pragma once
 
-class PSF2Glyph;
-
 #include "Bitmap.h"
-#include "PSF2Font.h"
 
-class PSF2Glyph : Bitmap
+class PSF2Glyph
 {
 public:
-    bool GetPixel(unsigned int x, unsigned int y);
-    PSF2Glyph(uint8_t* glyphBuffer, uint32_t size_, PSF2Font* psf2Font);
+    bool GetPixel(unsigned int x, unsigned int y) const;
+    PSF2Glyph(uint8_t* buffer, uint32_t size, unsigned int width, unsigned int height);
 private:
-    PSF2Font* font;
+    Bitmap bitmap;
+    unsigned int width;
+    unsigned int height;
 };
