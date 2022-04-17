@@ -4,9 +4,7 @@
 #include "Vector.h"
 #include "Scheduler.h"
 
-const char* FONT_PATH = "/fonts/Uni2-Terminus20x10.psf";
-constexpr int CHARACTER_SPACING = 0;
-constexpr uint64_t BUFFER_SIZE = 2048;
+constexpr uint64_t INPUT_BUFFER_SIZE = 2048;
 
 Terminal* Terminal::instance = nullptr;
 
@@ -36,7 +34,7 @@ uint64_t Terminal::Read(void* buffer, uint64_t count)
 
 uint64_t Terminal::Write(const void* buffer, uint64_t count)
 {
-    textRenderer->Print(String(reinterpret_cast<const char*>(buffer), count));
+    Print(String(reinterpret_cast<const char*>(buffer), count));
     return count;
 }
 
@@ -49,11 +47,11 @@ void Terminal::InputCharacter(char c)
     }
     else
     {
-        Assert(currentBufferLength < BUFFER_SIZE);
+        Assert(currentBufferLength < INPUT_BUFFER_SIZE);
         inputBuffer[currentBufferLength++] = c;
     }
 
-    textRenderer->Print(String(c));
+    Print(String(c));
 
     if (c == '\n' && unblockQueue.GetLength() > 0)
     {
@@ -61,18 +59,18 @@ void Terminal::InputCharacter(char c)
     }
 }
 
-Terminal::Terminal(const String& name, uint32_t inodeNum) : Device(name, inodeNum)
+Terminal::Terminal(const String& name, uint32_t inodeNum) : Device(name, inodeNum),
+    textRenderer(new TextRenderer()),
+    backgroundColour(Colour(0, 0, 0)),
+    textColour(Colour(255, 255, 255)),
+    textBgColour(Colour(0, 0, 0)),
+    cursorX(0), cursorY(0)
 {
     Assert(instance == nullptr);
     instance = this;
 
-    inputBuffer = new char[BUFFER_SIZE];
+    inputBuffer = new char[INPUT_BUFFER_SIZE];
     currentBufferLength = 0;
-
-    auto textColour = Colour(255, 255, 255);
-    auto backgroundColour = Colour(0, 0, 0);
-    textRenderer = new TextRenderer(String(FONT_PATH), textColour, backgroundColour,
-                                    backgroundColour, CHARACTER_SPACING);
 }
 
 Terminal::~Terminal()
@@ -80,4 +78,169 @@ Terminal::~Terminal()
     delete inputBuffer;
     delete textRenderer;
     instance = nullptr;
+}
+
+void Terminal::Print(const String& string)
+{
+    // Erase previous cursor
+    textRenderer->Paint(cursorX, cursorY, backgroundColour);
+
+    uint64_t currentIndex = 0;
+    while (currentIndex < string.GetLength())
+    {
+        char c = string[currentIndex++];
+
+        bool eraseCharacter = false;
+
+        switch (c)
+        {
+            case '\n': // Line Feed
+            {
+                cursorY += textRenderer->FontHeight();
+                cursorX = 0;
+                break;
+            }
+            case '\b': // Backspace
+            {
+                cursorX -= textRenderer->FontWidth();
+                eraseCharacter = true;
+                break;
+            }
+            case '\t': // Horizontal Tab
+            {
+                cursorX += textRenderer->FontWidth() * 4;
+                break;
+            }
+            case '\a': // Terminal Bell
+            {
+                Panic();
+            }
+            case '\033': // Escape
+            {
+                bool hasCSI = string.Match(currentIndex, '[');
+                if (hasCSI) currentIndex++;
+
+                Vector<unsigned int> arguments;
+                do
+                {
+                    String numberString;
+                    while (string.IsNumeric(currentIndex))
+                    {
+                        numberString.Push(string[currentIndex++]);
+                    }
+
+                    Assert(numberString.GetLength() > 0);
+                    arguments.Push(numberString.ToUnsignedInt());
+
+                } while (string.Match(currentIndex++, ';'));
+
+                currentIndex--;
+
+                Assert(currentIndex < string.GetLength());
+                char command = string[currentIndex++];
+
+                ProcessEscapeSequence(command, hasCSI, arguments);
+                break;
+            }
+            default:
+            {
+                textRenderer->Print(c, cursorX, cursorY, textColour, textBgColour);
+                cursorX += textRenderer->FontWidth();
+            }
+        }
+
+        Assert(cursorX >= 0);
+        Assert(cursorY >= 0);
+        Assert(cursorY < textRenderer->ScreenHeight());
+
+        if (eraseCharacter)
+        {
+            textRenderer->Paint(cursorX, cursorY, backgroundColour);
+        }
+    }
+
+    // Render cursor
+    textRenderer->Print('_', cursorX, cursorY, textColour, backgroundColour);
+}
+
+void Terminal::ProcessEscapeSequence(char command, bool hasCSI, const Vector<unsigned int> &arguments)
+{
+    uint64_t argCount = arguments.GetLength();
+
+    if (hasCSI)
+    {
+        switch (command)
+        {
+            case 'H':
+                if (argCount == 0) { cursorX = cursorY = 0; break; }
+                Assert(argCount == 2);
+                cursorY = arguments.Get(0) * textRenderer->FontHeight();
+                cursorX = arguments.Get(1) * textRenderer->FontWidth();
+                break;
+            case 'f':
+                Assert(argCount == 2);
+                cursorY = arguments.Get(0) * textRenderer->FontHeight();
+                cursorX = arguments.Get(1) * textRenderer->FontWidth();
+                break;
+            case 'A':
+                Assert(argCount == 1);
+                cursorY -= arguments.Get(0) * textRenderer->FontHeight();
+                break;
+            case 'B':
+                Assert(argCount == 1);
+                cursorY += arguments.Get(0) * textRenderer->FontHeight();
+                break;
+            case 'C':
+                Assert(argCount == 1);
+                cursorX += arguments.Get(0) * textRenderer->FontWidth();
+                break;
+            case 'D':
+                Assert(argCount == 1);
+                cursorX -= arguments.Get(0) * textRenderer->FontWidth();
+                break;
+            case 'E':
+                Assert(argCount == 1);
+                cursorY += arguments.Get(0) * textRenderer->FontHeight();
+                cursorX = 0;
+                break;
+            case 'F':
+                Assert(argCount == 1);
+                cursorY -= arguments.Get(0) * textRenderer->FontHeight();
+                cursorX = 0;
+                break;
+            case 'G':
+                Assert(argCount == 1);
+                cursorX = arguments.Get(0) * textRenderer->FontWidth();
+                break;
+            case 'm':
+                for (unsigned int arg : arguments)
+                {
+                    switch (arg)
+                    {
+                        case 30 ... 39:
+                            textColour = Colour::FromANSICode(arg);
+                            break;
+                        case 40 ... 49:
+                            backgroundColour = Colour::FromANSICode(arg);
+                            break;
+                        default:
+                            Panic();
+                    }
+                }
+                break;
+            default:
+                Panic();
+        }
+    }
+    else
+    {
+        switch (command)
+        {
+            case 'M':
+                cursorY -= textRenderer->FontHeight();
+                break;
+            default:
+                Panic();
+        }
+    }
 }
