@@ -96,8 +96,9 @@ void Terminal::Print(const String& string)
         {
             case '\n': // Line Feed
             {
-                cursorY += textRenderer->FontHeight();
+                nextCursorXPerLine.Push(cursorX);
                 cursorX = 0;
+                cursorY += textRenderer->FontHeight();
                 break;
             }
             case '\b': // Backspace
@@ -147,6 +148,21 @@ void Terminal::Print(const String& string)
                 textRenderer->Print(c, cursorX, cursorY, textColour, textBgColour);
                 cursorX += textRenderer->FontWidth();
             }
+        }
+
+        // Right edge cursor wrapping
+        if (cursorX + textRenderer->FontWidth() > textRenderer->ScreenWidth())
+        {
+            nextCursorXPerLine.Push(cursorX - textRenderer->FontWidth());
+            cursorX = 0;
+            cursorY += textRenderer->FontHeight();
+        }
+        // Left edge cursor wrapping
+        else if (cursorX < 0)
+        {
+            Assert(nextCursorXPerLine.GetLength() > 0);
+            cursorX = nextCursorXPerLine.Pop();
+            cursorY -= textRenderer->FontHeight();
         }
 
         Assert(cursorX >= 0);

@@ -33,4 +33,6 @@ private:
 
     char* inputBuffer;
     uint64_t currentBufferLength;
+
+    Vector<long> nextCursorXPerLine;
 };
