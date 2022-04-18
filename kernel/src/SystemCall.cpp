@@ -59,7 +59,7 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             VnodeType vnodeType = scheduler->currentTask.vfs->GetVnodeType((int)arg0, error);
 
             // Assuming all VFS character devices are terminals
-            if (vnodeType != VnodeType::VFSCharacterDevice)
+            if (error == Error::None && vnodeType != VnodeType::VFSCharacterDevice)
             {
                 error = Error::NotTerminal;
             }
