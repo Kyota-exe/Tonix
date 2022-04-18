@@ -1,14 +1,15 @@
-From 6a61b97d0df3b3d18dfcb470f382fdf68295918c Mon Sep 17 00:00:00 2001
+From ef231863469376d06524601387c31586d9fa8d33 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
-Date: Sun, 6 Mar 2022 21:03:38 -0500
-Subject: [PATCH] mlibc tonix port
+Date: Sun, 17 Apr 2022 20:02:37 -0400
+Subject: [PATCH 1/1] mlibc tonix port
 
 ---
  meson.build                                  |   4 +
+ options/rtdl/generic/linker.cpp              |   6 +-
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++++
- sysdeps/tonix/generic/Generic.cpp            | 188 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 187 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -35,9 +36,9 @@ Subject: [PATCH] mlibc tonix port
  sysdeps/tonix/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
  sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 ++
- sysdeps/tonix/include/tonix/SystemCall.h     |  79 ++++++++
+ sysdeps/tonix/include/tonix/SystemCall.h     |  80 ++++++++
  sysdeps/tonix/meson.build                    |  51 +++++
- 33 files changed, 401 insertions(+), 2 deletions(-)
+ 34 files changed, 404 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -85,8 +86,25 @@ index 6c7b4073..6a12e308 100644
  else
  	error('No sysdeps defined for OS: ' + host_machine.system())
  endif
+diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
+index fb301343..6d5b5362 100644
+--- a/options/rtdl/generic/linker.cpp
++++ b/options/rtdl/generic/linker.cpp
+@@ -12,9 +12,9 @@
+ 
+ uintptr_t libraryBase = 0x41000000;
+ 
+-bool verbose = false;
+-bool stillSlightlyVerbose = false;
+-bool logBaseAddresses = false;
++bool verbose = true;
++bool stillSlightlyVerbose = true;
++bool logBaseAddresses = true;
+ bool eagerBinding = true;
+ 
+ #if defined(__x86_64__)
 diff --git a/options/rtdl/generic/main.cpp b/options/rtdl/generic/main.cpp
-index bed8e11d..322dbf77 100644
+index 86c9e00c..976b6500 100644
 --- a/options/rtdl/generic/main.cpp
 +++ b/options/rtdl/generic/main.cpp
 @@ -14,8 +14,8 @@
@@ -155,10 +173,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..5d1af8b5
+index 00000000..12bef3c1
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,188 @@
+@@ -0,0 +1,187 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -244,20 +262,20 @@ index 00000000..5d1af8b5
 +    }
 +
 +    int sys_tcb_set(void* pointer)
-+	{
++    {
 +        SystemCall(SystemCallID::TCBSet, pointer);
-+		return 0;
++        return 0;
 +    }
 +
 +    int sys_anon_allocate(size_t size, void** pointer)
-+	{
-+		return sys_vm_map(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0, pointer);
++    {
++        return sys_vm_map(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0, pointer);
 +    }
 +
 +    int sys_anon_free(void* pointer, size_t size)
-+	{
++    {
 +        SystemCall(SystemCallID::NotImplemented, pointer, size);
-+		return 0;
++        return 0;
 +    }
 +
 +    int sys_isatty(int fd)
@@ -271,78 +289,77 @@ index 00000000..5d1af8b5
 +
 +#ifndef MLIBC_BUILDING_RTDL
 +    void sys_exit(int status)
-+	{
++    {
 +        SystemCall(SystemCallID::Exit, status);
 +    }
 +#endif
 +
 +#ifndef MLIBC_BUILDING_RTDL
 +    int sys_clock_get(int clock, time_t *secs, long *nanos)
-+	{
++    {
 +        SystemCall(SystemCallID::NotImplemented, secs, nanos);
-+		return 0;
++        return 0;
 +    }
 +#endif
 +
 +    int sys_vm_unmap(void* pointer, size_t size)
-+	{
++    {
 +        return sys_anon_free(pointer, size);
 +    }
 +
 +    int sys_futex_wait(int* pointer, int expected, const timespec* time)
 +    {
-+	    SystemCall(SystemCallID::NotImplemented, pointer, expected, time);
-+	    return 0;
-+	}
++        SystemCall(SystemCallID::NotImplemented, pointer, expected, time);
++        return 0;
++    }
 +
 +    int sys_futex_wake(int* pointer)
-+	{
-+		SystemCall(SystemCallID::NotImplemented, pointer);
-+	    return 0;
++    {
++        SystemCall(SystemCallID::NotImplemented, pointer);
++        return 0;
 +    }
 +
 +// All remaining functions are disabled in ldso.
 +#ifndef MLIBC_BUILDING_RTDL
 +
 +    int sys_clone(void* entry, void* user_arg, void* tcb, pid_t* tid_out)
-+	{
++    {
 +        SystemCall(SystemCallID::NotImplemented, entry, user_arg, tcb, tid_out);
-+		return 0;
++        return 0;
 +    }
 +
 +    void sys_thread_exit()
-+	{
++    {
 +        SystemCall(SystemCallID::NotImplemented);
 +    }
 +
 +    int sys_sleep(time_t* secs, long* nanos)
-+	{
-+        SystemCall(SystemCallID::NotImplemented, secs, nanos);
-+		return 0;
++    {
++        return SystemCall(SystemCallID::Sleep, *secs, *nanos);
 +    }
 +
 +    int sys_fork(pid_t* child)
-+	{
++    {
 +        SystemCall(SystemCallID::NotImplemented, child);
-+		return 0;
++        return 0;
 +    }
 +
 +    int sys_execve(const char* path, char* const argv[], char* const envp[])
-+	{
++    {
 +        SystemCall(SystemCallID::NotImplemented, path, argv, envp);
-+		return 0;
++        return 0;
 +    }
 +
 +    pid_t sys_getpid()
-+	{
++    {
 +        SystemCall(SystemCallID::NotImplemented);
-+		return 0;
++        return 0;
 +    }
 +
 +    pid_t sys_getppid()
-+	{
++    {
 +        SystemCall(SystemCallID::NotImplemented);
-+		return 0;
++        return 0;
 +    }
 +
 +#endif // MLIBC_BUILDING_RTDL
@@ -568,10 +585,10 @@ index 00000000..9bda0961
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/tonix/SystemCall.h b/sysdeps/tonix/include/tonix/SystemCall.h
 new file mode 100644
-index 00000000..cd572101
+index 00000000..43591cc1
 --- /dev/null
 +++ b/sysdeps/tonix/include/tonix/SystemCall.h
-@@ -0,0 +1,79 @@
+@@ -0,0 +1,80 @@
 +#pragma once
 +
 +#include <sys/types.h>
@@ -586,6 +603,7 @@ index 00000000..cd572101
 +    FileMap = 5,
 +    TCBSet = 6,
 +    Exit = 8,
++    Sleep = 9,
 +    IsTerminal = 19,
 +    Panic = 254,
 +    Log = 255,
