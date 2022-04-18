@@ -17,9 +17,6 @@ constexpr uint64_t SYSCALL_STACK_PAGE_COUNT = 3;
 Vector<Task>* taskQueue;
 Spinlock taskQueueLock;
 
-Vector<CPU>* cpuList;
-Spinlock cpuListLock;
-
 Task CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPtr, bool userTask, bool setPid)
 {
     Task task {};
@@ -160,6 +157,9 @@ extern "C" void InitializeCore(stivale2_smp_info* smpInfoPtr)
     GDT::LoadGDTR();
     IDT::Load();
 
+    // Write core ID in IA32_TSC_AUX so that CPU::GetCoreID can get it
+    asm volatile ("wrmsr" : : "c"(0xc0000103), "a"(smpInfoPtr->lapic_id), "d"(0));
+
     tssInitLock.Acquire();
     TSS* tss = TSS::Initialize();
     GDT::LoadTSS(tss);
@@ -168,34 +168,25 @@ extern "C" void InitializeCore(stivale2_smp_info* smpInfoPtr)
     auto scheduler = new Scheduler(tss);
     scheduler->ConfigureTimerClosestExpiry();
 
-    cpuListLock.Acquire();
-    cpuList->Get(smpInfoPtr->lapic_id) = {scheduler};
-    cpuListLock.Release();
-
-    // Write core ID in IA32_TSC_AUX so that CPU::GetCoreID can get it
-    asm volatile ("wrmsr" : : "c"(0xc0000103), "a"(smpInfoPtr->lapic_id), "d"(0));
-
+    CPU::InitializeCPUStruct(scheduler);
     CPU::EnableSSE();
+
     asm volatile("sti");
     while (true) asm("hlt");
 }
 
 void Scheduler::StartCores(TSS* bspTss)
 {
-    Assert(cpuList == nullptr);
-    cpuList = new Vector<CPU>();
+    auto smpStruct = reinterpret_cast<stivale2_struct_tag_smp*>(GetStivale2Tag(STIVALE2_STRUCT_TAG_SMP_ID));
+    CPU::InitializeCPUList(smpStruct->cpu_count);
+
+    Assert(CPU::GetCoreID() == 0);
 
     auto bspScheduler = new Scheduler(bspTss);
-    cpuList->Push({bspScheduler});
+    CPU::InitializeCPUStruct(bspScheduler);
 
-    auto smpStruct = reinterpret_cast<stivale2_struct_tag_smp*>(GetStivale2Tag(STIVALE2_STRUCT_TAG_SMP_ID));
     if (smpStruct->cpu_count > 1)
     {
-        for (uint64_t i = 0; i < smpStruct->cpu_count - 1; ++i)
-        {
-            cpuList->Push({nullptr});
-        }
-
         for (uint64_t coreIndex = 0; coreIndex < smpStruct->cpu_count; ++coreIndex)
         {
             stivale2_smp_info& smpInfo = smpStruct->smp_info[coreIndex];
@@ -255,7 +246,7 @@ Scheduler* Scheduler::GetScheduler()
 {
     // This isn't a race condition, assuming all the cores have
     // pushed their struct onto cpuList. (meaning more won't be added)
-    return cpuList->Get(CPU::GetCoreID()).scheduler;
+    return CPU::GetStruct().scheduler;
 }
 
 Scheduler::Scheduler(TSS* tss) : lapic(new LAPIC()), tss(tss)
