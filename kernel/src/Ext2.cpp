@@ -45,7 +45,8 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
 {
     Serial::Print("Initializing Ext2 file system...");
 
-    disk->AllocateRead(EXT2_SUPERBLOCK_DISK_ADDR, reinterpret_cast<void**>(&superblock), sizeof(Ext2Superblock));
+    superblock = new Ext2Superblock;
+    disk->Read(EXT2_SUPERBLOCK_DISK_ADDR, superblock, sizeof(Ext2Superblock));
 
     Assert(superblock->ext2Signature == EXT2_SIGNATURE);
     Assert(superblock->fileSystemState == 1);
@@ -84,8 +85,9 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
     Serial::Printf("Number of blocks to preallocate for files: %d", superblock->preallocFilesBlocksCount);
     Serial::Printf("Number of blocks to preallocate for directories: %d", superblock->preallocDirectoriesBlocksCount);
 
+    blockGroupDescTable = new Ext2BlockGroupDescriptor[blockGroupsCount];
     uint32_t blockGroupDescTableDiskAddr = blockSize * (blockSize == 1024 ? 2 : 1);
-    disk->AllocateRead(blockGroupDescTableDiskAddr, reinterpret_cast<void**>(&blockGroupDescTable), sizeof(Ext2BlockGroupDescriptor) * blockGroupsCount);
+    disk->Read(blockGroupDescTableDiskAddr, blockGroupDescTable, sizeof(Ext2BlockGroupDescriptor) * blockGroupsCount);
 
     fileSystemRoot = new Vnode();
     fileSystemRoot->type = VFSDirectory;
@@ -94,22 +96,24 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
 
     Ext2Inode* rootInode = GetInode(INODE_ROOT_DIR);
     fileSystemRoot->context = rootInode;
+    Assert(rootInode->size1 == 0);
     fileSystemRoot->fileSize = rootInode->size0;
 
     VFS::CacheVNode(fileSystemRoot);
 }
 
-Vnode* Ext2::CacheDirectoryEntry(Ext2DirectoryEntry* directoryEntry)
+Vnode* Ext2::CacheDirectoryEntry(const Ext2DirectoryEntry& directoryEntry)
 {
     auto vnode = new Vnode();
-    vnode->inodeNum = directoryEntry->inodeNum;
+    vnode->inodeNum = directoryEntry.inodeNum;
     vnode->fileSystem = this;
 
     Ext2Inode* childInode = GetInode(vnode->inodeNum);
     vnode->context = childInode;
+    Assert(childInode->size1 == 0);
     vnode->fileSize = childInode->size0;
 
-    switch (directoryEntry->typeIndicator)
+    switch (directoryEntry.typeIndicator)
     {
         case DEntryRegularFile:
             vnode->type = VFSRegularFile;
@@ -128,7 +132,8 @@ Vnode* Ext2::CacheDirectoryEntry(Ext2DirectoryEntry* directoryEntry)
 
 Vnode* Ext2::FindInDirectory(Vnode* directory, const String& name)
 {
-    auto context = (Ext2Inode*)directory->context;
+    auto context = reinterpret_cast<Ext2Inode*>(directory->context);
+    Assert(context->size1 == 0);
 
     uint64_t parsedLength = 0;
     while (parsedLength < context->size0)
@@ -143,7 +148,7 @@ Vnode* Ext2::FindInDirectory(Vnode* directory, const String& name)
             // SearchInCache returns nullptr if it could not find vnode in cache
             if (child == nullptr)
             {
-                child = CacheDirectoryEntry(&directoryEntry);
+                child = CacheDirectoryEntry(directoryEntry);
             }
 
             char nameBuffer[directoryEntry.nameLength];
@@ -162,37 +167,19 @@ Vnode* Ext2::FindInDirectory(Vnode* directory, const String& name)
         parsedLength += directoryEntry.entrySize;
     }
 
+    Serial::Print("[ext2]$$$$$$$$$$$$$ Failed to find ", "");
+    Serial::Print(name);
+
     return nullptr;
 }
 
 uint64_t Ext2::Read(Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos)
 {
-    // TODO: Support files larger than 2^32 bytes
     if (readPos + count > vnode->fileSize)
     {
         count = vnode->fileSize - readPos;
     }
-
-    uint64_t currentReadPos = readPos;
-    uint64_t parsedCount = 0;
-
-    while (parsedCount < count)
-    {
-        uint64_t remainingBytes = count - parsedCount;
-        uint64_t offsetInBlock = currentReadPos % blockSize;
-        uint64_t readSize = blockSize - offsetInBlock;
-        if (readSize > remainingBytes) readSize = remainingBytes;
-
-        uint32_t block = GetBlockAddr(vnode, currentReadPos / blockSize, false);
-        uint64_t diskAddr = block * blockSize + offsetInBlock;
-
-        disk->Read(diskAddr, reinterpret_cast<void*>((uintptr_t)buffer + parsedCount), readSize);
-
-        parsedCount += readSize;
-        currentReadPos += readSize;
-    }
-
-    return parsedCount;
+    return DiskOperation(Ext2IOType::Read, vnode, buffer, count, readPos);
 }
 
 uint64_t Ext2::Read(uint32_t block, void* buffer, uint64_t count, uint64_t readPos)
@@ -205,34 +192,52 @@ uint64_t Ext2::Read(uint32_t block, void* buffer, uint64_t count, uint64_t readP
 
 uint64_t Ext2::Write(Vnode* vnode, const void* buffer, uint64_t count, uint64_t writePos)
 {
-    uint64_t currentWritePos = writePos;
-    uint64_t wroteCount = 0;
-
-    while (wroteCount < count)
+    uint64_t wroteCount = DiskOperation(Ext2IOType::Write, vnode, const_cast<void*>(buffer), count, writePos);
+    uint64_t newSize = writePos + wroteCount;
+    if (vnode->fileSize < writePos + wroteCount)
     {
-        uint64_t remainingBytes = count - wroteCount;
-        uint64_t offsetInBlock = currentWritePos % blockSize;
-        uint64_t writeSize = blockSize - offsetInBlock;
-        if (writeSize > remainingBytes) writeSize = remainingBytes;
-
-        uint64_t block = GetBlockAddr(vnode, currentWritePos / blockSize, true);
-        uint64_t diskAddr = block * blockSize + offsetInBlock;
-
-        disk->Write(diskAddr, reinterpret_cast<const void*>((uintptr_t)buffer + wroteCount), writeSize);
-
-        wroteCount += writeSize;
-        currentWritePos += writeSize;
-
-        if (vnode->fileSize < currentWritePos)
-        {
-            // TODO: Write to disk if file system is disk-backed
-            auto context = reinterpret_cast<Ext2Inode*>(vnode->context);
-            context->size0 = currentWritePos;
-            vnode->fileSize = currentWritePos;
-        }
+        auto context = reinterpret_cast<Ext2Inode*>(vnode->context);
+        Assert(context->size1 == 0);
+        context->size0 = newSize;
+        vnode->fileSize = newSize;
     }
 
     return wroteCount;
+}
+
+uint64_t Ext2::DiskOperation(Ext2IOType ioType, Vnode* vnode, void* buffer, uint64_t count, uint64_t position)
+{
+    uint64_t currentPos = position;
+    uint64_t completedCount = 0;
+
+    while (completedCount < count)
+    {
+        uint64_t remainingCount = count - completedCount;
+        uint64_t offsetInBlock = currentPos % blockSize;
+        uint64_t ioSize = blockSize - offsetInBlock;
+        if (ioSize > remainingCount) ioSize = remainingCount;
+
+        bool allocateMissingBlock = ioType == Ext2IOType::Write;
+        uint64_t block = GetBlockAddr(vnode, currentPos / blockSize, allocateMissingBlock);
+        uint64_t diskAddr = block * blockSize + offsetInBlock;
+        uintptr_t bufferAddr = reinterpret_cast<uintptr_t>(buffer) + completedCount;
+
+        switch (ioType)
+        {
+            case Ext2IOType::Read:
+                disk->Read(diskAddr, reinterpret_cast<void*>(bufferAddr), ioSize);
+                break;
+            case Ext2IOType::Write:
+                disk->Write(diskAddr, reinterpret_cast<const void*>(bufferAddr), ioSize);
+                break;
+            default: Panic();
+        }
+
+        completedCount += ioSize;
+        currentPos += ioSize;
+    }
+
+    return completedCount;
 }
 
 void Ext2::Create(Vnode* vnode, Vnode* directory, const String& name)
@@ -241,43 +246,8 @@ void Ext2::Create(Vnode* vnode, Vnode* directory, const String& name)
 
     Assert(directoryContext->typePermissions & Directory);
 
-    // Find unallocated inode
-    Ext2Inode* inode = nullptr;
-    uint32_t inodeNum = 0;
-    Ext2BlockGroupDescriptor* blockGroup;
-
-    for (uint32_t blockGroupIndex = 0; blockGroupIndex < blockGroupsCount; ++blockGroupIndex)
-    {
-        blockGroup = &blockGroupDescTable[blockGroupIndex];
-        if (blockGroup->unallocatedInodesCount > 0)
-        {
-            uint64_t inodeUsageBitmapSize = blockGroup->unallocatedInodesCount / 8;
-            if (blockGroup->unallocatedInodesCount % 8 != 0) inodeUsageBitmapSize++;
-
-            Bitmap inodeUsageBitmap;
-            disk->AllocateRead(blockGroup->inodeUsageBitmapBlock * blockSize, reinterpret_cast<void**>(&inodeUsageBitmap.buffer), inodeUsageBitmapSize);
-            inodeUsageBitmap.size = inodeUsageBitmapSize;
-
-            for (uint32_t inodeIndex = 0; inodeIndex < inodeUsageBitmap.size * 8; ++inodeIndex)
-            {
-                if (!inodeUsageBitmap.GetBit(inodeIndex))
-                {
-                    inodeNum = blockGroupIndex * superblock->inodesPerBlockGroup + inodeIndex + 1;
-                    inode = GetInode(inodeNum);
-
-                    inodeUsageBitmap.SetBit(inodeIndex, true);
-
-                    blockGroup->unallocatedInodesCount--;
-                    superblock->unallocatedInodesCount--;
-
-                    goto FoundUnallocatedInode;
-                }
-            }
-        }
-    }
-
-    FoundUnallocatedInode:
-
+    uint32_t inodeNum = Allocate(Ext2AllocationType::Inode);
+    Ext2Inode* inode = GetInode(inodeNum);
     Assert(inode != nullptr && inodeNum != 0);
 
     // TODO: Support file ACL and other fields in ext2 directory
@@ -317,6 +287,7 @@ void Ext2::Create(Vnode* vnode, Vnode* directory, const String& name)
 void Ext2::Truncate(Vnode* vnode)
 {
     auto context = reinterpret_cast<Ext2Inode*>(vnode->context);
+    Assert(context->size1 == 0);
     context->size0 = 0;
     vnode->fileSize = 0;
 }
@@ -375,36 +346,82 @@ uint32_t Ext2::GetBlockAddr(Vnode* vnode, uint32_t requestedBlockIndex, bool all
 
     if (allocateMissingBlock && blockPtr == 0)
     {
-        // Find unallocated blockPtr
-        for (uint32_t blockGroupIndex = 0; blockGroupIndex < blockGroupsCount; ++blockGroupIndex)
-        {
-            Ext2BlockGroupDescriptor* blockGroup = &blockGroupDescTable[blockGroupIndex];
-            if (blockGroup->unallocatedBlocksCount > 0)
-            {
-                uint64_t blockUsageBitmapSize = blockGroup->unallocatedBlocksCount / 8;
-                if (blockGroup->unallocatedBlocksCount % 8 != 0) blockUsageBitmapSize++;
-
-                Bitmap blockUsageBitmap;
-                disk->AllocateRead(blockGroup->inodeUsageBitmapBlock * blockSize, reinterpret_cast<void**>(&blockUsageBitmap.buffer), blockUsageBitmapSize);
-                blockUsageBitmap.size = blockUsageBitmapSize;
-
-                for (uint32_t blockIndex = 0; blockIndex < blockUsageBitmap.size * 8; ++blockIndex)
-                {
-                    if (!blockUsageBitmap.GetBit(blockIndex))
-                    {
-                        blockPtr = blockGroupIndex * superblock->blocksPerBlockGroup + blockIndex;
-                        blockUsageBitmap.SetBit(blockIndex, true);
-                        blockGroup->unallocatedBlocksCount--;
-                        superblock->unallocatedBlocksCount--;
-                        context->directBlockPointers[requestedBlockIndex] = blockPtr;
-                        return blockPtr;
-                    }
-                }
-            }
-        }
+        blockPtr = Allocate(Ext2AllocationType::Block);
+        Assert(requestedBlockIndex < 12);
+        context->directBlockPointers[requestedBlockIndex] = blockPtr;
     }
 
     return blockPtr;
+}
+
+uint32_t Ext2::Allocate(Ext2AllocationType allocationType)
+{
+    uint32_t object;
+
+    for (uint32_t blockGroupIndex = 0; blockGroupIndex < blockGroupsCount; ++blockGroupIndex)
+    {
+        Ext2BlockGroupDescriptor& blockGroup = blockGroupDescTable[blockGroupIndex];
+        if (blockGroup.unallocatedBlocksCount > 0)
+        {
+            uint64_t usageBitmapBlock;
+            uint64_t objectsPerBlockGroup;
+            switch (allocationType)
+            {
+                case Ext2AllocationType::Inode:
+                    usageBitmapBlock = blockGroup.inodeUsageBitmapBlock;
+                    objectsPerBlockGroup = superblock->inodesPerBlockGroup;
+                    break;
+                case Ext2AllocationType::Block:
+                    usageBitmapBlock = blockGroup.blockUsageBitmapBlock;
+                    objectsPerBlockGroup = superblock->blocksPerBlockGroup;
+                    break;
+                default: Panic();
+            }
+
+            uint64_t usageBitmapSize = superblock->blocksPerBlockGroup / 8;
+            Assert(superblock->blocksPerBlockGroup % 8 == 0);
+
+            Bitmap usageBitmap;
+            usageBitmap.buffer = new uint8_t[usageBitmapSize];
+            uint64_t usageBitmapDiskAddr = usageBitmapBlock * blockSize;
+            disk->Read(usageBitmapDiskAddr, usageBitmap.buffer, usageBitmapSize);
+            usageBitmap.size = usageBitmapSize;
+
+            bool found = false;
+            for (uint32_t i = 0; i < usageBitmap.size * 8; ++i)
+            {
+                if (!usageBitmap.GetBit(i))
+                {
+                    object = blockGroupIndex * objectsPerBlockGroup + i;
+
+                    usageBitmap.SetBit(i, true);
+                    disk->Write(usageBitmapDiskAddr, usageBitmap.buffer, usageBitmapSize);
+
+                    switch (allocationType)
+                    {
+                        case Ext2AllocationType::Inode:
+                            blockGroup.unallocatedInodesCount--;
+                            superblock->unallocatedInodesCount--;
+                            object++; // Inode numbers start from 1
+                            break;
+                        case Ext2AllocationType::Block:
+                            blockGroup.unallocatedBlocksCount--;
+                            superblock->unallocatedBlocksCount--;
+                            break;
+                        default: Panic();
+                    }
+
+                    found = true;
+                    break;
+                }
+            }
+
+            delete[] usageBitmap.buffer;
+            if (found) break;
+        }
+    }
+
+    return object;
 }
 
 Ext2Inode* Ext2::GetInode(uint32_t inodeNum)
@@ -416,8 +433,15 @@ Ext2Inode* Ext2::GetInode(uint32_t inodeNum)
     uint64_t inodeTableDiskAddr = blockGroupDescTable[blockGroupIndex].inodeTableStartBlock * blockSize;
     uint64_t diskAddr = inodeTableDiskAddr + (inodeIndex * superblock->inodeSize);
 
-    Ext2Inode* inode = nullptr;
-    disk->AllocateRead(diskAddr, reinterpret_cast<void**>(&inode), sizeof(Ext2Inode));
+    auto inode = new Ext2Inode;
+    disk->Read(diskAddr, inode, sizeof(Ext2Inode));
 
     return inode;
+}
+
+Ext2::~Ext2()
+{
+    delete superblock;
+    delete[] blockGroupDescTable;
+    Panic();
 }
