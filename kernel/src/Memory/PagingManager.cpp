@@ -28,7 +28,7 @@ void PagingManager::PopulatePagingStructureEntry(PageTableEntry& entry, uintptr_
     entry.SetFlag(PagingFlag::UserAllowed, user);
 }
 
-PageTable* PagingManager::AllocatePagingStructure(PageTableEntry& entry, bool user)
+PagingManager::PageTable* PagingManager::AllocatePagingStructure(PageTableEntry& entry, bool user)
 {
     auto physAddr = RequestPageFrame();
 
@@ -183,25 +183,25 @@ uintptr_t PagingManager::GetTranslatedPhysAddr(const void* virtAddr)
     return physAddr;
 }
 
-void PageTableEntry::SetFlag(PagingFlag flag, bool enable)
+void PagingManager::PageTableEntry::SetFlag(PagingFlag flag, bool enable)
 {
     if (enable) value |= (1 << (uint64_t)flag);
     else value &= ~(1 << (uint64_t)flag);
 }
 
-bool PageTableEntry::GetFlag(PagingFlag flag) const
+bool PagingManager::PageTableEntry::GetFlag(PagingFlag flag) const
 {
     return value & (1 << (uint64_t)flag);
 }
 
-void PageTableEntry::SetPhysicalAddress(uint64_t physAddr)
+void PagingManager::PageTableEntry::SetPhysicalAddress(uint64_t physAddr)
 {
     physAddr &= 0x0000'fffffffff'000;
     value &=    0xffff'000000000'fff;
     value |= physAddr;
 }
 
-uint64_t PageTableEntry::GetPhysicalAddress() const
+uint64_t PagingManager::PageTableEntry::GetPhysicalAddress() const
 {
     return value & 0x0000'fffffffff'000;
 }

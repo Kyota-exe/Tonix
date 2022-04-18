@@ -1,17 +1,16 @@
 #include "Memory/Memory.h"
 #include "Memory/PageFrameAllocator.h"
 #include "Memory/PagingManager.h"
-#include "ELFLoader.h"
+#include "ELF.h"
 #include "VFS.h"
 #include "Serial.h"
-#include "ELF.h"
 
 constexpr uintptr_t USER_STACK_BASE = 0x0000'8000'0000'0000 - 0x1000;
 constexpr uintptr_t USER_STACK_SIZE = 0x2000;
 
 constexpr uintptr_t RTDL_ADDR = 0x40000000;
 
-void ELFLoader::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& entry, uintptr_t& stackPtr)
+void ELF::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& entry, uintptr_t& stackPtr)
 {
     int elfFile = VFS::kernelVfs->Open(path, 0);
 
@@ -127,8 +126,8 @@ void ELFLoader::LoadELF(const String& path, PagingManager* pagingManager, uintpt
     VFS::kernelVfs->Close(elfFile);
 }
 
-void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeader,
-                                  ELFHeader* elfHeader, PagingManager* pagingManager)
+void ELF::LoadProgramHeader(int elfFile, const ProgramHeader& programHeader,
+                            ELFHeader* elfHeader, PagingManager* pagingManager)
 {
     uint64_t segmentPagesCount = (programHeader.segmentSizeInMemory - 1) / 0x1000 + 1;
 

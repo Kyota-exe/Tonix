@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Colour.h"
-#include "PSF2Font.h"
+#include "PSF2.h"
 
 class TextRenderer
 {
@@ -15,5 +15,5 @@ public:
     TextRenderer();
     ~TextRenderer();
 private:
-    PSF2Font* font;
+    PSF2* font;
 };

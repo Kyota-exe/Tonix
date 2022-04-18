@@ -5,7 +5,7 @@
 #include "String.h"
 #include "RAMDisk.h"
 
-enum Ext2InodeTypePermissions : uint16_t
+enum InodeTypePermissions : uint16_t
 {
     // Types
     FIFO = 0x1000,
@@ -45,8 +45,8 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
 {
     Serial::Print("Initializing Ext2 file system...");
 
-    superblock = new Ext2Superblock;
-    disk->Read(EXT2_SUPERBLOCK_DISK_ADDR, superblock, sizeof(Ext2Superblock));
+    superblock = new Superblock;
+    disk->Read(EXT2_SUPERBLOCK_DISK_ADDR, superblock, sizeof(Superblock));
 
     Assert(superblock->ext2Signature == EXT2_SIGNATURE);
     Assert(superblock->fileSystemState == 1);
@@ -85,16 +85,16 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
     Serial::Printf("Number of blocks to preallocate for files: %d", superblock->preallocFilesBlocksCount);
     Serial::Printf("Number of blocks to preallocate for directories: %d", superblock->preallocDirectoriesBlocksCount);
 
-    blockGroupDescTable = new Ext2BlockGroupDescriptor[blockGroupsCount];
+    blockGroupDescTable = new BlockGroupDescriptor[blockGroupsCount];
     uint32_t blockGroupDescTableDiskAddr = blockSize * (blockSize == 1024 ? 2 : 1);
-    disk->Read(blockGroupDescTableDiskAddr, blockGroupDescTable, sizeof(Ext2BlockGroupDescriptor) * blockGroupsCount);
+    disk->Read(blockGroupDescTableDiskAddr, blockGroupDescTable, sizeof(BlockGroupDescriptor) * blockGroupsCount);
 
-    fileSystemRoot = new Vnode();
-    fileSystemRoot->type = VFSDirectory;
+    fileSystemRoot = new VFS::Vnode();
+    fileSystemRoot->type = VFS::VnodeType::Directory;
     fileSystemRoot->inodeNum = INODE_ROOT_DIR;
     fileSystemRoot->fileSystem = this;
 
-    Ext2Inode* rootInode = GetInode(INODE_ROOT_DIR);
+    Inode* rootInode = GetInode(INODE_ROOT_DIR);
     fileSystemRoot->context = rootInode;
     Assert(rootInode->size1 == 0);
     fileSystemRoot->fileSize = rootInode->size0;
@@ -102,13 +102,13 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
     VFS::CacheVNode(fileSystemRoot);
 }
 
-Vnode* Ext2::CacheDirectoryEntry(const Ext2DirectoryEntry& directoryEntry)
+VFS::Vnode* Ext2::CacheDirectoryEntry(const DirectoryEntry& directoryEntry)
 {
-    auto vnode = new Vnode();
+    auto vnode = new VFS::Vnode();
     vnode->inodeNum = directoryEntry.inodeNum;
     vnode->fileSystem = this;
 
-    Ext2Inode* childInode = GetInode(vnode->inodeNum);
+    Inode* childInode = GetInode(vnode->inodeNum);
     vnode->context = childInode;
     Assert(childInode->size1 == 0);
     vnode->fileSize = childInode->size0;
@@ -116,13 +116,13 @@ Vnode* Ext2::CacheDirectoryEntry(const Ext2DirectoryEntry& directoryEntry)
     switch (directoryEntry.typeIndicator)
     {
         case DEntryRegularFile:
-            vnode->type = VFSRegularFile;
+            vnode->type = VFS::VnodeType::RegularFile;
             break;
         case DEntryDirectory:
-            vnode->type = VFSDirectory;
+            vnode->type = VFS::VnodeType::Directory;
             break;
         default:
-            vnode->type = VFSUnknown;
+            vnode->type = VFS::VnodeType::Unknown;
     }
 
     VFS::CacheVNode(vnode);
@@ -130,20 +130,20 @@ Vnode* Ext2::CacheDirectoryEntry(const Ext2DirectoryEntry& directoryEntry)
     return vnode;
 }
 
-Vnode* Ext2::FindInDirectory(Vnode* directory, const String& name)
+VFS::Vnode* Ext2::FindInDirectory(VFS::Vnode* directory, const String& name)
 {
-    auto context = reinterpret_cast<Ext2Inode*>(directory->context);
+    auto context = reinterpret_cast<Inode*>(directory->context);
     Assert(context->size1 == 0);
 
     uint64_t parsedLength = 0;
     while (parsedLength < context->size0)
     {
-        Ext2DirectoryEntry directoryEntry {};
-        Read(directory, &directoryEntry, sizeof(Ext2DirectoryEntry), parsedLength);
+        DirectoryEntry directoryEntry {};
+        Read(directory, &directoryEntry, sizeof(DirectoryEntry), parsedLength);
 
         if (directoryEntry.inodeNum != 0)
         {
-            Vnode* child = VFS::SearchInCache(directoryEntry.inodeNum, this);
+            VFS::Vnode* child = VFS::SearchInCache(directoryEntry.inodeNum, this);
 
             // SearchInCache returns nullptr if it could not find vnode in cache
             if (child == nullptr)
@@ -173,13 +173,13 @@ Vnode* Ext2::FindInDirectory(Vnode* directory, const String& name)
     return nullptr;
 }
 
-uint64_t Ext2::Read(Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos)
+uint64_t Ext2::Read(VFS::Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos)
 {
     if (readPos + count > vnode->fileSize)
     {
         count = vnode->fileSize - readPos;
     }
-    return DiskOperation(Ext2IOType::Read, vnode, buffer, count, readPos);
+    return DiskOperation(IOType::Read, vnode, buffer, count, readPos);
 }
 
 uint64_t Ext2::Read(uint32_t block, void* buffer, uint64_t count, uint64_t readPos)
@@ -190,13 +190,13 @@ uint64_t Ext2::Read(uint32_t block, void* buffer, uint64_t count, uint64_t readP
     return count;
 }
 
-uint64_t Ext2::Write(Vnode* vnode, const void* buffer, uint64_t count, uint64_t writePos)
+uint64_t Ext2::Write(VFS::Vnode* vnode, const void* buffer, uint64_t count, uint64_t writePos)
 {
-    uint64_t wroteCount = DiskOperation(Ext2IOType::Write, vnode, const_cast<void*>(buffer), count, writePos);
+    uint64_t wroteCount = DiskOperation(IOType::Write, vnode, const_cast<void*>(buffer), count, writePos);
     uint64_t newSize = writePos + wroteCount;
     if (vnode->fileSize < writePos + wroteCount)
     {
-        auto context = reinterpret_cast<Ext2Inode*>(vnode->context);
+        auto context = reinterpret_cast<Inode*>(vnode->context);
         Assert(context->size1 == 0);
         context->size0 = newSize;
         vnode->fileSize = newSize;
@@ -205,7 +205,7 @@ uint64_t Ext2::Write(Vnode* vnode, const void* buffer, uint64_t count, uint64_t 
     return wroteCount;
 }
 
-uint64_t Ext2::DiskOperation(Ext2IOType ioType, Vnode* vnode, void* buffer, uint64_t count, uint64_t position)
+uint64_t Ext2::DiskOperation(IOType ioType, VFS::Vnode* vnode, void* buffer, uint64_t count, uint64_t position)
 {
     uint64_t currentPos = position;
     uint64_t completedCount = 0;
@@ -217,17 +217,17 @@ uint64_t Ext2::DiskOperation(Ext2IOType ioType, Vnode* vnode, void* buffer, uint
         uint64_t ioSize = blockSize - offsetInBlock;
         if (ioSize > remainingCount) ioSize = remainingCount;
 
-        bool allocateMissingBlock = ioType == Ext2IOType::Write;
+        bool allocateMissingBlock = ioType == IOType::Write;
         uint64_t block = GetBlockAddr(vnode, currentPos / blockSize, allocateMissingBlock);
         uint64_t diskAddr = block * blockSize + offsetInBlock;
         uintptr_t bufferAddr = reinterpret_cast<uintptr_t>(buffer) + completedCount;
 
         switch (ioType)
         {
-            case Ext2IOType::Read:
+            case IOType::Read:
                 disk->Read(diskAddr, reinterpret_cast<void*>(bufferAddr), ioSize);
                 break;
-            case Ext2IOType::Write:
+            case IOType::Write:
                 disk->Write(diskAddr, reinterpret_cast<const void*>(bufferAddr), ioSize);
                 break;
             default: Panic();
@@ -240,14 +240,14 @@ uint64_t Ext2::DiskOperation(Ext2IOType ioType, Vnode* vnode, void* buffer, uint
     return completedCount;
 }
 
-void Ext2::Create(Vnode* vnode, Vnode* directory, const String& name)
+void Ext2::Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name)
 {
-    auto directoryContext = reinterpret_cast<Ext2Inode*>(directory->context);
+    auto directoryContext = reinterpret_cast<Inode*>(directory->context);
 
     Assert(directoryContext->typePermissions & Directory);
 
-    uint32_t inodeNum = Allocate(Ext2AllocationType::Inode);
-    Ext2Inode* inode = GetInode(inodeNum);
+    uint32_t inodeNum = Allocate(AllocationType::Inode);
+    Inode* inode = GetInode(inodeNum);
     Assert(inode != nullptr && inodeNum != 0);
 
     // TODO: Support file ACL and other fields in ext2 directory
@@ -256,11 +256,11 @@ void Ext2::Create(Vnode* vnode, Vnode* directory, const String& name)
 
     switch (vnode->type)
     {
-        case VFSRegularFile:
+        case VFS::VnodeType::RegularFile:
             WriteDirectoryEntry(directory, inodeNum, name, DEntryRegularFile);
             inode->typePermissions = DEFAULT_FILE_TYPE_PERMISSIONS;
             break;
-        case VFSDirectory:
+        case VFS::VnodeType::Directory:
             WriteDirectoryEntry(directory, inodeNum, name, DEntryDirectory);
             inode->typePermissions = DEFAULT_DIRECTORY_TYPE_PERMISSIONS;
             break;
@@ -275,7 +275,7 @@ void Ext2::Create(Vnode* vnode, Vnode* directory, const String& name)
     vnode->context = inode;
     vnode->fileSize = inode->size0;
 
-    if (vnode->type == VFSDirectory)
+    if (vnode->type == VFS::VnodeType::Directory)
     {
         WriteDirectoryEntry(vnode, vnode->inodeNum, String("."), DEntryDirectory);
         WriteDirectoryEntry(vnode, directory->inodeNum, String(".."), DEntryDirectory);
@@ -284,27 +284,27 @@ void Ext2::Create(Vnode* vnode, Vnode* directory, const String& name)
     VFS::CacheVNode(vnode);
 }
 
-void Ext2::Truncate(Vnode* vnode)
+void Ext2::Truncate(VFS::Vnode* vnode)
 {
-    auto context = reinterpret_cast<Ext2Inode*>(vnode->context);
+    auto context = reinterpret_cast<Inode*>(vnode->context);
     Assert(context->size1 == 0);
     context->size0 = 0;
     vnode->fileSize = 0;
 }
 
-void Ext2::WriteDirectoryEntry(Vnode* directory, uint32_t inodeNum, const String& name, Ext2DirectoryEntryType type)
+void Ext2::WriteDirectoryEntry(VFS::Vnode* directory, uint32_t inodeNum, const String& name, DirectoryEntryType type)
 {
     uint8_t nameLength = name.GetLength();
     uint8_t nameLengthPadding = 4 - (nameLength % 4);
 
-    Ext2DirectoryEntry directoryEntry {};
+    DirectoryEntry directoryEntry {};
     directoryEntry.typeIndicator = type;
     directoryEntry.inodeNum = inodeNum;
-    directoryEntry.entrySize = sizeof(Ext2DirectoryEntry) + nameLength + nameLengthPadding;
+    directoryEntry.entrySize = sizeof(DirectoryEntry) + nameLength + nameLengthPadding;
     directoryEntry.nameLength = nameLength;
 
     uint8_t zero = 0;
-    Write(directory, &directoryEntry, sizeof(Ext2DirectoryEntry), directory->fileSize);
+    Write(directory, &directoryEntry, sizeof(DirectoryEntry), directory->fileSize);
     Write(directory, name.ToCString(), directoryEntry.nameLength, directory->fileSize);
     for (uint8_t i = 0; i < nameLengthPadding; ++i)
     {
@@ -312,11 +312,11 @@ void Ext2::WriteDirectoryEntry(Vnode* directory, uint32_t inodeNum, const String
     }
 }
 
-uint32_t Ext2::GetBlockAddr(Vnode* vnode, uint32_t requestedBlockIndex, bool allocateMissingBlock)
+uint32_t Ext2::GetBlockAddr(VFS::Vnode* vnode, uint32_t requestedBlockIndex, bool allocateMissingBlock)
 {
     // TODO: Refactor, make recursive
 
-    auto context = reinterpret_cast<Ext2Inode*>(vnode->context);
+    auto context = reinterpret_cast<Inode*>(vnode->context);
 
     uint32_t blockPtr = 0;
     uint64_t pointersPerBlock = blockSize / sizeof(blockPtr);
@@ -346,7 +346,7 @@ uint32_t Ext2::GetBlockAddr(Vnode* vnode, uint32_t requestedBlockIndex, bool all
 
     if (allocateMissingBlock && blockPtr == 0)
     {
-        blockPtr = Allocate(Ext2AllocationType::Block);
+        blockPtr = Allocate(AllocationType::Block);
         Assert(requestedBlockIndex < 12);
         context->directBlockPointers[requestedBlockIndex] = blockPtr;
     }
@@ -354,24 +354,24 @@ uint32_t Ext2::GetBlockAddr(Vnode* vnode, uint32_t requestedBlockIndex, bool all
     return blockPtr;
 }
 
-uint32_t Ext2::Allocate(Ext2AllocationType allocationType)
+uint32_t Ext2::Allocate(AllocationType allocationType)
 {
     uint32_t object;
 
     for (uint32_t blockGroupIndex = 0; blockGroupIndex < blockGroupsCount; ++blockGroupIndex)
     {
-        Ext2BlockGroupDescriptor& blockGroup = blockGroupDescTable[blockGroupIndex];
+        BlockGroupDescriptor& blockGroup = blockGroupDescTable[blockGroupIndex];
         if (blockGroup.unallocatedBlocksCount > 0)
         {
             uint64_t usageBitmapBlock;
             uint64_t objectsPerBlockGroup;
             switch (allocationType)
             {
-                case Ext2AllocationType::Inode:
+                case AllocationType::Inode:
                     usageBitmapBlock = blockGroup.inodeUsageBitmapBlock;
                     objectsPerBlockGroup = superblock->inodesPerBlockGroup;
                     break;
-                case Ext2AllocationType::Block:
+                case AllocationType::Block:
                     usageBitmapBlock = blockGroup.blockUsageBitmapBlock;
                     objectsPerBlockGroup = superblock->blocksPerBlockGroup;
                     break;
@@ -399,12 +399,12 @@ uint32_t Ext2::Allocate(Ext2AllocationType allocationType)
 
                     switch (allocationType)
                     {
-                        case Ext2AllocationType::Inode:
+                        case AllocationType::Inode:
                             blockGroup.unallocatedInodesCount--;
                             superblock->unallocatedInodesCount--;
                             object++; // Inode numbers start from 1
                             break;
-                        case Ext2AllocationType::Block:
+                        case AllocationType::Block:
                             blockGroup.unallocatedBlocksCount--;
                             superblock->unallocatedBlocksCount--;
                             break;
@@ -424,7 +424,7 @@ uint32_t Ext2::Allocate(Ext2AllocationType allocationType)
     return object;
 }
 
-Ext2Inode* Ext2::GetInode(uint32_t inodeNum)
+Ext2::Inode* Ext2::GetInode(uint32_t inodeNum)
 {
     // Inode numbers start at 1
     uint32_t blockGroupIndex = (inodeNum - 1) / superblock->inodesPerBlockGroup;
@@ -433,8 +433,8 @@ Ext2Inode* Ext2::GetInode(uint32_t inodeNum)
     uint64_t inodeTableDiskAddr = blockGroupDescTable[blockGroupIndex].inodeTableStartBlock * blockSize;
     uint64_t diskAddr = inodeTableDiskAddr + (inodeIndex * superblock->inodeSize);
 
-    auto inode = new Ext2Inode;
-    disk->Read(diskAddr, inode, sizeof(Ext2Inode));
+    auto inode = new Inode;
+    disk->Read(diskAddr, inode, sizeof(Inode));
 
     return inode;
 }

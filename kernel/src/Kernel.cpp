@@ -11,8 +11,6 @@
 #include "Device.h"
 #include "Framebuffer.h"
 
-PagingManager kernelPagingManager;
-
 extern "C" void _start(stivale2_struct* stivale2Struct)
 {
     InitializeStivale2Interface(stivale2Struct);
@@ -20,8 +18,6 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     Serial::Print("Kernel ELF successfully loaded");
 
     InitializePageFrameAllocator();
-    kernelPagingManager.InitializePaging();
-    kernelPagingManager.SetCR3();
     InitializeKernelHeap();
 
     GDT::Initialize();

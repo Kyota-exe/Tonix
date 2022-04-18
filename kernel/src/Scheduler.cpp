@@ -2,7 +2,7 @@
 #include "Memory/Memory.h"
 #include "Memory/PageFrameAllocator.h"
 #include "Memory/PagingManager.h"
-#include "ELFLoader.h"
+#include "ELF.h"
 #include "Serial.h"
 #include "Assert.h"
 #include "SegmentSelectors.h"
@@ -226,7 +226,7 @@ void Scheduler::CreateTaskFromELF(const String& path, bool userTask)
 
     uintptr_t entry;
     uintptr_t stackPtr;
-    ELFLoader::LoadELF(path, pagingManager, entry, stackPtr);
+    ELF::LoadELF(path, pagingManager, entry, stackPtr);
 
     Task task = CreateTask(pagingManager, entry, stackPtr, userTask, true);
 

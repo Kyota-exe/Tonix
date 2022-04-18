@@ -3,7 +3,7 @@
 
 const char* FONT_PATH = "/fonts/Uni2-Terminus20x10.psf";
 
-TextRenderer::TextRenderer() : font(new PSF2Font(String(FONT_PATH))) {}
+TextRenderer::TextRenderer() : font(new PSF2(String(FONT_PATH))) {}
 
 TextRenderer::~TextRenderer()
 {

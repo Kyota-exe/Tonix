@@ -7,11 +7,11 @@
 class DeviceFS : public FileSystem
 {
 public:
-    uint64_t Read(Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos) override;
-    uint64_t Write(Vnode* vnode, const void* buffer, uint64_t count, uint64_t writePos) override;
-    Vnode* FindInDirectory(Vnode* directory, const String& name) override;
-    void Create(Vnode* vnode, Vnode* directory, const String& name) override;
-    void Truncate(Vnode* vnode) override;
+    uint64_t Read(VFS::Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos) override;
+    uint64_t Write(VFS::Vnode* vnode, const void* buffer, uint64_t count, uint64_t writePos) override;
+    VFS::Vnode* FindInDirectory(VFS::Vnode* directory, const String& name) override;
+    void Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name) override;
+    void Truncate(VFS::Vnode* vnode) override;
     explicit DeviceFS(Disk* disk);
 private:
     Vector<Device*> devices;

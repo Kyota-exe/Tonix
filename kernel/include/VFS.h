@@ -1,42 +1,17 @@
 #pragma once
 
-struct Vnode;
-
 #include "String.h"
 #include "Vector.h"
-#include "FileSystem.h"
 #include "Error.h"
 
-enum VnodeType
-{
-    VFSUnknown,
-    VFSRegularFile,
-    VFSDirectory,
-    VFSCharacterDevice
-};
-
-struct Vnode
-{
-    VnodeType type;
-
-    void* context = nullptr;
-    uint32_t inodeNum = 0;
-    uint32_t fileSize;
-    FileSystem* fileSystem;
-
-    Vnode* mountedVNode = nullptr;
-    Vnode* nextInCache = nullptr;
-};
+class FileSystem;
 
 class VFS
 {
 public:
-    enum class SeekType
-    {
-        Set = 0,
-        Cursor = 1,
-        End = 2
-    };
+    struct Vnode;
+    enum class VnodeType;
+    enum class SeekType;
 
     static VFS* kernelVfs;
 
@@ -58,27 +33,46 @@ public:
     static void CacheVNode(Vnode* vnode);
     static Vnode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem);
 private:
-    struct FileDescriptor
-    {
-        bool present = false;
-        uint64_t offset = 0;
-        Vnode* vnode = nullptr;
-    };
-
-    enum OpenFlag
-    {
-        Create = 0x10,
-        Append = 0x8,
-        Truncate = 0x200,
-        Exclude = 0x40,
-        WriteOnly = 0x5,
-        ReadWrite = 0x3
-    };
-
+    struct FileDescriptor;
     Vector<FileDescriptor> fileDescriptors;
 
     FileDescriptor* GetFileDescriptor(int descriptor);
     int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor);
 
     static Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error);
+};
+
+enum class VFS::VnodeType
+{
+    Unknown,
+    RegularFile,
+    Directory,
+    CharacterDevice
+};
+
+struct VFS::Vnode
+{
+    VnodeType type;
+
+    void* context = nullptr;
+    uint32_t inodeNum = 0;
+    uint32_t fileSize;
+    FileSystem* fileSystem;
+
+    Vnode* mountedVNode = nullptr;
+    Vnode* nextInCache = nullptr;
+};
+
+struct VFS::FileDescriptor
+{
+    bool present = false;
+    uint64_t offset = 0;
+    Vnode* vnode = nullptr;
+};
+
+enum class VFS::SeekType
+{
+    Set = 0,
+    Cursor = 1,
+    End = 2
 };

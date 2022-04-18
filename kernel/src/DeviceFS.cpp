@@ -5,25 +5,25 @@
 
 DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
 {
-    fileSystemRoot = new Vnode();
+    fileSystemRoot = new VFS::Vnode();
     fileSystemRoot->inodeNum = currentInodeNum++;
-    fileSystemRoot->type = VFSDirectory;
+    fileSystemRoot->type = VFS::VnodeType::Directory;
     fileSystemRoot->fileSystem = this;
     VFS::CacheVNode(fileSystemRoot);
 
     Device* terminal = new Terminal(String("tty"), currentInodeNum++);
     devices.Push(terminal);
 
-    auto terminalVnode = new Vnode();
+    auto terminalVnode = new VFS::Vnode();
     terminalVnode->inodeNum = terminal->inodeNum;
     terminalVnode->fileSystem = this;
     terminalVnode->context = terminal;
     terminalVnode->fileSize = 0;
-    terminalVnode->type = VFSCharacterDevice;
+    terminalVnode->type = VFS::VnodeType::CharacterDevice;
     VFS::CacheVNode(terminalVnode);
 }
 
-uint64_t DeviceFS::Read(Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos)
+uint64_t DeviceFS::Read(VFS::Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos)
 {
     auto device = (Device*)vnode->context;
     return device->Read(buffer, count);
@@ -31,7 +31,7 @@ uint64_t DeviceFS::Read(Vnode* vnode, void* buffer, uint64_t count, uint64_t rea
     (void)readPos;
 }
 
-uint64_t DeviceFS::Write(Vnode* vnode, const void* buffer, uint64_t count, uint64_t writePos)
+uint64_t DeviceFS::Write(VFS::Vnode* vnode, const void* buffer, uint64_t count, uint64_t writePos)
 {
     auto device = (Device*)vnode->context;
     return device->Write(buffer, count);
@@ -39,7 +39,7 @@ uint64_t DeviceFS::Write(Vnode* vnode, const void* buffer, uint64_t count, uint6
     (void)writePos;
 }
 
-Vnode* DeviceFS::FindInDirectory(Vnode* directory, const String& name)
+VFS::Vnode* DeviceFS::FindInDirectory(VFS::Vnode* directory, const String& name)
 {
     Assert(directory == fileSystemRoot);
 
@@ -50,7 +50,7 @@ Vnode* DeviceFS::FindInDirectory(Vnode* directory, const String& name)
 
         if (device->name.Equals(name))
         {
-            Vnode* file = VFS::SearchInCache(device->inodeNum, this);
+            VFS::Vnode* file = VFS::SearchInCache(device->inodeNum, this);
 
             Assert(file != nullptr);
 
@@ -61,7 +61,7 @@ Vnode* DeviceFS::FindInDirectory(Vnode* directory, const String& name)
     return nullptr;
 }
 
-void DeviceFS::Create(Vnode* vnode, Vnode* directory, const String& name)
+void DeviceFS::Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name)
 {
     Panic();
 
@@ -70,7 +70,7 @@ void DeviceFS::Create(Vnode* vnode, Vnode* directory, const String& name)
     (void)name;
 }
 
-void DeviceFS::Truncate(Vnode* vnode)
+void DeviceFS::Truncate(VFS::Vnode* vnode)
 {
     Panic();
 

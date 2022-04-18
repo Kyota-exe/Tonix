@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Device.h"
-#include "PSF2Font.h"
+#include "PSF2.h"
 #include "TextRenderer.h"
 #include "Vector.h"
 
