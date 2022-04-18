@@ -13,9 +13,7 @@ constexpr uintptr_t RTDL_ADDR = 0x40000000;
 
 void ELFLoader::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& entry, uintptr_t& stackPtr)
 {
-    Error elfFileError;
-    int elfFile = VFS::kernelVfs->Open(path, 0, elfFileError);
-    Assert(elfFile != -1);
+    int elfFile = VFS::kernelVfs->Open(path, 0);
 
     auto elfHeader = new ELFHeader;
     uint64_t elfHeaderSize = VFS::kernelVfs->Read(elfFile, elfHeader, sizeof(ELFHeader));
@@ -58,8 +56,7 @@ void ELFLoader::LoadELF(const String& path, PagingManager* pagingManager, uintpt
             {
                 char* rtdlPath = new char[programHeader.segmentSizeInFile + 1];
 
-                Error error = Error::None;
-                VFS::kernelVfs->RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set, error);
+                VFS::kernelVfs->RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set);
                 VFS::kernelVfs->Read(elfFile, rtdlPath, programHeader.segmentSizeInFile);
 
                 rtdlPath[programHeader.segmentSizeInFile] = 0;
@@ -135,8 +132,7 @@ void ELFLoader::LoadProgramHeader(int elfFile, const ProgramHeader& programHeade
 {
     uint64_t segmentPagesCount = (programHeader.segmentSizeInMemory - 1) / 0x1000 + 1;
 
-    Error error;
-    VFS::kernelVfs->RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set, error);
+    VFS::kernelVfs->RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set);
 
     uintptr_t baseAddr = programHeader.virtAddr;
     if (elfHeader->type == ELFType::Shared) baseAddr += RTDL_ADDR;

@@ -239,16 +239,12 @@ void Scheduler::CreateTaskFromELF(const String& path, bool userTask)
 
     Task task = CreateTask(pagingManager, entry, stackPtr, userTask, true);
 
-    Error error;
-    int desc;
-    desc = task.vfs->Open(String("/dev/tty"), 0, error);
-    Assert(desc != -1);
-
-    desc = task.vfs->Open(String("/dev/tty"), 0, error);
-    Assert(desc != -1);
-
-    desc = task.vfs->Open(String("/dev/tty"), 0, error);
-    Assert(desc != -1);
+    int desc = task.vfs->Open(String("/dev/tty"), 0);
+    Assert(desc == 0);
+    desc = task.vfs->Open(String("/dev/tty"), 0);
+    Assert(desc == 1);
+    desc = task.vfs->Open(String("/dev/tty"), 0);
+    Assert(desc == 2);
 
     taskQueueLock.Acquire();
     taskQueue->Push(task);

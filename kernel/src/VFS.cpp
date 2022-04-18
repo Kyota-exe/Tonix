@@ -21,9 +21,7 @@ void VFS::Initialize(void* ext2RamDisk)
     ext2FileSystem = new Ext2(new RAMDisk(ext2RamDisk));
     Mount(root, ext2FileSystem->fileSystemRoot);
 
-    Error devMountPointError = Error::None;
-    Vnode* devMountPoint = VFS::CreateDirectory(String("/dev"), devMountPointError);
-    Assert(devMountPointError == Error::None && devMountPoint != nullptr);
+    Vnode* devMountPoint = VFS::CreateDirectory(String("/dev"));
 
     FileSystem* deviceFileSystem;
     deviceFileSystem = new DeviceFS(nullptr);
@@ -220,6 +218,14 @@ int VFS::Open(const String& path, int flags, Error& error)
     return descriptorIndex;
 }
 
+int VFS::Open(const String& path, int flags)
+{
+    Error error = Error::None;
+    int desc = Open(path, flags, error);
+    Assert(error == Error::None);
+    return desc;
+}
+
 uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
@@ -287,6 +293,14 @@ uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, VFS::SeekType se
     return fileDescriptor->offset;
 }
 
+uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, VFS::SeekType seekType)
+{
+    Error error = Error::None;
+    auto result = RepositionOffset(descriptor, offset, seekType, error);
+    Assert(error == Error::None);
+    return result;
+}
+
 void VFS::Close(int descriptor)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
@@ -306,6 +320,14 @@ VnodeType VFS::GetVnodeType(int descriptor, Error& error)
     }
 
     return fileDescriptor->vnode->type;
+}
+
+VnodeType VFS::GetVnodeType(int descriptor)
+{
+    Error error = Error::None;
+    auto result = GetVnodeType(descriptor, error);
+    Assert(error == Error::None);
+    return result;
 }
 
 Vnode* VFS::CreateDirectory(const String& path, Error& error)
@@ -330,4 +352,12 @@ Vnode* VFS::CreateDirectory(const String& path, Error& error)
     error = Error::None;
 
     return vnode;
+}
+
+Vnode* VFS::CreateDirectory(const String& path)
+{
+    Error error = Error::None;
+    auto result = CreateDirectory(path, error);
+    Assert(error == Error::None);
+    return result;
 }

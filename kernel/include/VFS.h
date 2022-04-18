@@ -41,14 +41,18 @@ public:
     static VFS* kernelVfs;
 
     int Open(const String& path, int flags, Error& error);
+    int Open(const String& path, int flags);
     uint64_t Read(int descriptor, void* buffer, uint64_t count);
     uint64_t Write(int descriptor, const void* buffer, uint64_t count);
     uint64_t RepositionOffset(int descriptor, uint64_t offset, SeekType seekType, Error& error);
+    uint64_t RepositionOffset(int descriptor, uint64_t offset, SeekType seekType);
     void Close(int descriptor);
     VnodeType GetVnodeType(int descriptor, Error& error);
+    VnodeType GetVnodeType(int descriptor);
 
     static void Mount(Vnode* mountPoint, Vnode* vnode);
     static Vnode* CreateDirectory(const String& path, Error& error);
+    static Vnode* CreateDirectory(const String& path);
 
     static void Initialize(void* ext2RamDisk);
     static void CacheVNode(Vnode* vnode);
