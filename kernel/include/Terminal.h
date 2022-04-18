@@ -25,6 +25,10 @@ private:
     Vector<uint64_t> unblockQueue;
 
     Colour backgroundColour;
+
+    Colour originalTextColour;
+    Colour originalTextBgColour;
+
     Colour textColour;
     Colour textBgColour;
 

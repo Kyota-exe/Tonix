@@ -1,47 +1,84 @@
 #include "Colour.h"
 #include "Assert.h"
 
+enum ANSICodes : unsigned int
+{
+    ForegroundBlack = 30,
+    ForegroundRed = 31,
+    ForegroundGreen = 32,
+    ForegroundYellow = 33,
+    ForegroundBlue = 34,
+    ForegroundMagenta = 35,
+    ForegroundCyan = 36,
+    ForegroundWhite = 37,
+
+    BackgroundBlack = 40,
+    BackgroundRed = 41,
+    BackgroundGreen = 42,
+    BackgroundYellow = 43,
+    BackgroundBlue = 44,
+    BackgroundMagenta = 45,
+    BackgroundCyan = 46,
+    BackgroundWhite = 47
+};
+
 Colour::Colour(uint8_t _red, uint8_t _green, uint8_t _blue) : red(_red), green(_green), blue(_blue) {}
 
 Colour Colour::FromANSICode(unsigned int code)
 {
     switch (code)
     {
-        case 30: // Black Foreground
-        case 40: // Black Background
-        case 49: // Default Background
+        case ForegroundBlack:
+        case BackgroundBlack:
             return {0, 0, 0};
 
-        case 31: // Red Foreground
-        case 41: // Red Background
+        case ForegroundRed:
+        case BackgroundRed:
             return {255, 0, 0};
 
-        case 32: // Green Foreground
-        case 42: // Green Background
+        case ForegroundGreen:
+        case BackgroundGreen:
             return {0, 255, 0};
 
-        case 33: // Yellow Foreground
-        case 43: // Yellow Background
+        case ForegroundYellow:
+        case BackgroundYellow:
             return {255, 255, 0};
 
-        case 34: // Blue Foreground
-        case 44: // Blue Background
+        case ForegroundBlue:
+        case BackgroundBlue:
             return {0, 0, 255};
 
-        case 35: // Magenta Foreground
-        case 45: // Magenta Background
+        case ForegroundMagenta:
+        case BackgroundMagenta:
             return {255, 0, 255};
 
-        case 36: // Cyan Foreground
-        case 46: // Cyan Background
+        case ForegroundCyan:
+        case BackgroundCyan:
             return {0, 255, 255};
 
-        case 37: // White Foreground
-        case 47: // White Background
-        case 39: // Default Foreground
+        case ForegroundWhite:
+        case BackgroundWhite:
             return {255, 255, 255};
 
         default:
             Panic();
     }
+}
+
+Colour::Colour(const Colour& original)
+{
+    red = original.red;
+    blue = original.blue;
+    green = original.green;
+}
+
+Colour& Colour::operator=(const Colour& original)
+{
+    if (&original != this)
+    {
+        red = original.red;
+        blue = original.blue;
+        green = original.green;
+    }
+    return *this;
 }

@@ -60,12 +60,17 @@ void Terminal::InputCharacter(char c)
 }
 
 Terminal::Terminal(const String& name, uint32_t inodeNum) : Device(name, inodeNum),
-    textRenderer(new TextRenderer()),
-    backgroundColour(Colour(0, 0, 0)),
-    textColour(Colour(255, 255, 255)),
-    textBgColour(Colour(0, 0, 0)),
-    cursorX(0), cursorY(0)
+                                                            textRenderer(new TextRenderer()),
+                                                            backgroundColour(Colour(0, 0, 0)),
+                                                            originalTextColour(Colour(0, 0, 0)),
+                                                            originalTextBgColour(Colour(0, 0, 0)),
+                                                            textColour(Colour(255, 255, 255)),
+                                                            textBgColour(Colour(0, 0, 0)),
+                                                            cursorX(0), cursorY(0)
 {
+    originalTextColour = textColour;
+    originalTextBgColour = textBgColour;
+
     Assert(instance == nullptr);
     instance = this;
 
@@ -233,11 +238,17 @@ void Terminal::ProcessEscapeSequence(char command, bool hasCSI, const Vector<uns
                 {
                     switch (arg)
                     {
-                        case 30 ... 39:
+                        case 30 ... 38:
                             textColour = Colour::FromANSICode(arg);
                             break;
-                        case 40 ... 49:
-                            backgroundColour = Colour::FromANSICode(arg);
+                        case 40 ... 48:
+                            textBgColour = Colour::FromANSICode(arg);
+                            break;
+                        case 39:
+                            textColour = originalTextColour;
+                            break;
+                        case 49:
+                            textBgColour = originalTextBgColour;
                             break;
                         default:
                             Panic();
