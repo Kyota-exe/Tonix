@@ -38,7 +38,7 @@ ramdisk:
 	sudo rm -rf ramdisk-mountpoint
 	mkdir -p ramdisk-mountpoint
 # Create ext2 ramdisk image
-	dd if=/dev/zero of=ext2-ramdisk-image.ext2 bs=1024 count=8192
+	dd if=/dev/zero of=ext2-ramdisk-image.ext2 bs=2048 count=16384
 	mke2fs -F ext2-ramdisk-image.ext2
 # Mount it on ramdisk-mountpoint/
 	sudo mount -o loop ext2-ramdisk-image.ext2 ramdisk-mountpoint

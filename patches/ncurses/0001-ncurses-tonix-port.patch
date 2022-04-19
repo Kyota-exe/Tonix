@@ -1,0 +1,26 @@
+From 1cf48d968b07ec61aa6ff699d79556937cd800d8 Mon Sep 17 00:00:00 2001
+From: Kyota Poeti <kyota.exe@gmail.com>
+Date: Sun, 17 Apr 2022 22:01:32 -0400
+Subject: [PATCH 1/1] ncurses tonix port
+
+---
+ configure | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/configure b/configure
+index 421cf85..9537691 100755
+--- a/configure
++++ b/configure
+@@ -6423,6 +6423,10 @@ CF_EOF
+ 		LINK_PROGS="$SHELL ${rel_builddir}/mk_prog.sh"
+ 		LINK_TESTS="$SHELL ${rel_builddir}/mk_prog.sh"
+ 		;;
++	(tonix*)
++		CC_SHARED_OPTS='-fPIC'
++		MK_SHARED_LIB='${CC} -shared -o $@'
++		;;
+ 	(mingw*)
+ 		cf_cv_shlib_version=mingw
+ 		cf_cv_shlib_version_infix=mingw
+-- 
+2.25.1
