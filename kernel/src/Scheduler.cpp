@@ -11,6 +11,7 @@
 #include "Spinlock.h"
 #include "GDT.h"
 #include "IDT.h"
+#include "Heap.h"
 
 constexpr uint64_t SYSCALL_STACK_PAGE_COUNT = 3;
 

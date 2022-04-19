@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stdint.h>
-#include "Heap.h"
 #include "Assert.h"
 
 template <typename T> class Vector

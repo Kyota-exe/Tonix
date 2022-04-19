@@ -4,6 +4,7 @@
 #include "Vector.h"
 #include "Serial.h"
 #include "RAMDisk.h"
+#include "Heap.h"
 
 enum OpenFlag : int
 {
@@ -23,7 +24,7 @@ void VFS::Initialize(void* ext2RamDisk)
 {
     kernelVfs = new VFS();
 
-    root = new VFS::Vnode();
+    root = new (Allocator::Permanent) VFS::Vnode();
     root->type = VFS::VnodeType::Directory;
     currentInCache = root;
 
@@ -189,7 +190,7 @@ int VFS::Open(const String& path, int flags, Error& error)
         {
             Assert(vnode == nullptr);
 
-            vnode = new VFS::Vnode();
+            vnode = new (Allocator::Permanent) VFS::Vnode();
             vnode->type = VFS::VnodeType::RegularFile;
             vnode->fileSystem = fileSystem;
             fileSystem->Create(vnode, containingDirectory, filename);
@@ -354,7 +355,7 @@ VFS::Vnode* VFS::CreateDirectory(const String& path, Error& error)
 
     Assert(vnode == nullptr && error == Error::NoFile);
 
-    vnode = new VFS::Vnode();
+    vnode = new (Allocator::Permanent) VFS::Vnode();
     vnode->type = VFS::VnodeType::Directory;
     vnode->fileSystem = fileSystem;
     fileSystem->Create(vnode, containingDirectory, directoryName);

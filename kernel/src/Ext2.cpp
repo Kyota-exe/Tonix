@@ -4,6 +4,7 @@
 #include "Bitmap.h"
 #include "String.h"
 #include "RAMDisk.h"
+#include "Heap.h"
 
 enum InodeTypePermissions : uint16_t
 {
@@ -89,7 +90,7 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
     uint32_t blockGroupDescTableDiskAddr = blockSize * (blockSize == 1024 ? 2 : 1);
     disk->Read(blockGroupDescTableDiskAddr, blockGroupDescTable, sizeof(BlockGroupDescriptor) * blockGroupsCount);
 
-    fileSystemRoot = new VFS::Vnode();
+    fileSystemRoot = new (Allocator::Permanent) VFS::Vnode();
     fileSystemRoot->type = VFS::VnodeType::Directory;
     fileSystemRoot->inodeNum = INODE_ROOT_DIR;
     fileSystemRoot->fileSystem = this;
@@ -104,7 +105,7 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
 
 VFS::Vnode* Ext2::CacheDirectoryEntry(const DirectoryEntry& directoryEntry)
 {
-    auto vnode = new VFS::Vnode();
+    auto vnode = new (Allocator::Permanent) VFS::Vnode();
     vnode->inodeNum = directoryEntry.inodeNum;
     vnode->fileSystem = this;
 
@@ -356,7 +357,7 @@ uint32_t Ext2::GetBlockAddr(VFS::Vnode* vnode, uint32_t requestedBlockIndex, boo
 
 uint32_t Ext2::Allocate(AllocationType allocationType)
 {
-    uint32_t object;
+    uint32_t object {};
 
     for (uint32_t blockGroupIndex = 0; blockGroupIndex < blockGroupsCount; ++blockGroupIndex)
     {
@@ -433,7 +434,7 @@ Ext2::Inode* Ext2::GetInode(uint32_t inodeNum)
     uint64_t inodeTableDiskAddr = blockGroupDescTable[blockGroupIndex].inodeTableStartBlock * blockSize;
     uint64_t diskAddr = inodeTableDiskAddr + (inodeIndex * superblock->inodeSize);
 
-    auto inode = new Inode;
+    auto inode = new (Allocator::Permanent) Inode;
     disk->Read(diskAddr, inode, sizeof(Inode));
 
     return inode;

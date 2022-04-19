@@ -2,10 +2,11 @@
 #include "Device.h"
 #include "Terminal.h"
 #include "Serial.h"
+#include "Heap.h"
 
 DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
 {
-    fileSystemRoot = new VFS::Vnode();
+    fileSystemRoot = new (Allocator::Permanent) VFS::Vnode();
     fileSystemRoot->inodeNum = currentInodeNum++;
     fileSystemRoot->type = VFS::VnodeType::Directory;
     fileSystemRoot->fileSystem = this;
@@ -14,7 +15,7 @@ DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
     Device* terminal = new Terminal(String("tty"), currentInodeNum++);
     devices.Push(terminal);
 
-    auto terminalVnode = new VFS::Vnode();
+    auto terminalVnode = new (Allocator::Permanent) VFS::Vnode();
     terminalVnode->inodeNum = terminal->inodeNum;
     terminalVnode->fileSystem = this;
     terminalVnode->context = terminal;

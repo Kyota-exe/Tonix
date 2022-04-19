@@ -61,6 +61,7 @@ void ELF::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& e
                 rtdlPath[programHeader.segmentSizeInFile] = 0;
 
                 LoadELF(String(rtdlPath), pagingManager, entry, stackPtr);
+                delete[] rtdlPath;
 
                 hasDynamicLinking = true;
                 break;

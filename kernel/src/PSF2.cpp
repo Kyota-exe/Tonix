@@ -1,6 +1,7 @@
 #include "PSF2.h"
 #include "VFS.h"
 #include "Serial.h"
+#include "Heap.h"
 #include <stdint.h>
 
 constexpr uint8_t PSF2_MAGIC_0 = 0x72;
@@ -32,7 +33,7 @@ PSF2::PSF2(const String &path)
     Serial::Printf("Header size: %d", header->headerSize);
 
     uint64_t glyphBufferSize = header->glyphCount * header->charSize;
-    glyphBuffer = new uint8_t[glyphBufferSize];
+    glyphBuffer = new (Allocator::Permanent) uint8_t[glyphBufferSize];
     VFS::kernelVfs->Read(fontFile, glyphBuffer, glyphBufferSize);
 
     VFS::kernelVfs->Close(fontFile);
@@ -55,5 +56,7 @@ uint32_t PSF2::Width() const
 
 PSF2::~PSF2()
 {
+    Panic();
     delete header;
+    delete[] glyphBuffer;
 }

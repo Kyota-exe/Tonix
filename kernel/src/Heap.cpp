@@ -107,12 +107,7 @@ void* KMalloc(uint64_t size)
 {
     if (size < 8) size = 8;
     uint64_t slabIndex = CeilLog2(size) - 3;
-
-    if (slabIndex >= SLABS_COUNT)
-    {
-        return LargeKMalloc(size);
-    }
-
+    Assert(slabIndex < SLABS_COUNT);
     return slabs[slabIndex].Alloc();
 }
 
@@ -141,6 +136,38 @@ void InitializeKernelHeap()
     }
 }
 
+Spinlock permanentAllocatorLock;
+uintptr_t currentPageAddr;
+uint64_t currentOffset = 0x1000;
+void* PermanentAlloc(uint64_t size)
+{
+    void* ptr;
+
+    if (size > 0x1000)
+    {
+        ptr = LargeKMalloc(size);
+    }
+    else if (currentOffset + size <= 0x1000)
+    {
+        permanentAllocatorLock.Acquire();
+        ptr = reinterpret_cast<void*>(currentPageAddr + currentOffset);
+        currentOffset += size;
+        permanentAllocatorLock.Release();
+    }
+    else
+    {
+        permanentAllocatorLock.Acquire();
+        currentPageAddr = HigherHalf(RequestPageFrame());
+        currentOffset = size;
+        permanentAllocatorLock.Release();
+
+        ptr = reinterpret_cast<void*>(currentPageAddr);
+    }
+
+    Assert(ptr != nullptr);
+    return ptr;
+}
+
 void* operator new(uint64_t, void* ptr) { return ptr; }
 void* operator new[](uint64_t, void* ptr) { return ptr; }
 void* operator new(uint64_t size) { return KMalloc(size); }
@@ -149,3 +176,23 @@ void operator delete(void* ptr) { KFree(ptr); }
 void operator delete(void* ptr, uint64_t) { KFree(ptr); }
 void operator delete[](void* ptr) { KFree(ptr); }
 void operator delete[](void* ptr, uint64_t) { KFree(ptr); }
+
+void* operator new(uint64_t size, Allocator type)
+{
+    switch (type)
+    {
+        case Allocator::Permanent: return PermanentAlloc(size);
+        case Allocator::Slab: return KMalloc(size);
+        default: Panic();
+    }
+}
+
+void* operator new[](uint64_t size, Allocator type)
+{
+    switch (type)
+    {
+        case Allocator::Permanent: return PermanentAlloc(size);
+        case Allocator::Slab: return KMalloc(size);
+        default: Panic();
+    }
+}
