@@ -14,7 +14,8 @@ enum class SystemCallType
     TCBSet = 6,
     Exit = 8,
     Sleep = 9,
-    IsTerminal = 19,
+    Stat = 10,
+    FStat = 11,
     Panic = 254,
     Log = 255
 };

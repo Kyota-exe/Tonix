@@ -321,22 +321,23 @@ void VFS::Close(int descriptor)
     fileDescriptor->offset = 0;
 }
 
-VFS::VnodeType VFS::GetVnodeType(int descriptor, Error& error)
+VFS::VnodeInfo VFS::GetVnodeInfo(int descriptor, Error& error)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
     if (fileDescriptor == nullptr)
     {
         error = Error::InvalidFileDescriptor;
-        return VFS::VnodeType::Unknown;
+        return {};
     }
 
-    return fileDescriptor->vnode->type;
+    Vnode* vnode = fileDescriptor->vnode;
+    return {vnode->type, vnode->inodeNum, vnode->fileSize};
 }
 
-VFS::VnodeType VFS::GetVnodeType(int descriptor)
+VFS::VnodeInfo VFS::GetVnodeInfo(int descriptor)
 {
     Error error = Error::None;
-    auto result = GetVnodeType(descriptor, error);
+    auto result = GetVnodeInfo(descriptor, error);
     Assert(error == Error::None);
     return result;
 }

@@ -10,6 +10,7 @@ class VFS
 {
 public:
     struct Vnode;
+    struct VnodeInfo;
     enum class VnodeType;
     enum class SeekType;
 
@@ -22,8 +23,8 @@ public:
     uint64_t RepositionOffset(int descriptor, uint64_t offset, SeekType seekType, Error& error);
     uint64_t RepositionOffset(int descriptor, uint64_t offset, SeekType seekType);
     void Close(int descriptor);
-    VnodeType GetVnodeType(int descriptor, Error& error);
-    VnodeType GetVnodeType(int descriptor);
+    VnodeInfo GetVnodeInfo(int descriptor, Error& error);
+    VnodeInfo GetVnodeInfo(int descriptor);
 
     static void Mount(Vnode* mountPoint, Vnode* vnode);
     static Vnode* CreateDirectory(const String& path, Error& error);
@@ -44,24 +45,31 @@ private:
 
 enum class VFS::VnodeType
 {
-    Unknown,
-    RegularFile,
-    Directory,
-    CharacterDevice
+    Unknown = 0,
+    RegularFile = 1,
+    Directory = 2,
+    CharacterDevice = 3
 };
 
 struct VFS::Vnode
 {
-    VnodeType type;
+    VnodeType type = VnodeType::Unknown;
 
     void* context = nullptr;
     uint32_t inodeNum = 0;
-    uint32_t fileSize;
-    FileSystem* fileSystem;
+    uint32_t fileSize = 0;
+    FileSystem* fileSystem = nullptr;
 
     Vnode* mountedVNode = nullptr;
     Vnode* nextInCache = nullptr;
 };
+
+struct VFS::VnodeInfo
+{
+    VnodeType type;
+    uint32_t inodeNum;
+    uint32_t fileSize;
+} __attribute__((packed));
 
 struct VFS::FileDescriptor
 {

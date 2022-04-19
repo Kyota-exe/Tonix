@@ -54,19 +54,6 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             return 0;
         }
 
-        case SystemCallType::IsTerminal:
-        {
-            VFS::VnodeType vnodeType = scheduler->currentTask.vfs->GetVnodeType((int)arg0, error);
-
-            // Assuming all VFS character devices are terminals
-            if (error == Error::None && vnodeType != VFS::VnodeType::CharacterDevice)
-            {
-                error = Error::NotTerminal;
-            }
-
-            return error == Error::None ? 0 : -1;
-        }
-
         case SystemCallType::Exit:
             scheduler->ExitCurrentTask((int)arg0, interruptFrame); return 0;
 
@@ -75,6 +62,26 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             auto nanoseconds = static_cast<int64_t>(arg1);
             Assert(nanoseconds == 0);
             scheduler->SleepCurrentTask(arg0 * 1000 + nanoseconds / 1'000'000);
+            return 0;
+        }
+
+        case SystemCallType::FStat:
+        {
+            int fd = (int)arg0;
+            auto buffer = reinterpret_cast<VFS::VnodeInfo*>(arg1);
+            *buffer = scheduler->currentTask.vfs->GetVnodeInfo(fd);
+            return 0;
+        }
+
+        case SystemCallType::Stat:
+        {
+            int fd = scheduler->currentTask.vfs->Open(String((const char*)arg0), 0, error);
+            if (error != Error::None) return 0;
+
+            auto buffer = reinterpret_cast<VFS::VnodeInfo*>(arg1);
+            *buffer = scheduler->currentTask.vfs->GetVnodeInfo(fd, error);
+            scheduler->currentTask.vfs->Close(fd);
+
             return 0;
         }
 

@@ -1,6 +1,6 @@
-From ef231863469376d06524601387c31586d9fa8d33 Mon Sep 17 00:00:00 2001
+From 1c438dbc63a4686c1d50a0e7a6edb901a5d4c3b6 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
-Date: Sun, 17 Apr 2022 20:02:37 -0400
+Date: Tue, 19 Apr 2022 12:32:13 -0400
 Subject: [PATCH 1/1] mlibc tonix port
 
 ---
@@ -8,8 +8,8 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/linker.cpp              |   6 +-
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
- sysdeps/tonix/generic/Entry.cpp              |  34 ++++
- sysdeps/tonix/generic/Generic.cpp            | 187 +++++++++++++++++++
+ sysdeps/tonix/generic/Entry.cpp              |  34 +++
+ sysdeps/tonix/generic/Generic.cpp            | 236 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -35,10 +35,11 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/abi-bits/uid_t.h       |   1 +
  sysdeps/tonix/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
- sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 ++
- sysdeps/tonix/include/tonix/SystemCall.h     |  80 ++++++++
- sysdeps/tonix/meson.build                    |  51 +++++
- 34 files changed, 404 insertions(+), 5 deletions(-)
+ sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
+ sysdeps/tonix/include/tonix/SystemCall.h     |  81 +++++++
+ sysdeps/tonix/include/tonix/VFS.h            |  18 ++
+ sysdeps/tonix/meson.build                    |  51 ++++
+ 35 files changed, 472 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -69,6 +70,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  create mode 120000 sysdeps/tonix/include/abi-bits/wait.h
  create mode 100644 sysdeps/tonix/include/mlibc/thread-entry.hpp
  create mode 100644 sysdeps/tonix/include/tonix/SystemCall.h
+ create mode 100644 sysdeps/tonix/include/tonix/VFS.h
  create mode 100644 sysdeps/tonix/meson.build
 
 diff --git a/meson.build b/meson.build
@@ -173,10 +175,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..12bef3c1
+index 00000000..ed018d95
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,187 @@
+@@ -0,0 +1,236 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -187,6 +189,7 @@ index 00000000..12bef3c1
 +#include <limits.h>
 +
 +#include <tonix/SystemCall.h>
++#include <tonix/VFS.h>
 +
 +namespace mlibc
 +{
@@ -274,17 +277,20 @@ index 00000000..12bef3c1
 +
 +    int sys_anon_free(void* pointer, size_t size)
 +    {
++        mlibc::infoLogger() << __FUNCTION__ << frg::endlog;
 +        SystemCall(SystemCallID::NotImplemented, pointer, size);
 +        return 0;
 +    }
 +
 +    int sys_isatty(int fd)
 +    {
-+        int ret = SystemCall(SystemCallID::IsTerminal, fd);
++        struct stat buffer;
++        int ret = sys_stat(fsfd_target::fd, fd, nullptr, 0, &buffer);
 +
-+        if (ret < 0) return -ret;
++        if (ret > 0) return ret;
 +
-+        return 0;
++        // Assuming that all character device files are ttys
++        return !S_ISCHR(buffer.st_mode);
 +    }
 +
 +#ifndef MLIBC_BUILDING_RTDL
@@ -297,6 +303,7 @@ index 00000000..12bef3c1
 +#ifndef MLIBC_BUILDING_RTDL
 +    int sys_clock_get(int clock, time_t *secs, long *nanos)
 +    {
++        mlibc::infoLogger() << __FUNCTION__ << frg::endlog;
 +        SystemCall(SystemCallID::NotImplemented, secs, nanos);
 +        return 0;
 +    }
@@ -309,12 +316,14 @@ index 00000000..12bef3c1
 +
 +    int sys_futex_wait(int* pointer, int expected, const timespec* time)
 +    {
++        mlibc::infoLogger() << __FUNCTION__ << frg::endlog;
 +        SystemCall(SystemCallID::NotImplemented, pointer, expected, time);
 +        return 0;
 +    }
 +
 +    int sys_futex_wake(int* pointer)
 +    {
++        mlibc::infoLogger() << __FUNCTION__ << frg::endlog;
 +        SystemCall(SystemCallID::NotImplemented, pointer);
 +        return 0;
 +    }
@@ -324,12 +333,14 @@ index 00000000..12bef3c1
 +
 +    int sys_clone(void* entry, void* user_arg, void* tcb, pid_t* tid_out)
 +    {
++        mlibc::infoLogger() << __FUNCTION__ << frg::endlog;
 +        SystemCall(SystemCallID::NotImplemented, entry, user_arg, tcb, tid_out);
 +        return 0;
 +    }
 +
 +    void sys_thread_exit()
 +    {
++        mlibc::infoLogger() << __FUNCTION__ << frg::endlog;
 +        SystemCall(SystemCallID::NotImplemented);
 +    }
 +
@@ -340,26 +351,66 @@ index 00000000..12bef3c1
 +
 +    int sys_fork(pid_t* child)
 +    {
++        mlibc::infoLogger() << __FUNCTION__ << frg::endlog;
 +        SystemCall(SystemCallID::NotImplemented, child);
 +        return 0;
 +    }
 +
 +    int sys_execve(const char* path, char* const argv[], char* const envp[])
 +    {
++        mlibc::infoLogger() << __FUNCTION__ << frg::endlog;
 +        SystemCall(SystemCallID::NotImplemented, path, argv, envp);
 +        return 0;
 +    }
 +
 +    pid_t sys_getpid()
 +    {
++        mlibc::infoLogger() << __FUNCTION__ << frg::endlog;
 +        SystemCall(SystemCallID::NotImplemented);
 +        return 0;
 +    }
 +
 +    pid_t sys_getppid()
 +    {
++        mlibc::infoLogger() << __FUNCTION__ << frg::endlog;
 +        SystemCall(SystemCallID::NotImplemented);
 +        return 0;
++    }
++
++    int sys_stat(fsfd_target fsfdt, int fd, const char* path, int flags, struct stat* statbuf)
++    {
++        long ret;
++        VnodeInfo vnodeInfo;
++        switch (fsfdt)
++        {
++            case fsfd_target::fd:
++                ret = SystemCall(SystemCallID::FStat, fd, &vnodeInfo);
++                break;
++            case fsfd_target::path:
++                ret = SystemCall(SystemCallID::Stat, path, &vnodeInfo);
++                break;
++            default: sys_libc_panic();
++        }
++
++        statbuf->st_mode = 0;
++        switch (vnodeInfo.type)
++        {
++            case VnodeType::RegularFile:
++                statbuf->st_mode |= S_IFREG;
++                break;
++            case VnodeType::Directory:
++                statbuf->st_mode |= S_IFDIR;
++                break;
++            case VnodeType::CharacterDevice:
++                statbuf->st_mode |= S_IFCHR;
++                break;
++            default: sys_libc_panic();
++        }
++
++        statbuf->st_ino = vnodeInfo.inodeNum;
++        statbuf->st_size = vnodeInfo.fileSize;
++
++        return -ret;
 +    }
 +
 +#endif // MLIBC_BUILDING_RTDL
@@ -585,10 +636,10 @@ index 00000000..9bda0961
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/tonix/SystemCall.h b/sysdeps/tonix/include/tonix/SystemCall.h
 new file mode 100644
-index 00000000..43591cc1
+index 00000000..70d0a1ec
 --- /dev/null
 +++ b/sysdeps/tonix/include/tonix/SystemCall.h
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,81 @@
 +#pragma once
 +
 +#include <sys/types.h>
@@ -604,7 +655,8 @@ index 00000000..43591cc1
 +    TCBSet = 6,
 +    Exit = 8,
 +    Sleep = 9,
-+    IsTerminal = 19,
++    Stat = 10,
++    FStat = 11,
 +    Panic = 254,
 +    Log = 255,
 +    NotImplemented = 253
@@ -669,6 +721,31 @@ index 00000000..43591cc1
 +{
 +    return SystemCallOverload(call, (ssize_t)arguments...);
 +}
+\ No newline at end of file
+diff --git a/sysdeps/tonix/include/tonix/VFS.h b/sysdeps/tonix/include/tonix/VFS.h
+new file mode 100644
+index 00000000..7ae3d15b
+--- /dev/null
++++ b/sysdeps/tonix/include/tonix/VFS.h
+@@ -0,0 +1,18 @@
++#pragma once
++
++#include <stdint.h>
++
++enum class VnodeType
++{
++    Unknown = 0,
++    RegularFile = 1,
++    Directory = 2,
++    CharacterDevice = 3
++};
++
++struct VnodeInfo
++{
++    VnodeType type;
++    uint32_t inodeNum;
++    uint32_t fileSize;
++} __attribute__((packed));
 \ No newline at end of file
 diff --git a/sysdeps/tonix/meson.build b/sysdeps/tonix/meson.build
 new file mode 100644
