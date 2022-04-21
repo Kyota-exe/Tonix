@@ -13,9 +13,8 @@ public:
     template <typename T>
     static void Printf(const char* string, T value, const char* end = "\n")
     {
-        char* formattedString = new char[128];
+        char formattedString[128];
         StringUtils::Format(formattedString, string, (uint64_t)value);
         Print(formattedString, end);
-        delete[] formattedString;
     }
 };
