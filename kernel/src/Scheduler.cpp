@@ -260,4 +260,6 @@ Scheduler::Scheduler(TSS* tss) : lapic(new LAPIC()), tss(tss)
 
     idleTask = CreateTask(idlePagingManager, idleEntry, idleStack, false, false);
     idleTask.pid = 0;
+
+    currentTask = idleTask;
 }
