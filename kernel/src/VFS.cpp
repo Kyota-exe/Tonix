@@ -215,7 +215,7 @@ int VFS::Open(const String& path, int flags, Error& error)
 
     if ((flags & OpenFlag::Append))
     {
-        fileDescriptor->offset = vnode->fileSize;
+        fileDescriptor->appendMode = true;
     }
 
     if (((flags & OpenFlag::WriteOnly) || (flags & OpenFlag::ReadWrite)) && vnode->type == VFS::VnodeType::Directory)
@@ -256,6 +256,11 @@ uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count)
     Assert(fileDescriptor != nullptr);
 
     VFS::Vnode* vnode = fileDescriptor->vnode;
+
+    if (fileDescriptor->appendMode)
+    {
+        fileDescriptor->offset = fileDescriptor->vnode->fileSize;
+    }
 
     uint64_t wroteCount = vnode->fileSystem->Write(vnode, buffer, count, fileDescriptor->offset);
     fileDescriptor->offset += wroteCount;

@@ -76,6 +76,7 @@ struct VFS::FileDescriptor
     bool present = false;
     uint64_t offset = 0;
     Vnode* vnode = nullptr;
+    bool appendMode = false;
 };
 
 enum class VFS::SeekType
