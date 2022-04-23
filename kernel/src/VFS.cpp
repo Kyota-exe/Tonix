@@ -279,7 +279,11 @@ uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count, Error& error)
     }
 
     uint64_t readCount = vnode->fileSystem->Read(vnode, buffer, count, fileDescriptor->offset);
-    fileDescriptor->offset += readCount;
+
+    if (vnode->type == VnodeType::RegularFile)
+    {
+        fileDescriptor->offset += readCount;
+    }
 
     return readCount;
 }
@@ -321,7 +325,11 @@ uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count, Error& e
     }
 
     uint64_t wroteCount = vnode->fileSystem->Write(vnode, buffer, count, fileDescriptor->offset);
-    fileDescriptor->offset += wroteCount;
+
+    if (vnode->type == VnodeType::RegularFile)
+    {
+        fileDescriptor->offset += wroteCount;
+    }
 
     return wroteCount;
 }
