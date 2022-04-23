@@ -231,11 +231,11 @@ void Scheduler::CreateTaskFromELF(const String& path, bool userTask)
 
     Task task = CreateTask(pagingManager, entry, stackPtr, userTask, true);
 
-    int desc = task.vfs->Open(String("/dev/tty"), 0);
+    int desc = task.vfs->Open(String("/dev/tty"), VFS::OpenFlag::ReadWrite);
     Assert(desc == 0);
-    desc = task.vfs->Open(String("/dev/tty"), 0);
+    desc = task.vfs->Open(String("/dev/tty"), VFS::OpenFlag::ReadWrite);
     Assert(desc == 1);
-    desc = task.vfs->Open(String("/dev/tty"), 0);
+    desc = task.vfs->Open(String("/dev/tty"), VFS::OpenFlag::ReadWrite);
     Assert(desc == 2);
 
     taskQueueLock.Acquire();

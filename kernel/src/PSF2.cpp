@@ -12,7 +12,7 @@ constexpr uint32_t PSF2_HEADER_FLAG_HAS_UNICODE_TABLE = 0x01;
 
 PSF2::PSF2(const String &path)
 {
-    int fontFile = VFS::kernelVfs->Open(path, 0);
+    int fontFile = VFS::kernelVfs->Open(path, VFS::OpenFlag::ReadOnly);
 
     header = new PSF2::Header;
     uint64_t headerSize = VFS::kernelVfs->Read(fontFile, header, sizeof(PSF2::Header));

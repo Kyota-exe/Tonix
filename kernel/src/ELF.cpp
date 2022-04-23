@@ -12,7 +12,7 @@ constexpr uintptr_t RTDL_ADDR = 0x40000000;
 
 void ELF::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& entry, uintptr_t& stackPtr)
 {
-    int elfFile = VFS::kernelVfs->Open(path, 0);
+    int elfFile = VFS::kernelVfs->Open(path, VFS::OpenFlag::ReadOnly);
 
     auto elfHeader = new ELFHeader;
     uint64_t elfHeaderSize = VFS::kernelVfs->Read(elfFile, elfHeader, sizeof(ELFHeader));
