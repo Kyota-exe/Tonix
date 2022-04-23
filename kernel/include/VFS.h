@@ -12,6 +12,7 @@ public:
     struct Vnode;
     struct VnodeInfo;
     enum class VnodeType;
+    enum OpenFlag : int;
     enum class SeekType;
 
     static VFS* kernelVfs;
@@ -77,6 +78,16 @@ struct VFS::FileDescriptor
     uint64_t offset = 0;
     Vnode* vnode = nullptr;
     bool appendMode = false;
+};
+
+enum VFS::OpenFlag : int
+{
+    Create = 0x10,
+    Append = 0x8,
+    Truncate = 0x200,
+    Exclude = 0x40,
+    WriteOnly = 0x5,
+    ReadWrite = 0x3
 };
 
 enum class VFS::SeekType

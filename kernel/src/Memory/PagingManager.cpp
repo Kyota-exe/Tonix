@@ -183,6 +183,11 @@ uintptr_t PagingManager::GetTranslatedPhysAddr(const void* virtAddr)
     return physAddr;
 }
 
+bool PagingManager::AddressIsAccessible(const void* virtAddr)
+{
+    return PageNotPresentLevel(virtAddr) == 0 && FlagMismatchLevel(virtAddr, PagingFlag::UserAllowed, true) == 0;
+}
+
 void PagingManager::PageTableEntry::SetFlag(PagingFlag flag, bool enable)
 {
     if (enable) value |= (1 << (uint64_t)flag);

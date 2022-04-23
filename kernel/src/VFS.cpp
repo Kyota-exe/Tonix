@@ -6,16 +6,6 @@
 #include "RAMDisk.h"
 #include "Heap.h"
 
-enum OpenFlag : int
-{
-    Create = 0x10,
-    Append = 0x8,
-    Truncate = 0x200,
-    Exclude = 0x40,
-    WriteOnly = 0x5,
-    ReadWrite = 0x3
-};
-
 VFS::Vnode* root;
 VFS::Vnode* currentInCache = nullptr;
 VFS* VFS::kernelVfs = nullptr;
@@ -170,6 +160,8 @@ int VFS::FindFreeFileDescriptor(FileDescriptor*& fileDescriptor)
     }
 
     fileDescriptor = &fileDescriptors.Get(descriptorIndex);
+    fileDescriptor->offset = 0;
+    fileDescriptor->vnode = nullptr;
 
     return descriptorIndex;
 }
@@ -178,11 +170,14 @@ int VFS::Open(const String& path, int flags, Error& error)
 {
     FileDescriptor* fileDescriptor = nullptr;
     int descriptorIndex = FindFreeFileDescriptor(fileDescriptor);
+    Assert(!fileDescriptor->present);
 
     String filename;
     VFS::Vnode* containingDirectory = nullptr;
     FileSystem* fileSystem = nullptr;
     VFS::Vnode* vnode = TraversePath(path, filename, containingDirectory, fileSystem, error);
+
+    Assert(!filename.IsEmpty());
 
     if (flags & OpenFlag::Create)
     {
@@ -205,10 +200,15 @@ int VFS::Open(const String& path, int flags, Error& error)
 
     if (vnode == nullptr)
     {
+        Assert(error == Error::NoFile || error == Error::NotDirectory);
         return -1;
     }
 
-    if ((flags & OpenFlag::Truncate) && vnode->type == VFS::VnodeType::RegularFile)
+    Assert(error == Error::None);
+
+    bool writingAllowed = (flags & OpenFlag::WriteOnly) || (flags & OpenFlag::ReadWrite);
+
+    if (writingAllowed && (flags & OpenFlag::Truncate) && vnode->type == VFS::VnodeType::RegularFile)
     {
         vnode->fileSystem->Truncate(vnode);
     }
@@ -218,7 +218,7 @@ int VFS::Open(const String& path, int flags, Error& error)
         fileDescriptor->appendMode = true;
     }
 
-    if (((flags & OpenFlag::WriteOnly) || (flags & OpenFlag::ReadWrite)) && vnode->type == VFS::VnodeType::Directory)
+    if (writingAllowed && vnode->type == VFS::VnodeType::Directory)
     {
         error = Error::IsDirectory;
         return -1;
@@ -323,7 +323,6 @@ void VFS::Close(int descriptor)
     Assert(fileDescriptor != nullptr);
 
     fileDescriptor->present = false;
-    fileDescriptor->offset = 0;
 }
 
 VFS::VnodeInfo VFS::GetVnodeInfo(int descriptor, Error& error)

@@ -272,8 +272,6 @@ void Ext2::Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name)
     vnode->context = inode;
     vnode->inodeNum = inodeNum;
     vnode->fileSystem = this;
-
-    vnode->context = inode;
     vnode->fileSize = inode->size0;
 
     if (vnode->type == VFS::VnodeType::Directory)

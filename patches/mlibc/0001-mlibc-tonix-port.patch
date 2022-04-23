@@ -1,4 +1,4 @@
-From d2b6480d41a5302feebbad6a820c200e2b955278 Mon Sep 17 00:00:00 2001
+From 81ea7d1ababd2e80af5b572e1c35766890476be4 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 +++
- sysdeps/tonix/generic/Generic.cpp            | 255 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 268 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -39,7 +39,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/tonix/SystemCall.h     |  81 ++++++
  sysdeps/tonix/include/tonix/VFS.h            |  18 ++
  sysdeps/tonix/meson.build                    |  51 ++++
- 35 files changed, 491 insertions(+), 5 deletions(-)
+ 35 files changed, 504 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -175,10 +175,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..94631453
+index 00000000..e4a4a4d6
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,255 @@
+@@ -0,0 +1,268 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -206,6 +206,19 @@ index 00000000..94631453
 +    int sys_open(const char* path, int flags, int* fd)
 +    {
 +        mlibc::infoLogger() << "[syscall] Open: " << path << " Flags: " << flags << frg::endlog;
++
++        __ensure(!(flags & O_EXEC));
++        __ensure(!(flags & O_CLOEXEC));
++        __ensure(!(flags & O_DIRECTORY));
++        __ensure(!(flags & O_DSYNC));
++        __ensure(!(flags & O_LARGEFILE));
++        __ensure(!(flags & O_NOATIME));
++        __ensure(!(flags & O_NOCTTY));
++        __ensure(!(flags & O_NOFOLLOW));
++        __ensure(!(flags & O_NONBLOCK));
++        __ensure(!(flags & O_NDELAY));
++        __ensure(!(flags & O_PATH));
++        __ensure(!(flags & O_SYNC));
 +
 +        ssize_t ret = SystemCall(SystemCallID::Open, path, flags);
 +
