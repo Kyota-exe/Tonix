@@ -1,4 +1,4 @@
-From 606810eb43acaaa6de7a02fd2fdaf6ceda812041 Mon Sep 17 00:00:00 2001
+From d52f2bf90151ca6a77e7ce2db7b3b275e14d577f Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 +++
- sysdeps/tonix/generic/Generic.cpp            | 278 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 279 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -39,7 +39,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/tonix/SystemCall.h     |  55 ++++
  sysdeps/tonix/include/tonix/VFS.h            |  18 ++
  sysdeps/tonix/meson.build                    |  51 ++++
- 35 files changed, 488 insertions(+), 5 deletions(-)
+ 35 files changed, 489 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -175,10 +175,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..e7f99dd5
+index 00000000..6eb3c79d
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,278 @@
+@@ -0,0 +1,279 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -187,6 +187,7 @@ index 00000000..e7f99dd5
 +#include <dirent.h>
 +#include <fcntl.h>
 +#include <limits.h>
++#include <unistd.h>
 +
 +#include <tonix/SystemCall.h>
 +#include <tonix/VFS.h>
@@ -326,7 +327,7 @@ index 00000000..e7f99dd5
 +        if (ret > 0) return ret;
 +
 +        // Assuming that all character device files are ttys
-+        return !S_ISCHR(buffer.st_mode);
++        return S_ISCHR(buffer.st_mode) ? 0 : ENOTTY;
 +    }
 +
 +#ifndef MLIBC_BUILDING_RTDL
@@ -424,7 +425,7 @@ index 00000000..e7f99dd5
 +        switch (fsfdt)
 +        {
 +            case fsfd_target::fd:
-+                mlibc::infoLogger() << "[syscall] Stat: " << fd << frg::endlog;
++                mlibc::infoLogger() << "[syscall] FStat: " << fd << frg::endlog;
 +                ret = SystemCall(SystemCallID::FStat, fd, &vnodeInfo);
 +                break;
 +            case fsfd_target::path:
