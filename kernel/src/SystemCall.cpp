@@ -94,7 +94,15 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
         {
             int fd = (int)arg0;
             auto buffer = reinterpret_cast<VFS::VnodeInfo*>(arg1);
-            *buffer = scheduler->currentTask.vfs->GetVnodeInfo(fd);
+
+            if (!scheduler->currentTask.pagingManager->AddressIsAccessible(buffer))
+            {
+                Panic();
+                error = Error::Fault;
+                return 0;
+            }
+
+            *buffer = scheduler->currentTask.vfs->GetVnodeInfo(fd, error);
             return 0;
         }
 
