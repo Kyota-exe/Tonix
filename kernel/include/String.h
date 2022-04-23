@@ -10,8 +10,7 @@ private:
     uint64_t length;
 
 public:
-    char& operator[](uint64_t index);
-    const char& operator[](uint64_t index) const;
+    char operator[](uint64_t index) const;
     void Push(char c);
     bool Match(uint64_t index, char c, bool assertValidIndex = false) const;
     bool IsNumeric(uint64_t index, bool assertValidIndex = false) const;

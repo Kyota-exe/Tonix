@@ -59,13 +59,7 @@ bool String::Equals(const char* other) const
     return *bufferPtr == 0 && *other == 0;
 }
 
-char& String::operator[](uint64_t index)
-{
-    Assert(index < length);
-    return buffer[index];
-}
-
-const char& String::operator[](uint64_t index) const
+char String::operator[](uint64_t index) const
 {
     Assert(index < length);
     return buffer[index];
@@ -73,6 +67,8 @@ const char& String::operator[](uint64_t index) const
 
 void String::Push(char c)
 {
+    Assert(c != 0);
+
     length++;
 
     char* newBuffer = new char[length + 1];
@@ -132,6 +128,8 @@ String::String(const char* original, uint64_t stringLength)
     buffer = new char[length + 1];
     MemCopy(buffer, original, length);
     buffer[length] = 0;
+
+    for (uint64_t i = 0; i < length; ++i) Assert(buffer[i] != 0);
 }
 
 String::String(const String& original)
@@ -149,6 +147,8 @@ String::String()
 
 String::String(char c)
 {
+    Assert(c != 0);
+
     length = 1;
     buffer = new char[2];
     buffer[0] = c;
