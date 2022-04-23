@@ -11,5 +11,6 @@ enum class Error : int64_t
     NotTerminal = 1058,
     NotDirectory = 1053,
     IsPipe = 1069,
-    Fault = 1020
+    Fault = 1020,
+    BadFileDescriptor = 1081
 };

@@ -4,8 +4,8 @@
 #include "VFS.h"
 #include "Scheduler.h"
 
-uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3,
-                    uint64_t arg4, uint64_t arg5, InterruptFrame* interruptFrame, Error& error)
+uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t arg2,
+                    InterruptFrame* interruptFrame, Error& error)
 {
     Scheduler* scheduler = Scheduler::GetScheduler();
 
@@ -26,10 +26,32 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
         }
 
         case SystemCallType::Read:
-            return scheduler->currentTask.vfs->Read((int)arg0, (void*)arg1, arg2);
+        {
+            void* buffer = reinterpret_cast<void*>(arg1);
+
+            if (!scheduler->currentTask.pagingManager->AddressIsAccessible(buffer))
+            {
+                Panic();
+                error = Error::Fault;
+                return 0;
+            }
+
+            return scheduler->currentTask.vfs->Read((int)arg0, buffer, arg2, error);
+        }
 
         case SystemCallType::Write:
-            return scheduler->currentTask.vfs->Write((int)arg0, (const void*)arg1, arg2);
+        {
+            const void* buffer = reinterpret_cast<const void*>(arg1);
+
+            if (!scheduler->currentTask.pagingManager->AddressIsAccessible(buffer))
+            {
+                Panic();
+                error = Error::Fault;
+                return 0;
+            }
+
+            return scheduler->currentTask.vfs->Write((int)arg0, buffer, arg2, error);
+        }
 
         case SystemCallType::Seek:
             return scheduler->currentTask.vfs->RepositionOffset((int)arg0, arg1, (VFS::SeekType)arg2, error);
@@ -38,8 +60,7 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             scheduler->currentTask.vfs->Close((int)arg0); return 0;
 
         case SystemCallType::FileMap:
-            return (uint64_t)FileMap(&scheduler->currentTask, (void*)arg0, arg1,
-                                     (int)arg2,(int)arg3, (int)arg4, (int)arg5);
+            return reinterpret_cast<uintptr_t>(FileMap((void*)arg0, arg1));
 
         case SystemCallType::Log:
             Serial::Print((const char*)arg0); return 0;

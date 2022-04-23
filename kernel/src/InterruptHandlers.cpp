@@ -48,8 +48,7 @@ void SystemCallHandler(InterruptFrame* interruptFrame)
     Error error = Error::None;
 
     interruptFrame->rax = SystemCall((SystemCallType)interruptFrame->rax, interruptFrame->rdi,
-                                     interruptFrame->rsi, interruptFrame->rdx,interruptFrame->rcx,
-                                     interruptFrame->r8,interruptFrame->r9, interruptFrame, error);
+                                     interruptFrame->rsi, interruptFrame->rdx, interruptFrame, error);
 
     if (error != Error::None)
     {
