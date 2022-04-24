@@ -1,6 +1,6 @@
 #pragma once
 
-[[noreturn]] void Poof(const char* assertion, const char* file, unsigned int line, const char* function);
+[[noreturn]] void KernelPanic(const char* assertion, const char* file, unsigned int line, const char* function);
 
-#define Panic() Poof("None", __FILE__, __LINE__, __func__)
-#define Assert(assertion) if (!(assertion)) Poof(#assertion, __FILE__, __LINE__, __func__)
+#define Panic() KernelPanic("None", __FILE__, __LINE__, __func__)
+#define Assert(assertion) if (!(assertion)) KernelPanic(#assertion, __FILE__, __LINE__, __func__)

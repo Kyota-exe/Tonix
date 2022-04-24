@@ -1,7 +1,7 @@
 #include "Assert.h"
 #include "Serial.h"
 
-[[noreturn]] void Poof(const char* assertion, const char* file, unsigned int line, const char* function)
+[[noreturn]] void KernelPanic(const char* assertion, const char* file, unsigned int line, const char* function)
 {
     asm volatile("cli");
     Serial::Print("! KERNEL PANIC !");
