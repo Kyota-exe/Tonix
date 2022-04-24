@@ -237,10 +237,14 @@ void Terminal::ProcessEscapeSequence(char command, bool hasCSI, const Vector<uns
                 cursorX = arguments.Get(0) * textRenderer->FontWidth();
                 break;
             case 'm':
+                if (argCount == 0) ResetColors();
                 for (unsigned int arg : arguments)
                 {
                     switch (arg)
                     {
+                        case 0:
+                            ResetColors();
+                            break;
                         case 30 ... 38:
                             textColour = Colour::FromANSICode(arg);
                             break;
@@ -273,4 +277,10 @@ void Terminal::ProcessEscapeSequence(char command, bool hasCSI, const Vector<uns
                 Panic();
         }
     }
+}
+
+void Terminal::ResetColors()
+{
+    textColour = originalTextColour;
+    textBgColour = originalTextBgColour;
 }

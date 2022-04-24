@@ -20,6 +20,7 @@ public:
 private:
     void Print(const String& string);
     void ProcessEscapeSequence(char command, bool hasCSI, const Vector<unsigned int>& arguments);
+    void ResetColors();
 
     TextRenderer* textRenderer;
     Vector<uint64_t> unblockQueue;
