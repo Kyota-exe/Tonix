@@ -127,20 +127,23 @@ void Terminal::Print(const String& string)
                 if (hasCSI) currentIndex++;
 
                 Vector<unsigned int> arguments;
-                do
+                if (string.IsNumeric(currentIndex))
                 {
-                    String numberString;
-                    while (string.IsNumeric(currentIndex))
+                    while (true)
                     {
-                        numberString.Push(string[currentIndex++]);
+                        String numberString;
+                        while (string.IsNumeric(currentIndex))
+                        {
+                            numberString.Push(string[currentIndex++]);
+                        }
+
+                        Assert(numberString.GetLength() > 0);
+                        arguments.Push(numberString.ToUnsignedInt());
+
+                        if (string.Match(currentIndex, ';')) currentIndex++;
+                        else break;
                     }
-
-                    Assert(numberString.GetLength() > 0);
-                    arguments.Push(numberString.ToUnsignedInt());
-
-                } while (string.Match(currentIndex++, ';'));
-
-                currentIndex--;
+                }
 
                 Assert(currentIndex < string.GetLength());
                 char command = string[currentIndex++];
