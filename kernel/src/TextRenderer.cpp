@@ -17,8 +17,8 @@ void TextRenderer::Print(char c, long x, long y, Colour colour, Colour bgColour)
     {
         for (uint32_t glyphX = 0; glyphX < font->Width(); ++glyphX)
         {
-            long screenX = x + glyphX;
-            long screenY = y + glyphY;
+            long screenX = x * font->Width() + glyphX;
+            long screenY = y * font->Height() + glyphY;
             Framebuffer::PlotPixel(screenX, screenY, glyph.GetPixel(glyphX, glyphY) ? colour : bgColour);
         }
     }
@@ -30,29 +30,21 @@ void TextRenderer::Paint(long x, long y, Colour colour)
     {
         for (uint32_t glyphX = 0; glyphX < font->Width(); ++glyphX)
         {
-            long screenX = x + glyphX;
-            long screenY = y + glyphY;
+            long screenX = x * font->Width() + glyphX;
+            long screenY = y * font->Height() + glyphY;
             Framebuffer::PlotPixel(screenX, screenY, colour);
         }
     }
 }
 
-unsigned int TextRenderer::FontWidth()
+long TextRenderer::CharsPerLine()
 {
-    return font->Width();
+    Assert(Framebuffer::Width() / font->Width() == 102);
+    return Framebuffer::Width() / font->Width();
 }
 
-unsigned int TextRenderer::FontHeight()
+long TextRenderer::CharsPerColumn()
 {
-    return font->Height();
-}
-
-long TextRenderer::ScreenWidth()
-{
-    return Framebuffer::Width();
-}
-
-long TextRenderer::ScreenHeight()
-{
-    return Framebuffer::Height();
+    Assert(Framebuffer::Height() / font->Height() == 38);
+    return Framebuffer::Height() / font->Height();
 }

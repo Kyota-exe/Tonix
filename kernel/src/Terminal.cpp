@@ -103,18 +103,18 @@ void Terminal::Print(const String& string)
             {
                 nextCursorXPerLine.Push(cursorX);
                 cursorX = 0;
-                cursorY += textRenderer->FontHeight();
+                cursorY++;
                 break;
             }
             case '\b': // Backspace
             {
-                cursorX -= textRenderer->FontWidth();
+                cursorX--;
                 eraseCharacter = true;
                 break;
             }
             case '\t': // Horizontal Tab
             {
-                cursorX += textRenderer->FontWidth() * 4;
+                cursorX += 4;
                 break;
             }
             case '\a': // Terminal Bell
@@ -154,28 +154,28 @@ void Terminal::Print(const String& string)
             default:
             {
                 textRenderer->Print(c, cursorX, cursorY, textColour, textBgColour);
-                cursorX += textRenderer->FontWidth();
+                cursorX++;
             }
         }
 
         // Right edge cursor wrapping
-        if (cursorX + textRenderer->FontWidth() > textRenderer->ScreenWidth())
+        if (cursorX + 1 > textRenderer->CharsPerLine())
         {
-            nextCursorXPerLine.Push(cursorX - textRenderer->FontWidth());
+            nextCursorXPerLine.Push(cursorX - 1);
             cursorX = 0;
-            cursorY += textRenderer->FontHeight();
+            cursorY++;
         }
         // Left edge cursor wrapping
         else if (cursorX < 0)
         {
             Assert(nextCursorXPerLine.GetLength() > 0);
             cursorX = nextCursorXPerLine.Pop();
-            cursorY -= textRenderer->FontHeight();
+            cursorY--;
         }
 
         Assert(cursorX >= 0);
         Assert(cursorY >= 0);
-        Assert(cursorY < textRenderer->ScreenHeight());
+        Assert(cursorY < textRenderer->CharsPerColumn());
 
         if (eraseCharacter)
         {
@@ -198,43 +198,43 @@ void Terminal::ProcessEscapeSequence(char command, bool hasCSI, const Vector<uns
             case 'H':
                 if (argCount == 0) { cursorX = cursorY = 0; break; }
                 Assert(argCount == 2);
-                cursorY = arguments.Get(0) * textRenderer->FontHeight();
-                cursorX = arguments.Get(1) * textRenderer->FontWidth();
+                cursorY = arguments.Get(0);
+                cursorX = arguments.Get(1);
                 break;
             case 'f':
                 Assert(argCount == 2);
-                cursorY = arguments.Get(0) * textRenderer->FontHeight();
-                cursorX = arguments.Get(1) * textRenderer->FontWidth();
+                cursorY = arguments.Get(0);
+                cursorX = arguments.Get(1);
                 break;
             case 'A':
                 Assert(argCount == 1);
-                cursorY -= arguments.Get(0) * textRenderer->FontHeight();
+                cursorY -= arguments.Get(0);
                 break;
             case 'B':
                 Assert(argCount == 1);
-                cursorY += arguments.Get(0) * textRenderer->FontHeight();
+                cursorY += arguments.Get(0);
                 break;
             case 'C':
                 Assert(argCount == 1);
-                cursorX += arguments.Get(0) * textRenderer->FontWidth();
+                cursorX += arguments.Get(0);
                 break;
             case 'D':
                 Assert(argCount == 1);
-                cursorX -= arguments.Get(0) * textRenderer->FontWidth();
+                cursorX -= arguments.Get(0);
                 break;
             case 'E':
                 Assert(argCount == 1);
-                cursorY += arguments.Get(0) * textRenderer->FontHeight();
+                cursorY += arguments.Get(0);
                 cursorX = 0;
                 break;
             case 'F':
                 Assert(argCount == 1);
-                cursorY -= arguments.Get(0) * textRenderer->FontHeight();
+                cursorY -= arguments.Get(0);
                 cursorX = 0;
                 break;
             case 'G':
                 Assert(argCount == 1);
-                cursorX = arguments.Get(0) * textRenderer->FontWidth();
+                cursorX = arguments.Get(0);
                 break;
             case 'm':
                 if (argCount == 0) ResetColors();
@@ -271,7 +271,7 @@ void Terminal::ProcessEscapeSequence(char command, bool hasCSI, const Vector<uns
         switch (command)
         {
             case 'M':
-                cursorY -= textRenderer->FontHeight();
+                cursorY--;
                 break;
             default:
                 Panic();

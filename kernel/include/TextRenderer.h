@@ -8,10 +8,8 @@ class TextRenderer
 public:
     void Print(char c, long x, long y, Colour colour, Colour bgColour);
     void Paint(long x, long y, Colour colour);
-    unsigned int FontWidth();
-    unsigned int FontHeight();
-    long ScreenWidth();
-    long ScreenHeight();
+    long CharsPerLine();
+    long CharsPerColumn();
     TextRenderer();
     ~TextRenderer();
 private:
