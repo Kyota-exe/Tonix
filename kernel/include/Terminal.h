@@ -21,6 +21,8 @@ private:
     void Print(const String& string);
     void ProcessEscapeSequence(char command, bool hasCSI, const Vector<unsigned int>& arguments);
     void ResetColors();
+    void EraseRangeInclusive(long minX, long minY, long maxX, long maxY);
+    void EraseScreenFrom(long x, long y);
 
     TextRenderer* textRenderer;
     Vector<uint64_t> unblockQueue;

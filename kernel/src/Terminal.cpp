@@ -100,6 +100,7 @@ void Terminal::Print(const String& string)
         switch (c)
         {
             case '\n': // Line Feed
+            case '\r': // Carriage Return
             {
                 nextCursorXPerLine.Push(cursorX);
                 cursorX = 0;
@@ -236,6 +237,27 @@ void Terminal::ProcessEscapeSequence(char command, bool hasCSI, const Vector<uns
                 Assert(argCount == 1);
                 cursorX = arguments.Get(0);
                 break;
+            case 'J':
+                if (argCount == 0) EraseScreenFrom(cursorX, cursorY);
+                else
+                {
+                    Assert(argCount == 1);
+                    switch (arguments.Get(0))
+                    {
+                        case 0:
+                            EraseScreenFrom(cursorX, cursorY);
+                            break;
+                        case 1:
+                            EraseRangeInclusive(0, 0, cursorX, cursorY);
+                            break;
+                        case 2:
+                            EraseScreenFrom(0, 0);
+                            break;
+                        default:
+                            Panic();
+                    }
+                }
+                break;
             case 'm':
                 if (argCount == 0) ResetColors();
                 for (unsigned int arg : arguments)
@@ -283,4 +305,20 @@ void Terminal::ResetColors()
 {
     textColour = originalTextColour;
     textBgColour = originalTextBgColour;
+}
+
+void Terminal::EraseRangeInclusive(long minX, long minY, long maxX, long maxY)
+{
+    for (long y = minY; y <= maxY; ++y)
+    {
+        for (long x = (y == minY) ? minX : 0; x <= maxX; ++x)
+        {
+            textRenderer->Paint(x, y, backgroundColour);
+        }
+    }
+}
+
+void Terminal::EraseScreenFrom(long x, long y)
+{
+    EraseRangeInclusive(x, y, textRenderer->CharsPerLine() - 1, textRenderer->CharsPerColumn() - 1);
 }
