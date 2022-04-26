@@ -6,12 +6,9 @@
     asm volatile("cli");
     Serial::Print("! KERNEL PANIC !");
 
-    // TODO: Don't print strings directly
-    Serial::Print(assertion);
-    Serial::Print(file, "");
-    Serial::Printf(": line %d", line);
-    Serial::Print("Function: ", "");
-    Serial::Print(function);
+    Serial::Printf("%s", assertion);
+    Serial::Printf("%s: line: %d", file, line);
+    Serial::Printf("Function: %s", function);
 
     while (true) asm("hlt");
 }

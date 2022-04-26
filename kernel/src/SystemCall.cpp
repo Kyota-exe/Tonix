@@ -63,10 +63,10 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             return reinterpret_cast<uintptr_t>(FileMap((void*)arg0, arg1));
 
         case SystemCallType::Log:
-            Serial::Print((const char*)arg0); return 0;
+            Serial::Printf("%s", arg0); return 0;
 
         case SystemCallType::Panic:
-            Serial::Print((const char*)arg0);
+            Serial::Printf("%s", arg0);
             Panic();
 
         case SystemCallType::TCBSet:

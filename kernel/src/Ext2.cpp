@@ -61,11 +61,9 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
     Serial::Printf("Blocks per block group: %d", superblock->blocksPerBlockGroup);
     Serial::Printf("Inodes per block group: %d", superblock->inodesPerBlockGroup);
 
-    Serial::Printf("Version: %d.", superblock->majorVersion, "");
-    Serial::Printf("%d", superblock->minorVersion);
+    Serial::Printf("Version: %d.%d", superblock->majorVersion, superblock->minorVersion);
 
-    Serial::Print("Volume name: ", "");
-    Serial::Print(superblock->volumeName);
+    Serial::Printf("Volume name: %s", superblock->volumeName);
 
     blockGroupsCount = superblock->blocksCount / superblock->blocksPerBlockGroup;
     if (superblock->blocksCount % superblock->blocksPerBlockGroup != 0) blockGroupsCount += 1;
@@ -156,8 +154,7 @@ VFS::Vnode* Ext2::FindInDirectory(VFS::Vnode* directory, const String& name)
             Read(directory, nameBuffer, directoryEntry.nameLength, parsedLength + sizeof(directoryEntry));
             nameBuffer[directoryEntry.nameLength] = 0;
 
-            Serial::Print("[ext2]------------- Found: ", "");
-            Serial::Print(nameBuffer);
+            Serial::Printf("[ext2]------------- Found: %s", nameBuffer);
 
             if (String(nameBuffer).Equals(name))
             {
@@ -168,8 +165,7 @@ VFS::Vnode* Ext2::FindInDirectory(VFS::Vnode* directory, const String& name)
         parsedLength += directoryEntry.entrySize;
     }
 
-    Serial::Print("[ext2]$$$$$$$$$$$$$ Failed to find ", "");
-    Serial::Print(name);
+    Serial::Printf("[ext2]------------- Failed to find %s", name.ToRawString());
 
     return nullptr;
 }
@@ -304,7 +300,7 @@ void Ext2::WriteDirectoryEntry(VFS::Vnode* directory, uint32_t inodeNum, const S
 
     uint8_t zero = 0;
     Write(directory, &directoryEntry, sizeof(DirectoryEntry), directory->fileSize);
-    Write(directory, name.ToCString(), directoryEntry.nameLength, directory->fileSize);
+    Write(directory, name.ToRawString(), directoryEntry.nameLength, directory->fileSize);
     for (uint8_t i = 0; i < nameLengthPadding; ++i)
     {
         Write(directory, &zero, 1, directory->fileSize);

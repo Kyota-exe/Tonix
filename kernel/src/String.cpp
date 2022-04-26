@@ -195,7 +195,7 @@ unsigned int String::ToUnsignedInt()
     return number;
 }
 
-const char* String::ToCString() const
+const char* String::ToRawString() const
 {
     return buffer;
 }
@@ -208,36 +208,4 @@ const char* String::begin() const
 const char* String::end() const
 {
     return buffer + GetLength();
-}
-
-String String::ToString(unsigned long n, int base)
-{
-    if (n == 0)
-    {
-        char buffer[2];
-        buffer[0] = '0';
-        buffer[1] = 0;
-        return String(buffer);
-    }
-
-    Assert(base == 2 || base == 8 || base == 10 || base == 16);
-
-    unsigned long size = 0;
-    unsigned long num = n;
-    while (num > 0)
-    {
-        size++;
-        num /= base;
-    }
-
-    char buffer[size + 1];
-    for (unsigned long i = size; i > 0; --i)
-    {
-        char c = base != 16 ? static_cast<char>(n % base + '0') : "0123456789abcdef"[n % base];
-        buffer[i - 1] = c;
-        n /= base;
-    }
-    buffer[size] = 0;
-
-    return String(buffer);
 }

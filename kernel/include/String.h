@@ -22,7 +22,7 @@ public:
     bool Equals(const char* other) const;
     bool IsEmpty() const;
     String Substring(uint64_t index, uint64_t substringLength) const;
-    const char* ToCString() const;
+    const char* ToRawString() const;
     unsigned int ToUnsignedInt();
 
     const char* begin() const;
@@ -34,6 +34,4 @@ public:
     String(char c);
     String();
     ~String();
-
-    static String ToString(unsigned long n, int base);
 };
