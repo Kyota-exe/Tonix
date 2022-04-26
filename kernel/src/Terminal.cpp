@@ -258,6 +258,25 @@ void Terminal::ProcessEscapeSequence(char command, bool hasCSI, const Vector<uns
                     }
                 }
                 break;
+            case 'K':
+                if (argCount == 0) EraseRangeInclusive(cursorX, cursorY, textRenderer->CharsPerLine() - 1, cursorY);
+                else
+                {
+                    Assert(argCount == 1);
+                    switch (arguments.Get(0))
+                    {
+                        case 0:
+                            EraseRangeInclusive(cursorX, cursorY, textRenderer->CharsPerLine() - 1, cursorY);
+                            break;
+                        case 1:
+                            EraseRangeInclusive(0, cursorY, cursorX, cursorY);
+                            break;
+                        case 2:
+                            EraseRangeInclusive(0, cursorY, textRenderer->CharsPerLine() - 1, cursorY);
+                            break;
+                    }
+                }
+                break;
             case 'm':
                 if (argCount == 0) ResetColors();
                 for (unsigned int arg : arguments)
