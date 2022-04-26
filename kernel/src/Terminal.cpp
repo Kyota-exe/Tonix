@@ -19,15 +19,16 @@ uint64_t Terminal::Read(void* buffer, uint64_t count)
 
     uint64_t readCount = count > currentBufferLength ? currentBufferLength : count;
     MemCopy(buffer, inputBuffer, readCount);
-    currentBufferLength -= readCount;
 
-    if (count < currentBufferLength)
+    if (readCount < currentBufferLength)
     {
-        for (uint64_t i = 0; i < currentBufferLength; ++i)
+        for (uint64_t i = 0; i < currentBufferLength - readCount; ++i)
         {
             inputBuffer[i] = inputBuffer[i + readCount];
         }
     }
+
+    currentBufferLength -= readCount;
 
     return readCount;
 }
