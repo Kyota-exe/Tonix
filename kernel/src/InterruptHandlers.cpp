@@ -9,20 +9,20 @@
 
 void PageFaultHandler()
 {
-    Serial::Print("Page fault occurred.");
+    Serial::Log("Page fault occurred.");
 
     uint64_t cr2;
     asm volatile("mov %%cr2, %0" : "=r"(cr2));
-    Serial::Printf("CR2: %x", cr2);
+    Serial::Log("CR2: %x", cr2);
 }
 
 [[noreturn]] void ExceptionHandler(InterruptFrame* interruptFrame)
 {
-    Serial::Printf("Exception: %x", interruptFrame->interruptNumber);
-    Serial::Printf("Error code: %x", interruptFrame->errorCode);
-    Serial::Printf("RIP: %x", interruptFrame->rip);
-    Serial::Printf("RSP: %x", interruptFrame->rsp);
-    Serial::Printf("Core: %d", CPU::GetCoreID());
+    Serial::Log("Exception: %x", interruptFrame->interruptNumber);
+    Serial::Log("Error code: %x", interruptFrame->errorCode);
+    Serial::Log("RIP: %x", interruptFrame->rip);
+    Serial::Log("RSP: %x", interruptFrame->rsp);
+    Serial::Log("Core: %d", CPU::GetCoreID());
 
     if (interruptFrame->interruptNumber == 0xe) PageFaultHandler();
 
@@ -75,7 +75,7 @@ extern "C" void ISRHandler(InterruptFrame* interruptFrame)
         case 0 ... 31:
             ExceptionHandler(interruptFrame);
         default:
-            Serial::Printf("Could not find ISR for interrupt %x.", interruptFrame->interruptNumber);
+            Serial::Log("Could not find ISR for interrupt %x.", interruptFrame->interruptNumber);
             Panic();
     }
 }

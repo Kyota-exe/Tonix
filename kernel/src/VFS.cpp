@@ -69,7 +69,7 @@ VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& contai
         fileName = path.Split('/', currentDepth);
         Vector<VFS::Vnode*> mounts;
 
-        Serial::Printf("PATH TOKEN: %s", fileName.ToRawString());
+        Serial::Log("PATH TOKEN: %s", fileName.ToRawString());
 
         // We make a stack of vnodes mounted on this directory so that we can attempt to find the next
         // file from the most recently mounted vnode.

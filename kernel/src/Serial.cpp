@@ -34,7 +34,7 @@ uint64_t ToRawString(char* buffer, uint64_t number, unsigned int base)
     return size;
 }
 
-void Serial::Printf(const char* string, ...)
+void Serial::Log(const char* string, ...)
 {
     va_list args;
     va_start(args, string);

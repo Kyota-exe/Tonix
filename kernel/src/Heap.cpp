@@ -88,9 +88,9 @@ void Slab::Free(void* ptr)
     }
     if (!foundAddr)
     {
-        Serial::Print("Double free!");
-        Serial::Printf("DF addr: %x", (uint64_t)ptr);
-        Serial::Printf("DF Slot size: %d", (uint64_t)slotSize);
+        Serial::Log("Double free!");
+        Serial::Log("DF addr: %x", (uint64_t) ptr);
+        Serial::Log("DF Slot size: %d", (uint64_t) slotSize);
         Panic();
     }
 

@@ -44,7 +44,7 @@ constexpr uint16_t DEFAULT_DIRECTORY_TYPE_PERMISSIONS = Directory | UserRead | U
 
 Ext2::Ext2(Disk* disk) : FileSystem(disk)
 {
-    Serial::Print("Initializing Ext2 file system...");
+    Serial::Log("Initializing Ext2 file system...");
 
     superblock = new Superblock;
     disk->Read(EXT2_SUPERBLOCK_DISK_ADDR, superblock, sizeof(Superblock));
@@ -54,16 +54,16 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
 
     blockSize = 1024 << superblock->blockSizeLog2Minus10;
 
-    Serial::Printf("Inodes count: %d", superblock->inodesCount);
-    Serial::Printf("Inode size: %d", superblock->inodeSize);
-    Serial::Printf("Blocks count: %d", superblock->blocksCount);
-    Serial::Printf("Block size: %d", blockSize);
-    Serial::Printf("Blocks per block group: %d", superblock->blocksPerBlockGroup);
-    Serial::Printf("Inodes per block group: %d", superblock->inodesPerBlockGroup);
+    Serial::Log("Inodes count: %d", superblock->inodesCount);
+    Serial::Log("Inode size: %d", superblock->inodeSize);
+    Serial::Log("Blocks count: %d", superblock->blocksCount);
+    Serial::Log("Block size: %d", blockSize);
+    Serial::Log("Blocks per block group: %d", superblock->blocksPerBlockGroup);
+    Serial::Log("Inodes per block group: %d", superblock->inodesPerBlockGroup);
 
-    Serial::Printf("Version: %d.%d", superblock->majorVersion, superblock->minorVersion);
+    Serial::Log("Version: %d.%d", superblock->majorVersion, superblock->minorVersion);
 
-    Serial::Printf("Volume name: %s", superblock->volumeName);
+    Serial::Log("Volume name: %s", superblock->volumeName);
 
     blockGroupsCount = superblock->blocksCount / superblock->blocksPerBlockGroup;
     if (superblock->blocksCount % superblock->blocksPerBlockGroup != 0) blockGroupsCount += 1;
@@ -73,16 +73,16 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
 
     Assert(blockGroupsCount == blockGroupsCountCheck);
 
-    Serial::Printf("Block group count: %d", blockGroupsCount);
+    Serial::Log("Block group count: %d", blockGroupsCount);
 
-    Serial::Printf("First non-reserved rootInode in file system: %d", superblock->firstNonReservedInode);
+    Serial::Log("First non-reserved rootInode in file system: %d", superblock->firstNonReservedInode);
 
-    Serial::Printf("Optional features: %x", superblock->optionalFeatures);
-    Serial::Printf("Required features: %x", superblock->requiredFeatures);
-    Serial::Printf("Read-only features: %x", superblock->readOnlyFeatures);
+    Serial::Log("Optional features: %x", superblock->optionalFeatures);
+    Serial::Log("Required features: %x", superblock->requiredFeatures);
+    Serial::Log("Read-only features: %x", superblock->readOnlyFeatures);
 
-    Serial::Printf("Number of blocks to preallocate for files: %d", superblock->preallocFilesBlocksCount);
-    Serial::Printf("Number of blocks to preallocate for directories: %d", superblock->preallocDirectoriesBlocksCount);
+    Serial::Log("Number of blocks to preallocate for files: %d", superblock->preallocFilesBlocksCount);
+    Serial::Log("Number of blocks to preallocate for directories: %d", superblock->preallocDirectoriesBlocksCount);
 
     blockGroupDescTable = new BlockGroupDescriptor[blockGroupsCount];
     uint32_t blockGroupDescTableDiskAddr = blockSize * (blockSize == 1024 ? 2 : 1);
@@ -154,7 +154,7 @@ VFS::Vnode* Ext2::FindInDirectory(VFS::Vnode* directory, const String& name)
             Read(directory, nameBuffer, directoryEntry.nameLength, parsedLength + sizeof(directoryEntry));
             nameBuffer[directoryEntry.nameLength] = 0;
 
-            Serial::Printf("[ext2]------------- Found: %s", nameBuffer);
+            Serial::Log("[ext2]------------- Found: %s", nameBuffer);
 
             if (String(nameBuffer).Equals(name))
             {
@@ -165,7 +165,7 @@ VFS::Vnode* Ext2::FindInDirectory(VFS::Vnode* directory, const String& name)
         parsedLength += directoryEntry.entrySize;
     }
 
-    Serial::Printf("[ext2]------------- Failed to find %s", name.ToRawString());
+    Serial::Log("[ext2]------------- Failed to find %s", name.ToRawString());
 
     return nullptr;
 }

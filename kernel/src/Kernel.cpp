@@ -15,7 +15,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
 {
     InitializeStivale2Interface(stivale2Struct);
 
-    Serial::Print("Kernel ELF successfully loaded");
+    Serial::Log("Kernel ELF successfully loaded");
 
     InitializePageFrameAllocator();
     InitializeKernelHeap();
@@ -32,7 +32,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     Framebuffer::Initialize();
 
     auto modulesStruct = (stivale2_struct_tag_modules*)GetStivale2Tag(STIVALE2_STRUCT_TAG_MODULES_ID);
-    Serial::Printf("Module Count: %d", modulesStruct->module_count);
+    Serial::Log("Module Count: %d", modulesStruct->module_count);
     for (uint64_t i = 0; i < modulesStruct->module_count; ++i)
     {
         stivale2_module module = modulesStruct->modules[i];
@@ -52,6 +52,6 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
 
 extern "C" __attribute__((unused)) void __cxa_pure_virtual()
 {
-    Serial::Print("__cxa_pure_virtual called");
+    Serial::Log("__cxa_pure_virtual called");
     Panic();
 }

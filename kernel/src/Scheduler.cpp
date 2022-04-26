@@ -206,7 +206,7 @@ void Scheduler::StartCores(TSS* bspTss)
 
 void Scheduler::ExitCurrentTask(int status, InterruptFrame* interruptFrame)
 {
-    Serial::Printf("Task exited with status %d.", status);
+    Serial::Log("Task exited with status %d.", status);
 
     restoreFrame = false;
     SwitchToNextTask(interruptFrame);

@@ -7,6 +7,5 @@
 class Serial
 {
 public:
-    static void Printf(const char* string, ...);
-    static void Print(const char* string) { Printf(string); }
+    static void Log(const char* string, ...);
 };

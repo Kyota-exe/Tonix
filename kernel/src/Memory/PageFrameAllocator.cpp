@@ -76,7 +76,7 @@ uintptr_t RequestPageFrame()
     }
 
     pageFrameBitmapLock.Release();
-    Serial::Print("Failed to find free page frame.");
+    Serial::Log("Failed to find free page frame.");
     Panic();
 }
 
@@ -108,7 +108,7 @@ uintptr_t RequestPageFrames(uint64_t count)
     }
 
     pageFrameBitmapLock.Release();
-    Serial::Printf("Could not find %d continuous free pages.", count);
+    Serial::Log("Could not find %d continuous free pages.", count);
     Panic();
 }
 

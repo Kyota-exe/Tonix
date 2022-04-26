@@ -18,9 +18,9 @@ void Framebuffer::Initialize()
     Assert(framebufferStruct->memory_model == 1);
     Assert(framebufferStruct->framebuffer_bpp == 32);
 
-    Serial::Printf("Framebuffer width: %d", framebufferStruct->framebuffer_width);
-    Serial::Printf("Framebuffer height: %d", framebufferStruct->framebuffer_height);
-    Serial::Printf("Framebuffer pitch: %d", framebufferStruct->framebuffer_pitch);
+    Serial::Log("Framebuffer width: %d", framebufferStruct->framebuffer_width);
+    Serial::Log("Framebuffer height: %d", framebufferStruct->framebuffer_height);
+    Serial::Log("Framebuffer pitch: %d", framebufferStruct->framebuffer_pitch);
 
     virtAddr = (uint32_t*)framebufferStruct->framebuffer_addr;
     width = framebufferStruct->framebuffer_width;

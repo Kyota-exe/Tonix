@@ -24,13 +24,13 @@ PSF2::PSF2(const String &path)
 
     Assert(headerSize == sizeof(PSF2::Header) && headerSize == header->headerSize);
 
-    Serial::Printf("Width: %d", header->width);
-    Serial::Printf("Height: %d", header->height);
-    Serial::Printf("Character size: %d", header->charSize);
-    Serial::Printf("Glyph count: %d", header->glyphCount);
-    Serial::Printf("Glyph buffer size: %d", header->glyphCount * header->charSize);
-    Serial::Printf("Has unicode table: %d", (bool)(header->flags & PSF2_HEADER_FLAG_HAS_UNICODE_TABLE));
-    Serial::Printf("Header size: %d", header->headerSize);
+    Serial::Log("Width: %d", header->width);
+    Serial::Log("Height: %d", header->height);
+    Serial::Log("Character size: %d", header->charSize);
+    Serial::Log("Glyph count: %d", header->glyphCount);
+    Serial::Log("Glyph buffer size: %d", header->glyphCount * header->charSize);
+    Serial::Log("Has unicode table: %d", (bool) (header->flags & PSF2_HEADER_FLAG_HAS_UNICODE_TABLE));
+    Serial::Log("Header size: %d", header->headerSize);
 
     uint64_t glyphBufferSize = header->glyphCount * header->charSize;
     glyphBuffer = new (Allocator::Permanent) uint8_t[glyphBufferSize];

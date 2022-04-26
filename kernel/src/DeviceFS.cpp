@@ -46,7 +46,7 @@ VFS::Vnode* DeviceFS::FindInDirectory(VFS::Vnode* directory, const String& name)
 
     for (Device* device : devices)
     {
-        Serial::Printf("[/dev]------------- Found: %s", device->name.ToRawString());
+        Serial::Log("[/dev]------------- Found: %s", device->name.ToRawString());
 
         if (device->name.Equals(name))
         {
