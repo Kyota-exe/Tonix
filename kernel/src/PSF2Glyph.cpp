@@ -1,12 +1,7 @@
 #include "PSF2Glyph.h"
 
 PSF2Glyph::PSF2Glyph(uint8_t* buffer, uint32_t size, unsigned int width, unsigned int height) :
-    width(width), height(height)
-{
-    bitmap.buffer = buffer;
-    bitmap.size = size;
-    bitmap.firstIsLeft = true;
-}
+    bitmap(buffer, size, true), width(width), height(height) {}
 
 bool PSF2Glyph::GetPixel(unsigned int x, unsigned int y) const
 {

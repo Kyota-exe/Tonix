@@ -5,8 +5,9 @@
 #include "Assert.h"
 #include "Bitmap.h"
 #include "Spinlock.h"
+#include "Heap.h"
 
-Bitmap pageFrameBitmap;
+Bitmap pageFrameBitmap = Bitmap(nullptr, 0, false);
 Spinlock pageFrameBitmapLock;
 
 uint64_t pageFrameCount = 0;
@@ -19,9 +20,7 @@ void InitializePageFrameAllocator()
 
     uint64_t memorySize = lastMemoryMapEntry.base + lastMemoryMapEntry.length;
     pageFrameCount = memorySize / 0x1000;
-
     uint64_t bitmapSize = pageFrameCount / 8;
-    pageFrameBitmap.size = bitmapSize;
 
     uint8_t* bitmapBuffer = nullptr;
     for (uint64_t entryIndex = 0; entryIndex < memoryMapStruct->entries; ++entryIndex)
@@ -29,15 +28,15 @@ void InitializePageFrameAllocator()
         stivale2_mmap_entry memoryMapEntry = memoryMapStruct->memmap[entryIndex];
         if (memoryMapEntry.type == 1 && memoryMapEntry.length > bitmapSize)
         {
-            bitmapBuffer = (uint8_t*)(memoryMapEntry.base + 0xffff'8000'0000'0000);
+            bitmapBuffer = reinterpret_cast<uint8_t*>(HigherHalf(memoryMapEntry.base));
             break;
         }
     }
 
     Assert(bitmapBuffer != nullptr);
 
-    pageFrameBitmap.buffer = bitmapBuffer;
     Memset(bitmapBuffer, 0xff, bitmapSize);
+    new (&pageFrameBitmap) Bitmap(bitmapBuffer, bitmapSize, false);
 
     for (uint64_t entryIndex = 0; entryIndex < memoryMapStruct->entries; ++entryIndex)
     {
@@ -65,7 +64,7 @@ uintptr_t RequestPageFrame()
     pageFrameBitmapLock.Acquire();
 
     // Find first free page frame, starting from page frame with the lowest physical address (0)
-    for (; latestAllocatedPageFrame < pageFrameBitmap.size * 8; ++latestAllocatedPageFrame)
+    for (; latestAllocatedPageFrame < pageFrameBitmap.TotalNumberOfBits(); ++latestAllocatedPageFrame)
     {
         if (!pageFrameBitmap.GetBit(latestAllocatedPageFrame))
         {
@@ -85,7 +84,7 @@ uintptr_t RequestPageFrames(uint64_t count)
     pageFrameBitmapLock.Acquire();
 
     uint64_t contiguousCount = 0;
-    for (; latestAllocatedPageFrame < pageFrameBitmap.size * 8; ++latestAllocatedPageFrame)
+    for (; latestAllocatedPageFrame < pageFrameBitmap.TotalNumberOfBits(); ++latestAllocatedPageFrame)
     {
         if (!pageFrameBitmap.GetBit(latestAllocatedPageFrame))
         {

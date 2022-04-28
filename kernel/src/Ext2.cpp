@@ -376,21 +376,21 @@ uint32_t Ext2::Allocate(AllocationType allocationType)
             uint64_t usageBitmapSize = superblock->blocksPerBlockGroup / 8;
             Assert(superblock->blocksPerBlockGroup % 8 == 0);
 
-            Bitmap usageBitmap;
-            usageBitmap.buffer = new uint8_t[usageBitmapSize];
+            auto usageBitmapBuffer = new uint8_t[usageBitmapSize];
             uint64_t usageBitmapDiskAddr = usageBitmapBlock * blockSize;
-            disk->Read(usageBitmapDiskAddr, usageBitmap.buffer, usageBitmapSize);
-            usageBitmap.size = usageBitmapSize;
+            disk->Read(usageBitmapDiskAddr, usageBitmapBuffer, usageBitmapSize);
+
+            Bitmap usageBitmap(usageBitmapBuffer, usageBitmapSize, false);
 
             bool found = false;
-            for (uint32_t i = 0; i < usageBitmap.size * 8; ++i)
+            for (uint32_t i = 0; i < usageBitmapSize * 8; ++i)
             {
                 if (!usageBitmap.GetBit(i))
                 {
                     object = blockGroupIndex * objectsPerBlockGroup + i;
 
                     usageBitmap.SetBit(i, true);
-                    disk->Write(usageBitmapDiskAddr, usageBitmap.buffer, usageBitmapSize);
+                    disk->Write(usageBitmapDiskAddr, usageBitmapBuffer, usageBitmapSize);
 
                     switch (allocationType)
                     {
@@ -411,7 +411,7 @@ uint32_t Ext2::Allocate(AllocationType allocationType)
                 }
             }
 
-            delete[] usageBitmap.buffer;
+            delete[] usageBitmapBuffer;
             if (found) break;
         }
     }
