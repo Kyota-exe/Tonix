@@ -125,10 +125,14 @@ void Terminal::Print(const String& string)
             }
             case '\033': // Escape
             {
-                bool hasCSI = string.Match(currentIndex, '[');
-                if (hasCSI) currentIndex++;
+                EscapeSequence escapeSequence;
 
-                Vector<unsigned int> arguments;
+                escapeSequence.hasCSI = string.Match(currentIndex, '[');
+                if (escapeSequence.hasCSI) currentIndex++;
+
+                escapeSequence.decPrivate = string.Match(currentIndex, '?');
+                if (escapeSequence.decPrivate) currentIndex++;
+
                 if (string.IsNumeric(currentIndex))
                 {
                     while (true)
@@ -140,7 +144,7 @@ void Terminal::Print(const String& string)
                         }
 
                         Assert(numberString.GetLength() > 0);
-                        arguments.Push(numberString.ToUnsignedInt());
+                        escapeSequence.arguments.Push(numberString.ToUnsignedInt());
 
                         if (string.Match(currentIndex, ';')) currentIndex++;
                         else break;
@@ -148,9 +152,9 @@ void Terminal::Print(const String& string)
                 }
 
                 Assert(currentIndex < string.GetLength());
-                char command = string[currentIndex++];
+                escapeSequence.command = string[currentIndex++];
 
-                ProcessEscapeSequence(command, hasCSI, arguments);
+                ProcessEscapeSequence(escapeSequence);
                 break;
             }
             default:
@@ -189,61 +193,61 @@ void Terminal::Print(const String& string)
     textRenderer->Print('_', cursorX, cursorY, textColour, backgroundColour);
 }
 
-void Terminal::ProcessEscapeSequence(char command, bool hasCSI, const Vector<unsigned int> &arguments)
+void Terminal::ProcessEscapeSequence(const EscapeSequence& escapeSequence)
 {
-    uint64_t argCount = arguments.GetLength();
+    uint64_t argCount = escapeSequence.arguments.GetLength();
 
-    if (hasCSI)
+    if (escapeSequence.hasCSI)
     {
-        switch (command)
+        switch (escapeSequence.command)
         {
             case 'H':
                 if (argCount == 0) { cursorX = cursorY = 0; break; }
                 Assert(argCount == 2);
-                cursorY = arguments.Get(0);
-                cursorX = arguments.Get(1);
+                cursorY = escapeSequence.arguments.Get(0);
+                cursorX = escapeSequence.arguments.Get(1);
                 break;
             case 'f':
                 Assert(argCount == 2);
-                cursorY = arguments.Get(0);
-                cursorX = arguments.Get(1);
+                cursorY = escapeSequence.arguments.Get(0);
+                cursorX = escapeSequence.arguments.Get(1);
                 break;
             case 'A':
                 Assert(argCount == 1);
-                cursorY -= arguments.Get(0);
+                cursorY -= escapeSequence.arguments.Get(0);
                 break;
             case 'B':
                 Assert(argCount == 1);
-                cursorY += arguments.Get(0);
+                cursorY += escapeSequence.arguments.Get(0);
                 break;
             case 'C':
                 Assert(argCount == 1);
-                cursorX += arguments.Get(0);
+                cursorX += escapeSequence.arguments.Get(0);
                 break;
             case 'D':
                 Assert(argCount == 1);
-                cursorX -= arguments.Get(0);
+                cursorX -= escapeSequence.arguments.Get(0);
                 break;
             case 'E':
                 Assert(argCount == 1);
-                cursorY += arguments.Get(0);
+                cursorY += escapeSequence.arguments.Get(0);
                 cursorX = 0;
                 break;
             case 'F':
                 Assert(argCount == 1);
-                cursorY -= arguments.Get(0);
+                cursorY -= escapeSequence.arguments.Get(0);
                 cursorX = 0;
                 break;
             case 'G':
                 Assert(argCount == 1);
-                cursorX = arguments.Get(0);
+                cursorX = escapeSequence.arguments.Get(0);
                 break;
             case 'J':
                 if (argCount == 0) EraseScreenFrom(cursorX, cursorY);
                 else
                 {
                     Assert(argCount == 1);
-                    switch (arguments.Get(0))
+                    switch (escapeSequence.arguments.Get(0))
                     {
                         case 0:
                             EraseScreenFrom(cursorX, cursorY);
@@ -264,7 +268,7 @@ void Terminal::ProcessEscapeSequence(char command, bool hasCSI, const Vector<uns
                 else
                 {
                     Assert(argCount == 1);
-                    switch (arguments.Get(0))
+                    switch (escapeSequence.arguments.Get(0))
                     {
                         case 0:
                             EraseRangeInclusive(cursorX, cursorY, textRenderer->CharsPerLine() - 1, cursorY);
@@ -280,7 +284,7 @@ void Terminal::ProcessEscapeSequence(char command, bool hasCSI, const Vector<uns
                 break;
             case 'm':
                 if (argCount == 0) ResetColors();
-                for (unsigned int arg : arguments)
+                for (unsigned int arg : escapeSequence.arguments)
                 {
                     switch (arg)
                     {
@@ -310,7 +314,7 @@ void Terminal::ProcessEscapeSequence(char command, bool hasCSI, const Vector<uns
     }
     else
     {
-        switch (command)
+        switch (escapeSequence.command)
         {
             case 'M':
                 cursorY--;

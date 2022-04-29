@@ -18,8 +18,10 @@ public:
     static Terminal* instance;
 
 private:
+    struct EscapeSequence;
+
     void Print(const String& string);
-    void ProcessEscapeSequence(char command, bool hasCSI, const Vector<unsigned int>& arguments);
+    void ProcessEscapeSequence(const EscapeSequence& escapeSequence);
     void ResetColors();
     void EraseRangeInclusive(long minX, long minY, long maxX, long maxY);
     void EraseScreenFrom(long x, long y);
@@ -42,4 +44,12 @@ private:
     uint64_t currentBufferLength;
 
     Vector<long> nextCursorXPerLine;
+};
+
+struct Terminal::EscapeSequence
+{
+    char command;
+    bool hasCSI;
+    bool decPrivate;
+    Vector<unsigned int> arguments;
 };
