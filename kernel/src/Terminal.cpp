@@ -195,122 +195,9 @@ void Terminal::Print(const String& string)
 
 void Terminal::ProcessEscapeSequence(const EscapeSequence& escapeSequence)
 {
-    uint64_t argCount = escapeSequence.arguments.GetLength();
-
     if (escapeSequence.hasCSI)
     {
-        switch (escapeSequence.command)
-        {
-            case 'H':
-                if (argCount == 0) { cursorX = cursorY = 0; break; }
-                Assert(argCount == 2);
-                cursorY = escapeSequence.arguments.Get(0);
-                cursorX = escapeSequence.arguments.Get(1);
-                break;
-            case 'f':
-                Assert(argCount == 2);
-                cursorY = escapeSequence.arguments.Get(0);
-                cursorX = escapeSequence.arguments.Get(1);
-                break;
-            case 'A':
-                Assert(argCount == 1);
-                cursorY -= escapeSequence.arguments.Get(0);
-                break;
-            case 'B':
-                Assert(argCount == 1);
-                cursorY += escapeSequence.arguments.Get(0);
-                break;
-            case 'C':
-                Assert(argCount == 1);
-                cursorX += escapeSequence.arguments.Get(0);
-                break;
-            case 'D':
-                Assert(argCount == 1);
-                cursorX -= escapeSequence.arguments.Get(0);
-                break;
-            case 'E':
-                Assert(argCount == 1);
-                cursorY += escapeSequence.arguments.Get(0);
-                cursorX = 0;
-                break;
-            case 'F':
-                Assert(argCount == 1);
-                cursorY -= escapeSequence.arguments.Get(0);
-                cursorX = 0;
-                break;
-            case 'G':
-                Assert(argCount == 1);
-                cursorX = escapeSequence.arguments.Get(0);
-                break;
-            case 'J':
-                if (argCount == 0) EraseScreenFrom(cursorX, cursorY);
-                else
-                {
-                    Assert(argCount == 1);
-                    switch (escapeSequence.arguments.Get(0))
-                    {
-                        case 0:
-                            EraseScreenFrom(cursorX, cursorY);
-                            break;
-                        case 1:
-                            EraseRangeInclusive(0, 0, cursorX, cursorY);
-                            break;
-                        case 2:
-                            EraseScreenFrom(0, 0);
-                            break;
-                        default:
-                            Panic();
-                    }
-                }
-                break;
-            case 'K':
-                if (argCount == 0) EraseRangeInclusive(cursorX, cursorY, textRenderer->CharsPerLine() - 1, cursorY);
-                else
-                {
-                    Assert(argCount == 1);
-                    switch (escapeSequence.arguments.Get(0))
-                    {
-                        case 0:
-                            EraseRangeInclusive(cursorX, cursorY, textRenderer->CharsPerLine() - 1, cursorY);
-                            break;
-                        case 1:
-                            EraseRangeInclusive(0, cursorY, cursorX, cursorY);
-                            break;
-                        case 2:
-                            EraseRangeInclusive(0, cursorY, textRenderer->CharsPerLine() - 1, cursorY);
-                            break;
-                    }
-                }
-                break;
-            case 'm':
-                if (argCount == 0) ResetColors();
-                for (unsigned int arg : escapeSequence.arguments)
-                {
-                    switch (arg)
-                    {
-                        case 0:
-                            ResetColors();
-                            break;
-                        case 30 ... 38:
-                            textColour = Colour::FromANSICode(arg);
-                            break;
-                        case 40 ... 48:
-                            textBgColour = Colour::FromANSICode(arg);
-                            break;
-                        case 39:
-                            textColour = originalTextColour;
-                            break;
-                        case 49:
-                            textBgColour = originalTextBgColour;
-                            break;
-                        default:
-                            Panic();
-                    }
-                }
-                break;
-            default:
-                Panic();
-        }
+        ProcessControlSequence(escapeSequence.command, escapeSequence.arguments, escapeSequence.decPrivate);
     }
     else
     {
@@ -322,6 +209,124 @@ void Terminal::ProcessEscapeSequence(const EscapeSequence& escapeSequence)
             default:
                 Panic();
         }
+    }
+}
+
+void Terminal::ProcessControlSequence(char command, const Vector<unsigned int>& arguments, bool decPrivate)
+{
+    uint64_t argCount = arguments.GetLength();
+
+    switch (command)
+    {
+        case 'H':
+            if (argCount == 0) { cursorX = cursorY = 0; break; }
+            Assert(argCount == 2);
+            cursorY = arguments.Get(0);
+            cursorX = arguments.Get(1);
+            break;
+        case 'f':
+            Assert(argCount == 2);
+            cursorY = arguments.Get(0);
+            cursorX = arguments.Get(1);
+            break;
+        case 'A':
+            Assert(argCount == 1);
+            cursorY -= arguments.Get(0);
+            break;
+        case 'B':
+            Assert(argCount == 1);
+            cursorY += arguments.Get(0);
+            break;
+        case 'C':
+            Assert(argCount == 1);
+            cursorX += arguments.Get(0);
+            break;
+        case 'D':
+            Assert(argCount == 1);
+            cursorX -= arguments.Get(0);
+            break;
+        case 'E':
+            Assert(argCount == 1);
+            cursorY += arguments.Get(0);
+            cursorX = 0;
+            break;
+        case 'F':
+            Assert(argCount == 1);
+            cursorY -= arguments.Get(0);
+            cursorX = 0;
+            break;
+        case 'G':
+            Assert(argCount == 1);
+            cursorX = arguments.Get(0);
+            break;
+        case 'J':
+            if (argCount == 0) EraseScreenFrom(cursorX, cursorY);
+            else
+            {
+                Assert(argCount == 1);
+                switch (arguments.Get(0))
+                {
+                    case 0:
+                        EraseScreenFrom(cursorX, cursorY);
+                        break;
+                    case 1:
+                        EraseRangeInclusive(0, 0, cursorX, cursorY);
+                        break;
+                    case 2:
+                        EraseScreenFrom(0, 0);
+                        break;
+                    default:
+                        Panic();
+                }
+            }
+            break;
+        case 'K':
+            if (argCount == 0) EraseRangeInclusive(cursorX, cursorY, textRenderer->CharsPerLine() - 1, cursorY);
+            else
+            {
+                Assert(argCount == 1);
+                switch (arguments.Get(0))
+                {
+                    case 0:
+                        EraseRangeInclusive(cursorX, cursorY, textRenderer->CharsPerLine() - 1, cursorY);
+                        break;
+                    case 1:
+                        EraseRangeInclusive(0, cursorY, cursorX, cursorY);
+                        break;
+                    case 2:
+                        EraseRangeInclusive(0, cursorY, textRenderer->CharsPerLine() - 1, cursorY);
+                        break;
+                }
+            }
+            break;
+        case 'm':
+            if (argCount == 0) ResetColors();
+            for (unsigned int arg : arguments)
+            {
+                switch (arg)
+                {
+                    case 0:
+                        ResetColors();
+                        break;
+                    case 30 ... 38:
+                        textColour = Colour::FromANSICode(arg);
+                        break;
+                    case 40 ... 48:
+                        textBgColour = Colour::FromANSICode(arg);
+                        break;
+                    case 39:
+                        textColour = originalTextColour;
+                        break;
+                    case 49:
+                        textBgColour = originalTextBgColour;
+                        break;
+                    default:
+                        Panic();
+                }
+            }
+            break;
+        default:
+            Panic();
     }
 }
 

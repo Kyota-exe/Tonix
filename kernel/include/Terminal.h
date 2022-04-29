@@ -22,6 +22,7 @@ private:
 
     void Print(const String& string);
     void ProcessEscapeSequence(const EscapeSequence& escapeSequence);
+    void ProcessControlSequence(char command, const Vector<unsigned int>& arguments, bool decPrivate);
     void ResetColors();
     void EraseRangeInclusive(long minX, long minY, long maxX, long maxY);
     void EraseScreenFrom(long x, long y);
