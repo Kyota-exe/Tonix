@@ -127,13 +127,13 @@ void Terminal::Print(const String& string)
             {
                 EscapeSequence escapeSequence;
 
-                escapeSequence.hasCSI = string.Match(currentIndex, '[');
-                if (escapeSequence.hasCSI) currentIndex++;
+                escapeSequence.controlSequence = string.Match(currentIndex, '[');
+                if (escapeSequence.controlSequence) currentIndex++;
 
                 escapeSequence.decPrivate = string.Match(currentIndex, '?');
                 if (escapeSequence.decPrivate) currentIndex++;
 
-                if (string.IsNumeric(currentIndex))
+                if (escapeSequence.controlSequence && string.IsNumeric(currentIndex))
                 {
                     while (true)
                     {
@@ -144,7 +144,7 @@ void Terminal::Print(const String& string)
                         }
 
                         Assert(numberString.GetLength() > 0);
-                        escapeSequence.arguments.Push(numberString.ToUnsignedInt());
+                        escapeSequence.controlArguments.Push(numberString.ToUnsignedInt());
 
                         if (string.Match(currentIndex, ';')) currentIndex++;
                         else break;
@@ -195,20 +195,17 @@ void Terminal::Print(const String& string)
 
 void Terminal::ProcessEscapeSequence(const EscapeSequence& escapeSequence)
 {
-    if (escapeSequence.hasCSI)
+    if (escapeSequence.controlSequence)
     {
-        ProcessControlSequence(escapeSequence.command, escapeSequence.arguments, escapeSequence.decPrivate);
+        Assert(!escapeSequence.rightParentheses);
+        ProcessControlSequence(escapeSequence.command, escapeSequence.controlArguments, escapeSequence.decPrivate);
     }
     else
     {
-        switch (escapeSequence.command)
-        {
-            case 'M':
-                cursorY--;
-                break;
-            default:
-                Panic();
-        }
+        Assert(!escapeSequence.decPrivate);
+
+        Assert(escapeSequence.command == 'M');
+        cursorY--;
     }
 }
 

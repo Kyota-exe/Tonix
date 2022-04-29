@@ -50,7 +50,8 @@ private:
 struct Terminal::EscapeSequence
 {
     char command;
-    bool hasCSI;
+    bool controlSequence;
     bool decPrivate;
-    Vector<unsigned int> arguments;
+    bool rightParentheses;
+    Vector<unsigned int> controlArguments;
 };
