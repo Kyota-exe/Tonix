@@ -1,4 +1,5 @@
 ISO_IMAGE = bin/disk.iso
+QEMUFLAGS ?= -cpu qemu64,+rdtscp -smp 1 -M q35 -M smm=off -no-reboot -m 1G -debugcon stdio
 
 .DEFAULT_GOAL := cleanbuild
 
@@ -57,3 +58,11 @@ clean:
 .PHONY: distclean
 distclean: clean
 	rm -rf limine
+
+.PHONY: run
+run:
+	qemu-system-x86_64 $(QEMUFLAGS) -cdrom $(ISO_IMAGE)
+
+.PHONY: debug
+debug:
+	qemu-system-x86_64 -s -S $(QEMUFLAGS) -cdrom $(ISO_IMAGE)
