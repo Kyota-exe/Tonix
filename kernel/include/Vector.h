@@ -24,6 +24,8 @@ public:
 
     T& Get(uint64_t index);
     const T& Get(uint64_t index) const;
+    T& GetLast();
+    const T& GetLast() const;
     Vector<T>& operator=(const Vector<T>& newVector);
 
     Vector();
@@ -159,6 +161,18 @@ const T& Vector<T>::Get(uint64_t index) const
 {
     Assert(index < GetLength());
     return buffer[index];
+}
+
+template <typename T>
+T& Vector<T>::GetLast()
+{
+    return Get(length - 1);
+}
+
+template <typename T>
+const T& Vector<T>::GetLast() const
+{
+    return Get(length - 1);
 }
 
 template <typename T>
