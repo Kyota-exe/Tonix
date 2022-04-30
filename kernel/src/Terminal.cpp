@@ -123,9 +123,15 @@ void Terminal::Print(const String& string)
                 cursorX += 4;
                 break;
             }
+            case '\017':
+            {
+                Warn("SI is not implemented");
+                break;
+            }
             case '\a': // Terminal Bell
             {
-                Panic();
+                Warn("BEL is not implemented");
+                break;
             }
             case '\033': // Escape
             {
@@ -136,6 +142,9 @@ void Terminal::Print(const String& string)
 
                 escapeSequence.decPrivate = string.Match(currentIndex, '?');
                 if (escapeSequence.decPrivate) currentIndex++;
+
+                escapeSequence.rightParentheses = string.Match(currentIndex, ')');
+                if (escapeSequence.rightParentheses) currentIndex++;
 
                 if (escapeSequence.controlSequence && string.IsNumeric(currentIndex))
                 {
@@ -210,14 +219,31 @@ void Terminal::ProcessEscapeSequence(const EscapeSequence& escapeSequence)
     {
         Assert(!escapeSequence.decPrivate);
 
-        Assert(escapeSequence.command == 'M');
-        cursorY--;
+        if (escapeSequence.rightParentheses)
+        {
+            Assert(escapeSequence.command == '0');
+            Warn("ESC)0 does nothing; special character sets are not implemented");
+        }
+        else
+        {
+            Assert(escapeSequence.command == 'M');
+            cursorY--;
+        }
     }
 }
 
 void Terminal::ProcessControlSequence(char command, const Vector<unsigned int>& arguments, bool decPrivate)
 {
     uint64_t argCount = arguments.GetLength();
+
+    if (decPrivate)
+    {
+        Assert(command == 'h');
+        Assert(argCount == 1);
+        Assert(arguments.Get(0) == 7);
+        Warn("ESC[?7h does nothing; wraparound mode is always enabled");
+        return;
+    }
 
     switch (command)
     {
@@ -327,6 +353,20 @@ void Terminal::ProcessControlSequence(char command, const Vector<unsigned int>& 
                         Panic();
                 }
             }
+            break;
+        case 'r':
+            Assert(argCount == 2);
+            Warn("ESC[<v>;<v>r does nothing; scrolling is not implemented");
+            break;
+        case 'l':
+            Assert(argCount == 1);
+            Assert(arguments.Get(0) == 4);
+            Warn("ESC[4l does nothing; replace mode is always enabled");
+            break;
+        case 'd':
+            Assert(argCount == 1);
+            Assert(arguments.Get(0) >= 1);
+            cursorY = arguments.Get(0) - 1;
             break;
         default:
             Panic();
