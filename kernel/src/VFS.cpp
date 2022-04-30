@@ -205,12 +205,13 @@ int VFS::Open(const String& path, int flags, Error& error)
 
     Assert(error == Error::None);
 
-    if (flags & OpenFlag::WriteOnly)
+    int accessBits = flags & 0b111;
+    if (accessBits == OpenFlag::WriteOnly)
     {
         fileDescriptor->readMode = false;
         fileDescriptor->writeMode = true;
     }
-    else if (flags & OpenFlag::ReadWrite)
+    else if (accessBits == OpenFlag::ReadWrite)
     {
         fileDescriptor->readMode = true;
         fileDescriptor->writeMode = true;
