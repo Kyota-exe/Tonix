@@ -131,7 +131,7 @@ VFS::Vnode* Ext2::CacheDirectoryEntry(const DirectoryEntry& directoryEntry)
 
 VFS::Vnode* Ext2::FindInDirectory(VFS::Vnode* directory, const String& name)
 {
-    auto context = reinterpret_cast<Inode*>(directory->context);
+    auto context = static_cast<Inode*>(directory->context);
     Assert(context->size1 == 0);
 
     uint64_t parsedLength = 0;
@@ -193,7 +193,7 @@ uint64_t Ext2::Write(VFS::Vnode* vnode, const void* buffer, uint64_t count, uint
     uint64_t newSize = writePos + wroteCount;
     if (vnode->fileSize < writePos + wroteCount)
     {
-        auto context = reinterpret_cast<Inode*>(vnode->context);
+        auto context = static_cast<Inode*>(vnode->context);
         Assert(context->size1 == 0);
         context->size0 = newSize;
         vnode->fileSize = newSize;
@@ -239,7 +239,7 @@ uint64_t Ext2::DiskOperation(IOType ioType, VFS::Vnode* vnode, void* buffer, uin
 
 void Ext2::Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name)
 {
-    auto directoryContext = reinterpret_cast<Inode*>(directory->context);
+    auto directoryContext = static_cast<Inode*>(directory->context);
 
     Assert(directoryContext->typePermissions & Directory);
 
@@ -281,7 +281,7 @@ void Ext2::Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name)
 
 void Ext2::Truncate(VFS::Vnode* vnode)
 {
-    auto context = reinterpret_cast<Inode*>(vnode->context);
+    auto context = static_cast<Inode*>(vnode->context);
     Assert(context->size1 == 0);
     context->size0 = 0;
     vnode->fileSize = 0;
@@ -311,7 +311,7 @@ uint32_t Ext2::GetBlockAddr(VFS::Vnode* vnode, uint32_t requestedBlockIndex, boo
 {
     // TODO: Refactor, make recursive
 
-    auto context = reinterpret_cast<Inode*>(vnode->context);
+    auto context = static_cast<Inode*>(vnode->context);
 
     uint32_t blockPtr = 0;
     uint64_t pointersPerBlock = blockSize / sizeof(blockPtr);

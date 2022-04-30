@@ -73,7 +73,7 @@ void Slab::Free(void* ptr)
     lock.Acquire();
 
     FreeSlot* previousHead = head;
-    head = reinterpret_cast<FreeSlot*>(ptr);
+    head = static_cast<FreeSlot*>(ptr);
     head->next = previousHead;
 
     bool foundAddr = false;

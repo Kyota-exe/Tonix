@@ -178,7 +178,7 @@ extern "C" void InitializeCore(stivale2_smp_info* smpInfoPtr)
 
 void Scheduler::StartCores(TSS* bspTss)
 {
-    auto smpStruct = reinterpret_cast<stivale2_struct_tag_smp*>(GetStivale2Tag(STIVALE2_STRUCT_TAG_SMP_ID));
+    auto smpStruct = static_cast<stivale2_struct_tag_smp*>(GetStivale2Tag(STIVALE2_STRUCT_TAG_SMP_ID));
     CPU::InitializeCPUList(smpStruct->cpu_count);
 
     Assert(CPU::GetCoreID() == 0);
