@@ -2,91 +2,8 @@
 #include "Memory/Memory.h"
 #include "Serial.h"
 #include "Vector.h"
-#include "Scheduler.h"
 
-constexpr uint64_t INPUT_BUFFER_SIZE = 2048;
-
-Terminal* Terminal::instance = nullptr;
-
-uint64_t Terminal::Read(void* buffer, uint64_t count)
-{
-    if (count > currentBufferLength)
-    {
-        Scheduler* scheduler = Scheduler::GetScheduler();
-        unblockQueue.Push(scheduler->currentTask.pid);
-        scheduler->SuspendSystemCall();
-    }
-
-    uint64_t readCount = count > currentBufferLength ? currentBufferLength : count;
-    MemCopy(buffer, inputBuffer, readCount);
-
-    if (readCount < currentBufferLength)
-    {
-        for (uint64_t i = 0; i < currentBufferLength - readCount; ++i)
-        {
-            inputBuffer[i] = inputBuffer[i + readCount];
-        }
-    }
-
-    currentBufferLength -= readCount;
-
-    return readCount;
-}
-
-uint64_t Terminal::Write(const void* buffer, uint64_t count)
-{
-    Print(String(reinterpret_cast<const char*>(buffer), count));
-    return count;
-}
-
-void Terminal::InputCharacter(char c)
-{
-    if (c == '\b')
-    {
-        if (currentBufferLength == 0) return;
-        currentBufferLength--;
-    }
-    else
-    {
-        Assert(currentBufferLength < INPUT_BUFFER_SIZE);
-        inputBuffer[currentBufferLength++] = c;
-    }
-
-    Print(String(c));
-
-    if (c == '\n' && unblockQueue.GetLength() > 0)
-    {
-        Scheduler::Unblock(unblockQueue.Pop());
-    }
-}
-
-Terminal::Terminal(const String& name, uint32_t inodeNum) : Device(name, inodeNum),
-                                                            textRenderer(new TextRenderer()),
-                                                            backgroundColour(Colour(0, 0, 0)),
-                                                            textColour(Colour(255, 255, 255)),
-                                                            textBgColour(Colour(0, 0, 0)),
-                                                            cursorX(0), cursorY(0)
-{
-    originalTextColour = textColour;
-    originalTextBgColour = textBgColour;
-
-    Assert(instance == nullptr);
-    instance = this;
-
-    inputBuffer = new char[INPUT_BUFFER_SIZE];
-    currentBufferLength = 0;
-
-    pendingWrap = false;
-}
-
-Terminal::~Terminal()
-{
-    delete inputBuffer;
-    delete textRenderer;
-    instance = nullptr;
-}
-
-void Terminal::Print(const String& string)
+void Terminal::Write(const String& string)
 {
     // Erase previous cursor
     if (!pendingWrap)
@@ -204,6 +121,23 @@ void Terminal::Print(const String& string)
         textRenderer->Print('_', cursorX, cursorY, textColour, backgroundColour);
     else
         textRenderer->Print('_', 0, cursorY + 1, textColour, backgroundColour);
+}
+
+Terminal::Terminal() : textRenderer(new TextRenderer()),
+                       backgroundColour(Colour(0, 0, 0)),
+                       textColour(Colour(255, 255, 255))
+{
+    originalTextColour = textColour;
+    textBgColour = backgroundColour;
+
+    pendingWrap = false;
+    cursorX = 0;
+    cursorY = 0;
+}
+
+Terminal::~Terminal()
+{
+    delete textRenderer;
 }
 
 void Terminal::ProcessEscapeSequence(const EscapeSequence& escapeSequence)
@@ -345,7 +279,7 @@ void Terminal::ProcessControlSequence(char command, const Vector<unsigned int>& 
                         textColour = originalTextColour;
                         break;
                     case 49:
-                        textBgColour = originalTextBgColour;
+                        textBgColour = backgroundColour;
                         break;
                     default:
                         Panic();
@@ -374,7 +308,7 @@ void Terminal::ProcessControlSequence(char command, const Vector<unsigned int>& 
 void Terminal::ResetColors()
 {
     textColour = originalTextColour;
-    textBgColour = originalTextBgColour;
+    textBgColour = backgroundColour;
 }
 
 void Terminal::EraseRangeInclusive(long minX, long minY, long maxX, long maxY)
