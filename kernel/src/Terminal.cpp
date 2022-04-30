@@ -63,8 +63,6 @@ void Terminal::InputCharacter(char c)
 Terminal::Terminal(const String& name, uint32_t inodeNum) : Device(name, inodeNum),
                                                             textRenderer(new TextRenderer()),
                                                             backgroundColour(Colour(0, 0, 0)),
-                                                            originalTextColour(Colour(0, 0, 0)),
-                                                            originalTextBgColour(Colour(0, 0, 0)),
                                                             textColour(Colour(255, 255, 255)),
                                                             textBgColour(Colour(0, 0, 0)),
                                                             cursorX(0), cursorY(0)
