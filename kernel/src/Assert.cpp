@@ -12,3 +12,8 @@
 
     while (true) asm("hlt");
 }
+
+void KernelWarn(const char* message, const char* file, unsigned int line)
+{
+    Serial::Log("\033[93m[WARNING] %s:%d -> %s\033[39m", file, line, message);
+}
