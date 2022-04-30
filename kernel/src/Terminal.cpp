@@ -77,6 +77,8 @@ Terminal::Terminal(const String& name, uint32_t inodeNum) : Device(name, inodeNu
 
     inputBuffer = new char[INPUT_BUFFER_SIZE];
     currentBufferLength = 0;
+
+    pendingWrap = false;
 }
 
 Terminal::~Terminal()
@@ -89,7 +91,10 @@ Terminal::~Terminal()
 void Terminal::Print(const String& string)
 {
     // Erase previous cursor
-    textRenderer->Paint(cursorX, cursorY, backgroundColour);
+    if (!pendingWrap)
+        textRenderer->Paint(cursorX, cursorY, backgroundColour);
+    else
+        textRenderer->Paint(0, cursorY + 1, backgroundColour);
 
     uint64_t currentIndex = 0;
     while (currentIndex < string.GetLength())
@@ -103,7 +108,6 @@ void Terminal::Print(const String& string)
             case '\n': // Line Feed
             case '\r': // Carriage Return
             {
-                nextCursorXPerLine.Push(cursorX);
                 cursorX = 0;
                 cursorY++;
                 break;
@@ -159,28 +163,27 @@ void Terminal::Print(const String& string)
             }
             default:
             {
+                if (pendingWrap)
+                {
+                    cursorX = 0;
+                    cursorY++;
+                    pendingWrap = false;
+                }
+
                 textRenderer->Print(c, cursorX, cursorY, textColour, textBgColour);
                 cursorX++;
+
+                if (CursorAtRightEdge()) pendingWrap = true;
             }
         }
 
-        // Right edge cursor wrapping
-        if (cursorX + 1 > textRenderer->CharsPerLine())
+        if (CursorAtRightEdge())
         {
-            nextCursorXPerLine.Push(cursorX - 1);
-            cursorX = 0;
-            cursorY++;
-        }
-        // Left edge cursor wrapping
-        else if (cursorX < 0)
-        {
-            Assert(nextCursorXPerLine.GetLength() > 0);
-            cursorX = nextCursorXPerLine.Pop();
-            cursorY--;
+            cursorX = textRenderer->CharsPerLine() - 1;
         }
 
-        Assert(cursorX >= 0);
-        Assert(cursorY >= 0);
+        if (cursorX < 0) cursorX = 0;
+        if (cursorY < 0) cursorY = 0;
         Assert(cursorY < textRenderer->CharsPerColumn());
 
         if (eraseCharacter)
@@ -190,7 +193,10 @@ void Terminal::Print(const String& string)
     }
 
     // Render cursor
-    textRenderer->Print('_', cursorX, cursorY, textColour, backgroundColour);
+    if (!pendingWrap)
+        textRenderer->Print('_', cursorX, cursorY, textColour, backgroundColour);
+    else
+        textRenderer->Print('_', 0, cursorY + 1, textColour, backgroundColour);
 }
 
 void Terminal::ProcessEscapeSequence(const EscapeSequence& escapeSequence)
@@ -347,4 +353,9 @@ void Terminal::EraseRangeInclusive(long minX, long minY, long maxX, long maxY)
 void Terminal::EraseScreenFrom(long x, long y)
 {
     EraseRangeInclusive(x, y, textRenderer->CharsPerLine() - 1, textRenderer->CharsPerColumn() - 1);
+}
+
+bool Terminal::CursorAtRightEdge()
+{
+    return cursorX >= textRenderer->CharsPerLine();
 }

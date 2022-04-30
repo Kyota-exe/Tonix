@@ -23,6 +23,7 @@ private:
     void Print(const String& string);
     void ProcessEscapeSequence(const EscapeSequence& escapeSequence);
     void ProcessControlSequence(char command, const Vector<unsigned int>& arguments, bool decPrivate);
+    bool CursorAtRightEdge();
     void ResetColors();
     void EraseRangeInclusive(long minX, long minY, long maxX, long maxY);
     void EraseScreenFrom(long x, long y);
@@ -44,7 +45,7 @@ private:
     char* inputBuffer;
     uint64_t currentBufferLength;
 
-    Vector<long> nextCursorXPerLine;
+    bool pendingWrap;
 };
 
 struct Terminal::EscapeSequence
