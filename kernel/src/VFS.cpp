@@ -59,20 +59,19 @@ VFS::FileDescriptor* VFS::GetFileDescriptor(int descriptor)
 
 VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error)
 {
-    VFS::Vnode* currentDirectory;
+    VFS::Vnode* currentEntry;
 
     if (path.Split('/', 0).IsEmpty())
     {
-        currentDirectory = root;
+        currentEntry = root;
         path = path.Substring(1, path.GetLength() - 1);
     }
     else
     {
-        currentDirectory = workingDirectory;
+        currentEntry = workingDirectory;
     }
 
-    unsigned int pathDepth = path.Count('/') + 1;
-
+    unsigned int pathDepth = path.IsEmpty() ? 0 : path.Count('/') + 1;
     for (unsigned int currentDepth = 0; currentDepth < pathDepth; ++currentDepth)
     {
         fileName = path.Split('/', currentDepth);
@@ -84,41 +83,41 @@ VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& contai
         // file from the most recently mounted vnode.
         do
         {
-            mounts.Push(currentDirectory);
+            mounts.Push(currentEntry);
 
-            if (currentDirectory->type != VFS::VnodeType::Directory)
+            if (currentEntry->type != VFS::VnodeType::Directory)
             {
                 error = Error::NotDirectory;
                 return nullptr;
             }
 
-            currentDirectory = currentDirectory->mountedVNode;
-        } while (currentDirectory != nullptr);
+            currentEntry = currentEntry->mountedVNode;
+        } while (currentEntry != nullptr);
 
         do
         {
-            currentDirectory = mounts.Pop();
+            currentEntry = mounts.Pop();
 
-            if (currentDirectory->fileSystem == nullptr)
+            if (currentEntry->fileSystem == nullptr)
             {
-                currentDirectory = nullptr;
+                currentEntry = nullptr;
                 continue;
             }
 
-            fileSystem = currentDirectory->fileSystem;
-            containingDirectory = currentDirectory;
+            fileSystem = currentEntry->fileSystem;
+            containingDirectory = currentEntry;
 
-            currentDirectory = fileSystem->FindInDirectory(containingDirectory, fileName);
-        } while (currentDirectory == nullptr && mounts.GetLength() > 0);
+            currentEntry = fileSystem->FindInDirectory(containingDirectory, fileName);
+        } while (currentEntry == nullptr && mounts.GetLength() > 0);
 
-        if (currentDirectory == nullptr)
+        if (currentEntry == nullptr)
         {
             error = Error::NoFile;
             return nullptr;
         }
     }
 
-    return currentDirectory;
+    return currentEntry;
 }
 
 VFS::Vnode* VFS::SearchInCache(uint32_t inodeNum, FileSystem* fileSystem)
