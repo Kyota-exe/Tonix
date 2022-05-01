@@ -10,7 +10,7 @@ TextRenderer::~TextRenderer()
     delete font;
 }
 
-void TextRenderer::Print(char c, long x, long y, Colour colour, Colour bgColour)
+void TextRenderer::Print(char c, long x, long y, const Colour& colour, const Colour& bgColour)
 {
     PSF2Glyph glyph = font->GetGlyphBitmap(c);
     for (uint32_t glyphY = 0; glyphY < font->Height(); ++glyphY)
@@ -24,7 +24,7 @@ void TextRenderer::Print(char c, long x, long y, Colour colour, Colour bgColour)
     }
 }
 
-void TextRenderer::Paint(long x, long y, Colour colour)
+void TextRenderer::Paint(long x, long y, const Colour& colour)
 {
     for (uint32_t glyphY = 0; glyphY < font->Height(); ++glyphY)
     {
