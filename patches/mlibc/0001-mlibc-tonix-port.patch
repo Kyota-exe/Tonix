@@ -1,4 +1,4 @@
-From 498f7275d19df0a9ab5ff11b19ce298ae9e2e78b Mon Sep 17 00:00:00 2001
+From 53fcd07c23f4fe2d5f509933a44de707f2196cef Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -8,8 +8,8 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/linker.cpp              |   6 +-
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
- sysdeps/tonix/generic/Entry.cpp              |  34 +++
- sysdeps/tonix/generic/Generic.cpp            | 293 +++++++++++++++++++
+ sysdeps/tonix/generic/Entry.cpp              |  34 ++
+ sysdeps/tonix/generic/Generic.cpp            | 317 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -38,8 +38,8 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
  sysdeps/tonix/include/tonix/SystemCall.h     |  55 ++++
  sysdeps/tonix/include/tonix/VFS.h            |  18 ++
- sysdeps/tonix/meson.build                    |  51 ++++
- 35 files changed, 503 insertions(+), 5 deletions(-)
+ sysdeps/tonix/meson.build                    |  51 +++
+ 35 files changed, 527 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -175,10 +175,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..fa1b79ee
+index 00000000..3824e068
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,293 @@
+@@ -0,0 +1,317 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -280,7 +280,7 @@ index 00000000..fa1b79ee
 +
 +    int sys_vm_map(void* hint, size_t size, int prot, int flags, int fd, off_t offset, void** window)
 +    {
-+        mlibc::infoLogger() << "[syscall] mmap: " << (uintptr_t)hint << " Size: " << size << frg::endlog;
++        mlibc::infoLogger() << "[syscall] mmap: 0x" << frg::hex_fmt((uintptr_t)hint) << " Size: 0x" << frg::hex_fmt(size) << frg::endlog;
 +
 +        __ensure(flags & MAP_ANONYMOUS || flags & MAP_ANON);
 +        __ensure(flags & MAP_PRIVATE);
@@ -456,6 +456,30 @@ index 00000000..fa1b79ee
 +        statbuf->st_size = vnodeInfo.fileSize;
 +
 +        return 0;
++    }
++
++    uid_t sys_getuid()
++    {
++        mlibc::infoLogger() << "mlibc: sys_setuid is a stub" << frg::endlog;
++        return 1000;
++    }
++
++    gid_t sys_getgid()
++    {
++        mlibc::infoLogger() << "mlibc: sys_setgid is a stub" << frg::endlog;
++        return 1000;
++    }
++
++    uid_t sys_geteuid()
++    {
++        mlibc::infoLogger() << "mlibc: sys_seteuid is a stub" << frg::endlog;
++        return 1000;
++    }
++
++    gid_t sys_getegid()
++    {
++        mlibc::infoLogger() << "mlibc: sys_getegid is a stub" << frg::endlog;
++        return 1000;
 +    }
 +
 +    int sys_access(const char* filename, int mode)
