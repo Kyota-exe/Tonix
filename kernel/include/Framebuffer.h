@@ -6,6 +6,7 @@ class Framebuffer
 {
 public:
     static void PlotPixel(unsigned int x, unsigned int y, Colour colour);
+    static void TranslateVertical(long deltaY, const Colour& fillColour);
     static void Initialize();
     static long Width();
     static long Height();

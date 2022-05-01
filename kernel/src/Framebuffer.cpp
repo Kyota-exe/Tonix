@@ -41,6 +41,25 @@ void Framebuffer::PlotPixel(unsigned int x, unsigned int y, Colour colour)
     *addr = rgb;
 }
 
+void Framebuffer::TranslateVertical(long deltaY, const Colour& fillColour)
+{
+    Assert(deltaY > 0);
+
+    long deltaPixels = deltaY * width;
+    uint32_t* source = virtAddr + deltaPixels;
+    uint32_t* destination = virtAddr;
+    for (long i = 0; i < width * height - deltaPixels; ++i)
+    {
+        destination[i] = source[i];
+    }
+
+    uint32_t* fillStart = virtAddr + width * height - deltaPixels - 1;
+    for (long i = 0; i < deltaPixels; ++i)
+    {
+        fillStart[i] = fillColour.red << redShift | fillColour.green << greenShift | fillColour.blue << blueShift;
+    }
+}
+
 long Framebuffer::Width()
 {
     return width;

@@ -25,6 +25,12 @@ void Terminal::Write(const String& string)
             {
                 cursorX = 0;
                 cursorY++;
+                if (cursorY >= textRenderer->CharsPerColumn())
+                {
+                    Assert(cursorY == textRenderer->CharsPerColumn());
+                    textRenderer->ScrollDown(backgroundColour);
+                    cursorY--;
+                }
                 break;
             }
             case '\b': // Backspace
@@ -284,7 +290,8 @@ void Terminal::ProcessControlSequence(char command, const Vector<int>& arguments
             break;
         case 'r':
             Assert(argCount == 2);
-            Warn("ESC[<v>;<v>r does nothing; scrolling is not implemented");
+            Assert(arguments.Get(0) == 1);
+            Assert(arguments.Get(1) == textRenderer->CharsPerColumn());
             break;
         case 'l':
             Assert(argCount == 1);

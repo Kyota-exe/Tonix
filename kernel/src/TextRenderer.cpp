@@ -37,6 +37,11 @@ void TextRenderer::Paint(long x, long y, const Colour& colour)
     }
 }
 
+void TextRenderer::ScrollDown(const Colour& fillColour)
+{
+    Framebuffer::TranslateVertical(font->Height(), fillColour);
+}
+
 long TextRenderer::CharsPerLine()
 {
     Assert(Framebuffer::Width() / font->Width() == 102);
