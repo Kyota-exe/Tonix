@@ -11,7 +11,7 @@ String String::Split(char splitCharacter, unsigned int substringIndex) const
 
     for (uint64_t i = 0; i <= GetLength(); ++i)
     {
-        if (buffer[i] == splitCharacter || buffer[i] == 0)
+        if (buffer[i] == splitCharacter || buffer[i] == '\0')
         {
             if (currentSubstring == substringIndex)
             {
@@ -33,7 +33,7 @@ uint64_t String::Count(char character) const
     uint64_t count = 0;
 
     char* ptr = buffer;
-    while (*ptr != 0)
+    while (*ptr != '\0')
     {
         if (*ptr == character) count++;
         ptr++;
@@ -51,12 +51,12 @@ bool String::Equals(const char* other) const
 {
     const char* bufferPtr = buffer;
 
-    while (*bufferPtr != 0 && *other != 0)
+    while (*bufferPtr != '\0' && *other != '\0')
     {
         if (*bufferPtr++ != *other++) return false;
     }
 
-    return *bufferPtr == 0 && *other == 0;
+    return *bufferPtr == '\0' && *other == '\0';
 }
 
 char String::operator[](uint64_t index) const
@@ -67,14 +67,14 @@ char String::operator[](uint64_t index) const
 
 void String::Push(char c)
 {
-    Assert(c != 0);
+    Assert(c != '\0');
 
     length++;
 
     char* newBuffer = new char[length + 1];
     MemCopy(newBuffer, buffer, length - 1);
     newBuffer[length - 1] = c;
-    newBuffer[length] = 0;
+    newBuffer[length] = '\0';
 
     delete[] buffer;
     buffer = newBuffer;
@@ -114,7 +114,7 @@ String::String(const char* original)
     length = 0;
 
     const char* originalPtr = original;
-    while (*originalPtr++ != 0) length++;
+    while (*originalPtr++ != '\0') length++;
 
     buffer = new char[length + 1];
     MemCopy(buffer, original, length + 1);
@@ -127,9 +127,9 @@ String::String(const char* original, uint64_t stringLength)
 
     buffer = new char[length + 1];
     MemCopy(buffer, original, length);
-    buffer[length] = 0;
+    buffer[length] = '\0';
 
-    for (uint64_t i = 0; i < length; ++i) Assert(buffer[i] != 0);
+    for (uint64_t i = 0; i < length; ++i) Assert(buffer[i] != '\0');
 }
 
 String::String(const String& original)
@@ -142,7 +142,8 @@ String::String(const String& original)
 String::String()
 {
     length = 0;
-    buffer = nullptr;
+    buffer = new char[1];
+    buffer[1] = '\0';
 }
 
 String::String(char c)
@@ -152,7 +153,7 @@ String::String(char c)
     length = 1;
     buffer = new char[2];
     buffer[0] = c;
-    buffer[1] = 0;
+    buffer[1] = '\0';
 }
 
 String::~String()
@@ -176,7 +177,7 @@ String String::Substring(uint64_t index, uint64_t substringLength) const
 
     char newBuffer[substringLength + 1];
     MemCopy(newBuffer, buffer + index, substringLength);
-    newBuffer[substringLength] = 0;
+    newBuffer[substringLength] = '\0';
 
     return String(newBuffer);
 }
