@@ -11,6 +11,11 @@ VFS::Vnode* root;
 VFS::Vnode* currentInCache = nullptr;
 VFS* VFS::kernelVfs = nullptr;
 
+VFS::VFS()
+{
+    workingDirectory = root;
+}
+
 void VFS::Initialize(void* ext2RamDisk)
 {
     kernelVfs = new VFS();
@@ -23,7 +28,7 @@ void VFS::Initialize(void* ext2RamDisk)
     ext2FileSystem = new Ext2(new RAMDisk(ext2RamDisk));
     Mount(root, ext2FileSystem->fileSystemRoot);
 
-    VFS::Vnode* devMountPoint = VFS::CreateDirectory(String("/dev"));
+    VFS::Vnode* devMountPoint = kernelVfs->CreateDirectory(String("/dev"));
 
     FileSystem* deviceFileSystem;
     deviceFileSystem = new DeviceFS(nullptr);
@@ -61,7 +66,10 @@ VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& contai
         currentDirectory = root;
         path = path.Substring(1, path.GetLength() - 1);
     }
-    else Panic();
+    else
+    {
+        currentDirectory = workingDirectory;
+    }
 
     unsigned int pathDepth = path.Count('/') + 1;
 

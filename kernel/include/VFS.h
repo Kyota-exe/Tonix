@@ -32,9 +32,11 @@ public:
     VnodeInfo GetVnodeInfo(int descriptor);
     void SetTerminalSettings(int descriptor, bool canonical, bool echo, Error& error);
 
+    VFS();
+
     static void Mount(Vnode* mountPoint, Vnode* vnode);
-    static Vnode* CreateDirectory(const String& path, Error& error);
-    static Vnode* CreateDirectory(const String& path);
+    Vnode* CreateDirectory(const String& path, Error& error);
+    Vnode* CreateDirectory(const String& path);
 
     static void Initialize(void* ext2RamDisk);
     static void CacheVNode(Vnode* vnode);
@@ -43,10 +45,12 @@ private:
     struct FileDescriptor;
     Vector<FileDescriptor> fileDescriptors;
 
+    Vnode* workingDirectory;
+
     FileDescriptor* GetFileDescriptor(int descriptor);
     int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor);
 
-    static Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error);
+    Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error);
 };
 
 enum class VFS::VnodeType
