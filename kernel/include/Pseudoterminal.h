@@ -13,9 +13,12 @@ public:
     void KeyboardInput(char c);
     Pseudoterminal(const String& name, uint32_t inodeNum);
     static Pseudoterminal* instance;
+    bool canonical;
+    bool echo;
 private:
     struct ReadRequest;
     Vector<Vector<char>> lines;
+    Vector<char> rawBuffer;
     Vector<ReadRequest> unblockQueue;
     Terminal* terminal;
 };

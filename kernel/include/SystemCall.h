@@ -16,6 +16,7 @@ enum class SystemCallType
     Sleep = 9,
     Stat = 10,
     FStat = 11,
+    SetTerminalSettings = 12,
     Panic = 254,
     Log = 255
 };

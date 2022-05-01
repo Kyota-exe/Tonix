@@ -106,6 +106,12 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             return 0;
         }
 
+        case SystemCallType::SetTerminalSettings:
+        {
+            scheduler->currentTask.vfs->SetTerminalSettings((int)arg0, (bool)arg1, (bool)arg2, error);
+            return 0;
+        }
+
         case SystemCallType::Stat:
         {
             const char* path = reinterpret_cast<const char*>(arg0);

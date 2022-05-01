@@ -27,8 +27,10 @@ public:
     uint64_t RepositionOffset(int descriptor, uint64_t offset, SeekType seekType);
     void Close(int descriptor, Error& error);
     void Close(int descriptor);
+
     VnodeInfo GetVnodeInfo(int descriptor, Error& error);
     VnodeInfo GetVnodeInfo(int descriptor);
+    void SetTerminalSettings(int descriptor, bool canonical, bool echo, Error& error);
 
     static void Mount(Vnode* mountPoint, Vnode* vnode);
     static Vnode* CreateDirectory(const String& path, Error& error);

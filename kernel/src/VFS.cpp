@@ -5,6 +5,7 @@
 #include "Serial.h"
 #include "RAMDisk.h"
 #include "Heap.h"
+#include "Pseudoterminal.h"
 
 VFS::Vnode* root;
 VFS::Vnode* currentInCache = nullptr;
@@ -368,6 +369,19 @@ uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, VFS::SeekType se
     }
 
     return fileDescriptor->offset;
+}
+
+void VFS::SetTerminalSettings(int descriptor, bool canonical, bool echo, Error& error)
+{
+    VnodeInfo vnodeInfo = GetVnodeInfo(descriptor, error);
+    if (vnodeInfo.type == VnodeType::CharacterDevice)
+    {
+        FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
+        auto terminal = static_cast<Pseudoterminal*>(fileDescriptor->vnode->context);
+        terminal->canonical = canonical;
+        terminal->echo = echo;
+    }
+    else error = Error::NotTerminal;
 }
 
 uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, VFS::SeekType seekType)
