@@ -296,7 +296,7 @@ void Terminal::ProcessControlSequence(char command, const Vector<int>& arguments
         case 'l':
             Assert(argCount == 1);
             Assert(arguments.Get(0) == 4);
-            Warn("ESC[4l does nothing; replace mode is always enabled");
+            Warn("ESC[4l does nothing; jump scrolling is always enabled");
             break;
         case 'd':
             Assert(argCount == 1);
