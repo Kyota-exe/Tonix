@@ -17,7 +17,7 @@ private:
     struct EscapeSequence;
 
     void ProcessEscapeSequence(const EscapeSequence& escapeSequence);
-    void ProcessControlSequence(char command, const Vector<unsigned int>& arguments, bool decPrivate);
+    void ProcessControlSequence(char command, const Vector<int>& arguments, bool decPrivate);
     bool CursorAtRightEdge();
     void ResetColors();
     void EraseRangeInclusive(long minX, long minY, long maxX, long maxY);
@@ -43,5 +43,5 @@ struct Terminal::EscapeSequence
     bool controlSequence;
     bool decPrivate;
     bool rightParentheses;
-    Vector<unsigned int> controlArguments;
+    Vector<int> controlArguments;
 };

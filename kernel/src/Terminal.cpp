@@ -164,7 +164,7 @@ void Terminal::ProcessEscapeSequence(const EscapeSequence& escapeSequence)
     }
 }
 
-void Terminal::ProcessControlSequence(char command, const Vector<unsigned int>& arguments, bool decPrivate)
+void Terminal::ProcessControlSequence(char command, const Vector<int>& arguments, bool decPrivate)
 {
     uint64_t argCount = arguments.GetLength();
 
@@ -180,15 +180,11 @@ void Terminal::ProcessControlSequence(char command, const Vector<unsigned int>& 
     switch (command)
     {
         case 'H':
+        case 'f':
             if (argCount == 0) { cursorX = cursorY = 0; break; }
             Assert(argCount == 2);
-            cursorY = arguments.Get(0);
-            cursorX = arguments.Get(1);
-            break;
-        case 'f':
-            Assert(argCount == 2);
-            cursorY = arguments.Get(0);
-            cursorX = arguments.Get(1);
+            cursorY = arguments.Get(0) - 1;
+            cursorX = arguments.Get(1) - 1;
             break;
         case 'A':
             Assert(argCount == 1);
@@ -218,7 +214,7 @@ void Terminal::ProcessControlSequence(char command, const Vector<unsigned int>& 
             break;
         case 'G':
             Assert(argCount == 1);
-            cursorX = arguments.Get(0);
+            cursorX = arguments.Get(0) - 1;
             break;
         case 'J':
             if (argCount == 0) EraseScreenFrom(cursorX, cursorY);
@@ -297,7 +293,6 @@ void Terminal::ProcessControlSequence(char command, const Vector<unsigned int>& 
             break;
         case 'd':
             Assert(argCount == 1);
-            Assert(arguments.Get(0) >= 1);
             cursorY = arguments.Get(0) - 1;
             break;
         default:
