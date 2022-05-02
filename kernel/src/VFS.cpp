@@ -22,6 +22,7 @@ void VFS::Initialize(void* ext2RamDisk)
 
     root = new (Allocator::Permanent) VFS::Vnode();
     root->type = VFS::VnodeType::Directory;
+    root->inodeNum = 2; // Root always has inode number 2
     currentInCache = root;
 
     FileSystem* ext2FileSystem;
