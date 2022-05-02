@@ -17,6 +17,7 @@ enum class SystemCallType
     Stat = 10,
     FStat = 11,
     SetTerminalSettings = 12,
+    GetPID = 14,
     Panic = 254,
     Log = 255
 };

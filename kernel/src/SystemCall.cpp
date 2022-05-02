@@ -133,6 +133,11 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             return 0;
         }
 
+        case SystemCallType::GetPID:
+        {
+            return scheduler->currentTask.pid;
+        }
+
         default:
             Panic();
     }

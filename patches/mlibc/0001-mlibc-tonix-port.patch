@@ -1,4 +1,4 @@
-From 53fcd07c23f4fe2d5f509933a44de707f2196cef Mon Sep 17 00:00:00 2001
+From 05e538b96b9f83240943c9d5695db281b652017a Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
- sysdeps/tonix/generic/Generic.cpp            | 317 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 315 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -36,10 +36,10 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
  sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
- sysdeps/tonix/include/tonix/SystemCall.h     |  55 ++++
+ sysdeps/tonix/include/tonix/SystemCall.h     |  56 ++++
  sysdeps/tonix/include/tonix/VFS.h            |  18 ++
  sysdeps/tonix/meson.build                    |  51 +++
- 35 files changed, 527 insertions(+), 5 deletions(-)
+ 35 files changed, 526 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -175,10 +175,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..3824e068
+index 00000000..a368de36
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,317 @@
+@@ -0,0 +1,315 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -406,9 +406,7 @@ index 00000000..3824e068
 +
 +    pid_t sys_getpid()
 +    {
-+        mlibc::infoLogger() << __FUNCTION__ << frg::endlog;
-+        SystemCall(SystemCallID::NotImplemented);
-+        return 0;
++        return SystemCall(SystemCallID::GetPID);
 +    }
 +
 +    pid_t sys_getppid()
@@ -461,25 +459,25 @@ index 00000000..3824e068
 +    uid_t sys_getuid()
 +    {
 +        mlibc::infoLogger() << "mlibc: sys_setuid is a stub" << frg::endlog;
-+        return 1000;
++        return 0;
 +    }
 +
 +    gid_t sys_getgid()
 +    {
 +        mlibc::infoLogger() << "mlibc: sys_setgid is a stub" << frg::endlog;
-+        return 1000;
++        return 0;
 +    }
 +
 +    uid_t sys_geteuid()
 +    {
 +        mlibc::infoLogger() << "mlibc: sys_seteuid is a stub" << frg::endlog;
-+        return 1000;
++        return 0;
 +    }
 +
 +    gid_t sys_getegid()
 +    {
 +        mlibc::infoLogger() << "mlibc: sys_getegid is a stub" << frg::endlog;
-+        return 1000;
++        return 0;
 +    }
 +
 +    int sys_access(const char* filename, int mode)
@@ -717,10 +715,10 @@ index 00000000..9bda0961
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/tonix/SystemCall.h b/sysdeps/tonix/include/tonix/SystemCall.h
 new file mode 100644
-index 00000000..83062751
+index 00000000..e209ed49
 --- /dev/null
 +++ b/sysdeps/tonix/include/tonix/SystemCall.h
-@@ -0,0 +1,55 @@
+@@ -0,0 +1,56 @@
 +#pragma once
 +
 +#include <sys/types.h>
@@ -738,6 +736,7 @@ index 00000000..83062751
 +    Sleep = 9,
 +    Stat = 10,
 +    FStat = 11,
++    GetPID = 14,
 +    Panic = 254,
 +    Log = 255,
 +    NotImplemented = 253
