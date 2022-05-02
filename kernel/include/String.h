@@ -12,6 +12,7 @@ private:
 public:
     char operator[](uint64_t index) const;
     void Push(char c);
+    void Insert(const String& string, uint64_t index);
     bool Match(uint64_t index, char c, bool assertValidIndex = false) const;
     bool IsNumeric(uint64_t index, bool assertValidIndex = false) const;
     String& operator=(const String& newString);

@@ -168,7 +168,7 @@ uint64_t String::GetLength() const
 
 bool String::IsEmpty() const
 {
-    return Equals("");
+    return length == 0;
 }
 
 String String::Substring(uint64_t index, uint64_t substringLength) const
@@ -180,6 +180,29 @@ String String::Substring(uint64_t index, uint64_t substringLength) const
     newBuffer[substringLength] = '\0';
 
     return String(newBuffer);
+}
+
+void String::Insert(const String& string, uint64_t index)
+{
+    char* newBuffer = new char[string.length + length + 1];
+    for (uint64_t i = 0; i <= index; ++i)
+    {
+        newBuffer[i] = buffer[i];
+    }
+    for (uint64_t i = 0; i < string.length; ++i)
+    {
+        newBuffer[i + index] = string[i];
+    }
+    for (uint64_t i = 0; i < length; ++i)
+    {
+        newBuffer[i + index + string.length] = buffer[i + index];
+    }
+
+    length += string.length;
+    newBuffer[length] = '\0';
+
+    delete[] buffer;
+    buffer = newBuffer;
 }
 
 unsigned int String::ToUnsignedInt()
