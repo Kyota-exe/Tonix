@@ -143,7 +143,7 @@ String::String()
 {
     length = 0;
     buffer = new char[1];
-    buffer[1] = '\0';
+    buffer[0] = '\0';
 }
 
 String::String(char c)
