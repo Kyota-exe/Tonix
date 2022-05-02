@@ -1,4 +1,4 @@
-From c4d2ad5147691cf04f4de23624365e8ae27ebb62 Mon Sep 17 00:00:00 2001
+From a99c91792c1c5e13f39a077f09e3745fc6384a86 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
- sysdeps/tonix/generic/Generic.cpp            | 316 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 318 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -40,7 +40,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/tonix/VFS.h            |  18 ++
  sysdeps/tonix/include/tonix/Warn.h           |   5 +
  sysdeps/tonix/meson.build                    |  51 +++
- 36 files changed, 532 insertions(+), 5 deletions(-)
+ 36 files changed, 534 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -177,10 +177,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..d54635a9
+index 00000000..5f6cfdc5
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,316 @@
+@@ -0,0 +1,318 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -345,10 +345,10 @@ index 00000000..d54635a9
 +    int sys_clock_get(int clock, time_t* secs, long* nanos)
 +    {
 +        mlibc::infoLogger() << "[syscall] Clock: " << clock << frg::endlog;
++        Warn("Always returns 0");
++        *secs = 0;
++        *nanos = 0;
 +        return 0;
-+
-+        (void)secs;
-+        (void)nanos;
 +    }
 +#endif
 +
@@ -414,8 +414,8 @@ index 00000000..d54635a9
 +
 +    pid_t sys_getppid()
 +    {
-+        mlibc::infoLogger() << __FUNCTION__ << frg::endlog;
-+        SystemCall(SystemCallID::NotImplemented);
++        __ensure(sys_getpid() == 1);
++        Warn("Only works when called from init process");
 +        return 0;
 +    }
 +
@@ -455,6 +455,8 @@ index 00000000..d54635a9
 +
 +        statbuf->st_ino = vnodeInfo.inodeNum;
 +        statbuf->st_size = vnodeInfo.fileSize;
++
++        Warn("Only returns inode number, size, and file type");
 +
 +        return 0;
 +    }
