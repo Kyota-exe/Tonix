@@ -13,7 +13,7 @@ VFS* VFS::kernelVfs = nullptr;
 
 VFS::VFS()
 {
-    workingDirectory = root;
+    workingDirectory = String("/");
 }
 
 void VFS::Initialize(void* ext2RamDisk)
@@ -61,15 +61,17 @@ VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& contai
 {
     VFS::Vnode* currentEntry;
 
-    if (path.Split('/', 0).IsEmpty())
+    bool pathIsAbsolute = path.Split('/', 0).IsEmpty();
+    if (!pathIsAbsolute)
     {
-        currentEntry = root;
-        path = path.Substring(1, path.GetLength() - 1);
+        path.Insert(workingDirectory, 0);
+        Assert(path.Split('/', 0).IsEmpty());
     }
-    else
-    {
-        currentEntry = workingDirectory;
-    }
+
+    // Remove first '/' from path
+    path = path.Substring(1, path.GetLength() - 1);
+
+    currentEntry = root;
 
     unsigned int pathDepth = path.IsEmpty() ? 0 : path.Count('/') + 1;
     for (unsigned int currentDepth = 0; currentDepth < pathDepth; ++currentDepth)
@@ -183,8 +185,6 @@ int VFS::Open(const String& path, int flags, Error& error)
     VFS::Vnode* containingDirectory = nullptr;
     FileSystem* fileSystem = nullptr;
     VFS::Vnode* vnode = TraversePath(path, filename, containingDirectory, fileSystem, error);
-
-    Assert(!filename.IsEmpty());
 
     if (flags & OpenFlag::Create)
     {

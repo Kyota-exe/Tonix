@@ -45,7 +45,7 @@ private:
     struct FileDescriptor;
     Vector<FileDescriptor> fileDescriptors;
 
-    Vnode* workingDirectory;
+    String workingDirectory;
 
     FileDescriptor* GetFileDescriptor(int descriptor);
     int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor);
