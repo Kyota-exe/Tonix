@@ -1,4 +1,4 @@
-From 05e538b96b9f83240943c9d5695db281b652017a Mon Sep 17 00:00:00 2001
+From c4d2ad5147691cf04f4de23624365e8ae27ebb62 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
- sysdeps/tonix/generic/Generic.cpp            | 315 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 316 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -38,8 +38,9 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
  sysdeps/tonix/include/tonix/SystemCall.h     |  56 ++++
  sysdeps/tonix/include/tonix/VFS.h            |  18 ++
+ sysdeps/tonix/include/tonix/Warn.h           |   5 +
  sysdeps/tonix/meson.build                    |  51 +++
- 35 files changed, 526 insertions(+), 5 deletions(-)
+ 36 files changed, 532 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -71,6 +72,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  create mode 100644 sysdeps/tonix/include/mlibc/thread-entry.hpp
  create mode 100644 sysdeps/tonix/include/tonix/SystemCall.h
  create mode 100644 sysdeps/tonix/include/tonix/VFS.h
+ create mode 100644 sysdeps/tonix/include/tonix/Warn.h
  create mode 100644 sysdeps/tonix/meson.build
 
 diff --git a/meson.build b/meson.build
@@ -175,10 +177,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..a368de36
+index 00000000..d54635a9
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,315 @@
+@@ -0,0 +1,316 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -191,6 +193,7 @@ index 00000000..a368de36
 +
 +#include <tonix/SystemCall.h>
 +#include <tonix/VFS.h>
++#include <tonix/Warn.h>
 +
 +namespace mlibc
 +{
@@ -458,25 +461,25 @@ index 00000000..a368de36
 +
 +    uid_t sys_getuid()
 +    {
-+        mlibc::infoLogger() << "mlibc: sys_setuid is a stub" << frg::endlog;
++        Warn("Users/groups are not implemented");
 +        return 0;
 +    }
 +
 +    gid_t sys_getgid()
 +    {
-+        mlibc::infoLogger() << "mlibc: sys_setgid is a stub" << frg::endlog;
++        Warn("Users/groups are not implemented");
 +        return 0;
 +    }
 +
 +    uid_t sys_geteuid()
 +    {
-+        mlibc::infoLogger() << "mlibc: sys_seteuid is a stub" << frg::endlog;
++        Warn("Users/groups are not implemented");
 +        return 0;
 +    }
 +
 +    gid_t sys_getegid()
 +    {
-+        mlibc::infoLogger() << "mlibc: sys_getegid is a stub" << frg::endlog;
++        Warn("Users/groups are not implemented");
 +        return 0;
 +    }
 +
@@ -800,6 +803,18 @@ index 00000000..7ae3d15b
 +    uint32_t inodeNum;
 +    uint32_t fileSize;
 +} __attribute__((packed));
+\ No newline at end of file
+diff --git a/sysdeps/tonix/include/tonix/Warn.h b/sysdeps/tonix/include/tonix/Warn.h
+new file mode 100644
+index 00000000..338a4e2d
+--- /dev/null
++++ b/sysdeps/tonix/include/tonix/Warn.h
+@@ -0,0 +1,5 @@
++#pragma once
++
++#include "SystemCall.h"
++
++#define Warn(message) mlibc::infoLogger() << "\033[95m[LIBC WARNING] " << __FUNCTION__ << " -> " << message << "\033[39m" << frg::endlog
 \ No newline at end of file
 diff --git a/sysdeps/tonix/meson.build b/sysdeps/tonix/meson.build
 new file mode 100644
