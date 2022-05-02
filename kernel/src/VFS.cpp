@@ -440,6 +440,11 @@ VFS::VnodeInfo VFS::GetVnodeInfo(int descriptor)
     return result;
 }
 
+String VFS::GetWorkingDirectory()
+{
+    return workingDirectory;
+}
+
 VFS::Vnode* VFS::CreateDirectory(const String& path, Error& error)
 {
     String directoryName;

@@ -138,6 +138,40 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             return scheduler->currentTask.pid;
         }
 
+        case SystemCallType::GetWorkingDirectory:
+        {
+            char* buffer = reinterpret_cast<char*>(arg0);
+            uint64_t bufferSize = arg1;
+
+            if (buffer == nullptr || bufferSize == 0)
+            {
+                error = Error::InvalidArgument;
+                return -1;
+            }
+
+            if (!scheduler->currentTask.pagingManager->AddressIsAccessible(buffer))
+            {
+                Panic();
+                error = Error::Fault;
+                return -1;
+            }
+
+            String workingDirectory = scheduler->currentTask.vfs->GetWorkingDirectory();
+
+            if (bufferSize < workingDirectory.GetLength())
+            {
+                error = Error::BadRange;
+                return -1;
+            }
+
+            for (uint64_t i = 0; i < bufferSize; ++i)
+            {
+                buffer[i] = workingDirectory[i];
+            }
+
+            return 0;
+        }
+
         default:
             Panic();
     }

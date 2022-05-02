@@ -31,6 +31,7 @@ public:
     VnodeInfo GetVnodeInfo(int descriptor, Error& error);
     VnodeInfo GetVnodeInfo(int descriptor);
     void SetTerminalSettings(int descriptor, bool canonical, bool echo, Error& error);
+    String GetWorkingDirectory();
 
     VFS();
 
