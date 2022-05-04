@@ -20,9 +20,9 @@ public:
     int Open(const String& path, int flags, Error& error);
     int Open(const String& path, int flags);
     uint64_t Read(int descriptor, void* buffer, uint64_t count, Error& error);
-    uint64_t Read(int descriptor, void* buffer, uint64_t count);
+    void Read(int descriptor, void* buffer, uint64_t count);
     uint64_t Write(int descriptor, const void* buffer, uint64_t count, Error& error);
-    uint64_t Write(int descriptor, const void* buffer, uint64_t count);
+    void Write(int descriptor, const void* buffer, uint64_t count);
     uint64_t RepositionOffset(int descriptor, uint64_t offset, SeekType seekType, Error& error);
     uint64_t RepositionOffset(int descriptor, uint64_t offset, SeekType seekType);
     void Close(int descriptor, Error& error);

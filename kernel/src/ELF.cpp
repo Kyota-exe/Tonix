@@ -15,8 +15,7 @@ void ELF::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& e
     int elfFile = VFS::kernelVfs->Open(path, VFS::OpenFlag::ReadOnly);
 
     auto elfHeader = new ELFHeader;
-    uint64_t elfHeaderSize = VFS::kernelVfs->Read(elfFile, elfHeader, sizeof(ELFHeader));
-    Assert(elfHeaderSize == sizeof(ELFHeader));
+    VFS::kernelVfs->Read(elfFile, elfHeader, sizeof(ELFHeader));
 
     Assert(elfHeader->eIdentMagic[0] == 0x7f &&
            elfHeader->eIdentMagic[1] == 0x45 &&
@@ -28,9 +27,7 @@ void ELF::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& e
 
     uint64_t programHeaderTableSize = elfHeader->programHeaderTableEntryCount * elfHeader->programHeaderTableEntrySize;
     auto programHeaderTable = new ProgramHeader[elfHeader->programHeaderTableEntryCount];
-
-    uint64_t programHeaderTableSizeRead = VFS::kernelVfs->Read(elfFile, programHeaderTable, programHeaderTableSize);
-    Assert(programHeaderTableSize == programHeaderTableSizeRead);
+    VFS::kernelVfs->Read(elfFile, programHeaderTable, programHeaderTableSize);
 
     bool hasDynamicLinking = false;
     uintptr_t programHeaderTableAddr = 0;
@@ -136,8 +133,7 @@ void ELF::LoadProgramHeader(int elfFile, const ProgramHeader& programHeader,
     if (elfHeader->type == ELFType::Shared) baseAddr += RTDL_ADDR;
     uintptr_t basePageAddr = baseAddr - (baseAddr % 0x1000);
 
-    uint64_t newOffset = VFS::kernelVfs->RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set);
-    Assert(newOffset == programHeader.offsetInFile);
+    VFS::kernelVfs->RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set);
 
     uint64_t readCount = 0;
     uint64_t segmentPagesCount = (programHeader.segmentSizeInMemory - 1) / 0x1000 + 1;
@@ -162,7 +158,8 @@ void ELF::LoadProgramHeader(int elfFile, const ProgramHeader& programHeader,
             count = programHeader.segmentSizeInFile - readCount;
         }
 
-        readCount += VFS::kernelVfs->Read(elfFile, reinterpret_cast<void*>(higherHalfAddr), count);
+        VFS::kernelVfs->Read(elfFile, reinterpret_cast<void*>(higherHalfAddr), count);
+        readCount += count;
     }
 
     Assert(readCount == programHeader.segmentSizeInFile);

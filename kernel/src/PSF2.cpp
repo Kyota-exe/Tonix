@@ -15,14 +15,14 @@ PSF2::PSF2(const String &path)
     int fontFile = VFS::kernelVfs->Open(path, VFS::OpenFlag::ReadOnly);
 
     header = new PSF2::Header;
-    uint64_t headerSize = VFS::kernelVfs->Read(fontFile, header, sizeof(PSF2::Header));
+    VFS::kernelVfs->Read(fontFile, header, sizeof(PSF2::Header));
 
     Assert(header->magic[0] == PSF2_MAGIC_0 &&
            header->magic[1] == PSF2_MAGIC_1 &&
            header->magic[2] == PSF2_MAGIC_2 &&
            header->magic[3] == PSF2_MAGIC_3);
 
-    Assert(headerSize == sizeof(PSF2::Header) && headerSize == header->headerSize);
+    Assert(sizeof(PSF2::Header) == header->headerSize);
 
     Serial::Log("Width: %d", header->width);
     Serial::Log("Height: %d", header->height);

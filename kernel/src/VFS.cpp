@@ -262,12 +262,12 @@ int VFS::Open(const String& path, int flags)
     return desc;
 }
 
-uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count)
+void VFS::Read(int descriptor, void* buffer, uint64_t count)
 {
     Error error = Error::None;
     uint64_t readCount = Read(descriptor, buffer, count, error);
     Assert(error == Error::None);
-    return readCount;
+    Assert(readCount == count);
 }
 
 uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count, Error& error)
@@ -297,12 +297,12 @@ uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count, Error& error)
     return readCount;
 }
 
-uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count)
+void VFS::Write(int descriptor, const void* buffer, uint64_t count)
 {
     Error error = Error::None;
     uint64_t wroteCount = Write(descriptor, buffer, count, error);
     Assert(error == Error::None);
-    return wroteCount;
+    Assert(wroteCount == count);
 }
 
 uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count, Error& error)
@@ -392,12 +392,12 @@ void VFS::SetTerminalSettings(int descriptor, bool canonical, bool echo, Error& 
     else error = Error::NotTerminal;
 }
 
-uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, VFS::SeekType seekType)
+uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, SeekType seekType)
 {
     Error error = Error::None;
-    auto result = RepositionOffset(descriptor, offset, seekType, error);
+    auto newOffset = RepositionOffset(descriptor, offset, seekType, error);
     Assert(error == Error::None);
-    return result;
+    return newOffset;
 }
 
 void VFS::Close(int descriptor)
