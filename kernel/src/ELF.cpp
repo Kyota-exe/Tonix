@@ -130,33 +130,40 @@ void ELF::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& e
 void ELF::LoadProgramHeader(int elfFile, const ProgramHeader& programHeader,
                             ELFHeader* elfHeader, PagingManager* pagingManager)
 {
-    uint64_t segmentPagesCount = (programHeader.segmentSizeInMemory - 1) / 0x1000 + 1;
-
-    VFS::kernelVfs->RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set);
+    Assert(programHeader.type == ProgramHeaderType::Load);
 
     uintptr_t baseAddr = programHeader.virtAddr;
     if (elfHeader->type == ELFType::Shared) baseAddr += RTDL_ADDR;
+    uintptr_t basePageAddr = baseAddr - (baseAddr % 0x1000);
 
-    uint64_t fileReadCount = 0;
-    for (uint64_t page = 0; page < segmentPagesCount; ++page)
+    uint64_t newOffset = VFS::kernelVfs->RepositionOffset(elfFile, programHeader.offsetInFile, VFS::SeekType::Set);
+    Assert(newOffset == programHeader.offsetInFile);
+
+    uint64_t readCount = 0;
+    uint64_t segmentPagesCount = (programHeader.segmentSizeInMemory - 1) / 0x1000 + 1;
+    for (uint64_t pageIndex = 0; pageIndex < segmentPagesCount; ++pageIndex)
     {
-        auto physAddr = RequestPageFrame();
-        auto virtAddr = reinterpret_cast<void*>(baseAddr + (page * 0x1000));
+        uintptr_t physAddr = RequestPageFrame();
+        uintptr_t virtAddr = basePageAddr + pageIndex * 0x1000;
+        pagingManager->MapMemory(reinterpret_cast<void*>(virtAddr), reinterpret_cast<void*>(physAddr), true);
 
-        void* pageAddr = (void*)((uintptr_t)virtAddr - ((uintptr_t)virtAddr % 0x1000));
-        pagingManager->MapMemory(pageAddr, reinterpret_cast<void*>(physAddr), true);
-
-        auto higherHalfAddr = HigherHalf(physAddr);
+        uintptr_t higherHalfAddr = HigherHalf(physAddr);
         Memset(reinterpret_cast<void*>(higherHalfAddr), 0, 0x1000);
 
-        higherHalfAddr += baseAddr % 0x1000;
-
-        uint64_t readCount = 0x1000;
-        if (fileReadCount + readCount > programHeader.segmentSizeInFile)
+        uint64_t count = 0x1000;
+        if (pageIndex == 0)
         {
-            readCount = programHeader.segmentSizeInFile % 0x1000;
+            higherHalfAddr += baseAddr % 0x1000;
+            count -= baseAddr % 0x1000;
         }
 
-        fileReadCount += VFS::kernelVfs->Read(elfFile, reinterpret_cast<void*>(higherHalfAddr), readCount);
+        if (readCount + count > programHeader.segmentSizeInFile)
+        {
+            count = programHeader.segmentSizeInFile - readCount;
+        }
+
+        readCount += VFS::kernelVfs->Read(elfFile, reinterpret_cast<void*>(higherHalfAddr), count);
     }
+
+    Assert(readCount == programHeader.segmentSizeInFile);
 }
