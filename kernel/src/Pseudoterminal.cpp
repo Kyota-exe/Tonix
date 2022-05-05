@@ -48,10 +48,11 @@ void Pseudoterminal::KeyboardInput(char c)
 {
     if (c == '\b')
     {
-        if (lines.GetLength() > 0 && lines.GetLast().GetLength() > 0)
+        if (lines.GetLength() == 0 || lines.GetLast().GetLength() == 0)
         {
-            lines.GetLast().Pop();
+            return;
         }
+        lines.GetLast().Pop();
     }
     else
     {
