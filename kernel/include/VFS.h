@@ -33,8 +33,6 @@ public:
     void SetTerminalSettings(int descriptor, bool canonical, bool echo, Error& error);
     String GetWorkingDirectory();
 
-    VFS();
-
     static void Mount(Vnode* mountPoint, Vnode* vnode);
     Vnode* CreateDirectory(const String& path, Error& error);
     Vnode* CreateDirectory(const String& path);
@@ -44,9 +42,8 @@ public:
     static Vnode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem);
 private:
     struct FileDescriptor;
-    Vector<FileDescriptor> fileDescriptors;
-
-    String workingDirectory;
+    Vector<FileDescriptor> fileDescriptors {};
+    String workingDirectory {"/"};
 
     FileDescriptor* GetFileDescriptor(int descriptor);
     int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor);

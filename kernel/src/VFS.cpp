@@ -11,11 +11,6 @@ VFS::Vnode* root;
 VFS::Vnode* currentInCache = nullptr;
 VFS* VFS::kernelVfs = nullptr;
 
-VFS::VFS()
-{
-    workingDirectory = String("/");
-}
-
 void VFS::Initialize(void* ext2RamDisk)
 {
     kernelVfs = new VFS();
