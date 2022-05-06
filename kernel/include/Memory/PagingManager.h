@@ -26,11 +26,11 @@ public:
     bool AddressIsAccessible(const void* virtAddr);
     uintptr_t GetPageTableEntryVirtAddr(const void* virtAddr);
     uintptr_t GetTranslatedPhysAddr(const void* virtAddr);
-    uintptr_t pml4PhysAddr;
+    uintptr_t pml4PhysAddr {};
 private:
     struct PageTableEntry;
     struct PageTable;
-    PageTable* pml4;
+    PageTable* pml4 {};
     Spinlock lock;
 	static void GetPageTableIndexes(const void* virtAddr, uint16_t* pageIndexes);
 	static void PopulatePagingStructureEntry(PageTableEntry& entry, uintptr_t physAddr, bool user);

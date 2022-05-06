@@ -42,9 +42,12 @@ PagingManager::PageTable* PagingManager::AllocatePagingStructure(PageTableEntry&
 
 void PagingManager::InitializePaging()
 {
+    lock.Acquire();
+    Assert(pml4 == nullptr);
     pml4PhysAddr = RequestPageFrame();
     pml4 = reinterpret_cast<PageTable*>(HigherHalf(pml4PhysAddr));
     Memset(pml4, 0, 0x1000);
+    lock.Release();
 
     for (uint64_t pageFrameIndex = 0; pageFrameIndex < pageFrameCount; ++pageFrameIndex)
     {
@@ -82,6 +85,7 @@ void PagingManager::MapMemory(const void* virtAddr, const void* physAddr, bool u
         auto& entry = table->entries[pageIndexes[level]];
         if (entry.GetFlag(PagingFlag::Present))
         {
+            Assert(entry.GetFlag(PagingFlag::UserAllowed) == user);
             table = reinterpret_cast<PageTable*>(HigherHalf(entry.GetPhysicalAddress()));
         }
         else
