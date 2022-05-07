@@ -130,16 +130,10 @@ void Terminal::Write(const String& string)
 }
 
 Terminal::Terminal() : textRenderer(new TextRenderer()),
-                       backgroundColour(Colour(0, 0, 0)),
-                       textColour(Colour(255, 255, 255))
-{
-    originalTextColour = textColour;
-    textBgColour = backgroundColour;
-
-    pendingWrap = false;
-    cursorX = 0;
-    cursorY = 0;
-}
+                       textColour(255, 255, 255),
+                       backgroundColour(0, 0, 0),
+                       originalTextColour(textColour),
+                       textBgColour(backgroundColour) {}
 
 Terminal::~Terminal()
 {

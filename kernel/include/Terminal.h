@@ -26,15 +26,16 @@ private:
     TextRenderer* textRenderer;
     Vector<uint64_t> unblockQueue;
 
-    Colour backgroundColour;
-    Colour originalTextColour;
-    Colour textColour;
+    Colour textColour = Colour(255, 255, 255);
+    const Colour backgroundColour = Colour(0, 0, 0);
+
+    const Colour originalTextColour;
     Colour textBgColour;
 
-    long cursorX;
-    long cursorY;
+    long cursorX = 0;
+    long cursorY = 0;
 
-    bool pendingWrap;
+    bool pendingWrap = false;
 };
 
 struct Terminal::EscapeSequence

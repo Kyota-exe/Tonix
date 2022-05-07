@@ -22,8 +22,6 @@ enum ANSICodes : unsigned int
     BackgroundWhite = 47
 };
 
-Colour::Colour(uint8_t _red, uint8_t _green, uint8_t _blue) : red(_red), green(_green), blue(_blue) {}
-
 Colour Colour::FromANSICode(unsigned int code)
 {
     switch (code)
@@ -65,20 +63,4 @@ Colour Colour::FromANSICode(unsigned int code)
     }
 }
 
-Colour::Colour(const Colour& original)
-{
-    red = original.red;
-    blue = original.blue;
-    green = original.green;
-}
-
-Colour& Colour::operator=(const Colour& original)
-{
-    if (&original != this)
-    {
-        red = original.red;
-        blue = original.blue;
-        green = original.green;
-    }
-    return *this;
-}
+Colour::Colour(uint8_t red, uint8_t green, uint8_t blue) : red(red), green(green), blue(blue) {}
