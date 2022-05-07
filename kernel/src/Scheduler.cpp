@@ -34,8 +34,9 @@ Task CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPt
     task.frame = frame;
 
     uintptr_t syscallStackSize = SYSCALL_STACK_PAGE_COUNT * 0x1000;
-    uintptr_t syscallStackPhysAddr = RequestPageFrames(SYSCALL_STACK_PAGE_COUNT) + syscallStackSize;
-    task.syscallStackAddr = reinterpret_cast<void*>(HigherHalf(syscallStackPhysAddr));
+    uintptr_t syscallStack = HigherHalf(RequestPageFrames(SYSCALL_STACK_PAGE_COUNT) + syscallStackSize);
+    task.syscallStackAddr = reinterpret_cast<void*>(syscallStack);
+    task.syscallStackBottom = reinterpret_cast<void*>(syscallStack - syscallStackSize);
 
     if (setPid)
     {

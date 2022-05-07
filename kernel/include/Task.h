@@ -39,6 +39,7 @@ struct Task
 
     InterruptFrame frame;
     void* syscallStackAddr = nullptr;
+    void* syscallStackBottom = nullptr;
 
     VFS* vfs = nullptr;
     PagingManager* pagingManager = nullptr;
