@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include "VFS.h"
-#include "UserspaceAllocator.h"
+#include "Memory/UserspaceAllocator.h"
 #include "Memory/PagingManager.h"
 
 struct InterruptFrame
@@ -35,13 +35,14 @@ struct InterruptFrame
 
 struct Task
 {
-    uint64_t pid;
+    uint64_t pid = 0;
 
     InterruptFrame frame;
-    void* syscallStackAddr;
-    bool blocked = false;
+    void* syscallStackAddr = nullptr;
 
-    VFS* vfs;
-    PagingManager* pagingManager;
-    UserspaceAllocator* userspaceAllocator;
+    VFS* vfs = nullptr;
+    PagingManager* pagingManager = nullptr;
+    UserspaceAllocator* userspaceAllocator = nullptr;
+
+    bool blocked = false;
 };
