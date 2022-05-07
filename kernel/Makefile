@@ -1,6 +1,6 @@
 KERNEL := bin/kernel.elf
-CC := x86_64-elf-g++
-LD := x86_64-elf-ld
+CC := g++
+LD := ld
 
 CFLAGS ?= -Wall -Wextra -O2 -pipe
 LDFLAGS ?=
