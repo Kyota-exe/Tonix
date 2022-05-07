@@ -4,7 +4,7 @@
 
 struct CPU
 {
-    Scheduler* scheduler;
+    Scheduler* scheduler = nullptr;
     static uint32_t GetCoreID();
     static CPU GetStruct();
     static void InitializeCPUList(unsigned long cpuCount);
