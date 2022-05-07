@@ -6,7 +6,7 @@
 #include "Serial.h"
 
 constexpr uintptr_t USER_STACK_BASE = 0x0000'8000'0000'0000 - 0x1000;
-constexpr uintptr_t USER_STACK_SIZE = 0x2000;
+constexpr uintptr_t USER_STACK_SIZE = 0x20000;
 
 constexpr uintptr_t RTDL_ADDR = 0x40000000;
 
