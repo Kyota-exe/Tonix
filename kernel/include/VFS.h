@@ -42,8 +42,8 @@ public:
     static Vnode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem);
 private:
     struct FileDescriptor;
-    Vector<FileDescriptor> fileDescriptors {};
-    String workingDirectory {"/"};
+    Vector<FileDescriptor> fileDescriptors;
+    String workingDirectory = String("/");
 
     FileDescriptor* GetFileDescriptor(int descriptor);
     int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor);
