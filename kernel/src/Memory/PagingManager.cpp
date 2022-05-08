@@ -134,7 +134,7 @@ unsigned int PagingManager::FlagMismatchLevel(const void* virtAddr, PagingFlag f
         auto& entry = table->entries[i];
         if (entry.GetFlag(flag) != enabled)
         {
-            return level;
+            return level + 1;
         }
         table = reinterpret_cast<PageTable*>(HigherHalf(entry.GetPhysicalAddress()));
     }
