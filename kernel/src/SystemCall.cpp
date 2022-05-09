@@ -80,7 +80,10 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
         }
 
         case SystemCallType::Exit:
-            scheduler->ExitCurrentTask((int)arg0, interruptFrame); return 0;
+            scheduler->ExitCurrentTask((int)arg0, interruptFrame);
+            // We need to return rax here because rax gets set to the return value,
+            // and we want rax to be set to the rax of the next task.
+            return interruptFrame->rax;
 
         case SystemCallType::Sleep:
         {
