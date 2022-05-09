@@ -19,6 +19,7 @@ enum class SystemCallType
     SetTerminalSettings = 12,
     GetPID = 14,
     GetWorkingDirectory = 15,
+    Fork = 16,
     Panic = 254,
     Log = 255
 };

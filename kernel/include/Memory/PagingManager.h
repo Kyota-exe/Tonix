@@ -18,6 +18,7 @@ class PagingManager
 {
 public:
     void InitializePaging();
+    void CopyUserspace(PagingManager& original);
     void SetCR3() const;
     void MapMemory(const void* virtAddr, const void* physAddr, bool user);
     void UnmapMemory(const void* virtAddr);
@@ -32,9 +33,10 @@ private:
     struct PageTable;
     PageTable* pml4 {};
     Spinlock lock;
-	static void GetPageTableIndexes(const void* virtAddr, uint16_t* pageIndexes);
-	static void PopulatePagingStructureEntry(PageTableEntry& entry, uintptr_t physAddr, bool user);
-	static PageTable* AllocatePagingStructure(PageTableEntry& entry, bool user);
+    static void GetPageTableIndexes(const void* virtAddr, uint16_t* pageIndexes);
+    static void PopulatePagingStructureEntry(PageTableEntry& entry, uintptr_t physAddr, bool user);
+    static PageTable* AllocatePagingStructure(PageTableEntry& entry, bool user);
+    void CopyPages(const PageTable* originalTable, PageTable* table, uint64_t pageCount, unsigned int level);
 };
 
 struct PagingManager::PageTableEntry

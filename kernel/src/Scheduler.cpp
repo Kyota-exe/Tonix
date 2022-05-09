@@ -18,12 +18,13 @@ constexpr uint64_t SYSCALL_STACK_PAGE_COUNT = 3;
 Vector<Task>* taskQueue;
 Spinlock taskQueueLock;
 
-Task CreateTask(PagingManager* pagingManager, uintptr_t entry, uintptr_t stackPtr, bool userTask, bool setPid)
+Task CreateTask(PagingManager* pagingManager, VFS* vfs, UserspaceAllocator* userspaceAllocator,
+                uintptr_t entry, uintptr_t stackPtr, bool userTask, bool setPid)
 {
     Task task {};
+    task.vfs = vfs;
     task.pagingManager = pagingManager;
-    task.userspaceAllocator = new UserspaceAllocator();
-    task.vfs = new VFS();
+    task.userspaceAllocator = userspaceAllocator;
 
     InterruptFrame frame {};
     frame.cs = userTask ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
@@ -221,6 +222,30 @@ void Scheduler::SleepCurrentTask(uint64_t milliseconds)
     SuspendSystemCall();
 }
 
+uint64_t Scheduler::ForkCurrentTask(InterruptFrame* interruptFrame)
+{
+    auto pagingManager = new PagingManager();
+    pagingManager->InitializePaging();
+    pagingManager->CopyUserspace(*currentTask.pagingManager);
+
+    auto childVfs = new VFS(*currentTask.vfs);
+    auto childUserspaceAllocator = new UserspaceAllocator(*currentTask.userspaceAllocator);
+    Task child = CreateTask(pagingManager, childVfs, childUserspaceAllocator, 0, 0, true, true);
+
+    child.frame = *interruptFrame;
+    child.frame.rax = 0;
+
+    // Clone system call stack
+    MemCopy(child.syscallStackBottom, currentTask.syscallStackBottom, SYSCALL_STACK_PAGE_COUNT * 0x1000);
+    child.syscallStackAddr = currentTask.syscallStackAddr;
+
+    taskQueueLock.Acquire();
+    taskQueue->Push(child);
+    taskQueueLock.Release();
+
+    return child.pid;
+}
+
 void Scheduler::CreateTaskFromELF(const String& path, bool userTask)
 {
     auto pagingManager = new PagingManager();
@@ -230,7 +255,7 @@ void Scheduler::CreateTaskFromELF(const String& path, bool userTask)
     uintptr_t stackPtr;
     ELF::LoadELF(path, pagingManager, entry, stackPtr);
 
-    Task task = CreateTask(pagingManager, entry, stackPtr, userTask, true);
+    Task task = CreateTask(pagingManager, new VFS(), new UserspaceAllocator(), entry, stackPtr, userTask, true);
 
     int desc = task.vfs->Open(String("/dev/tty"), VFS::OpenFlag::ReadWrite);
     Assert(desc == 0);
@@ -259,7 +284,7 @@ Scheduler::Scheduler(TSS* tss) : lapic(new LAPIC()), tss(tss)
     uintptr_t idleStack = HigherHalf(RequestPageFrame() + 0x1000);
     auto idleEntry = reinterpret_cast<uintptr_t>(Idle);
 
-    idleTask = CreateTask(idlePagingManager, idleEntry, idleStack, false, false);
+    idleTask = CreateTask(idlePagingManager, new VFS(), new UserspaceAllocator(), idleEntry, idleStack, false, false);
     idleTask.pid = 0;
 
     currentTask = idleTask;

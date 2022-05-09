@@ -63,7 +63,46 @@ void PagingManager::InitializePaging()
         for (uint64_t pmrVirtAddr = pmr.base; pmrVirtAddr < pmr.base + pmr.length; pmrVirtAddr += 0x1000)
         {
             uint64_t physAddr = kernelBaseAddrStruct->physical_base_address + (pmrVirtAddr - kernelBaseAddrStruct->virtual_base_address);
-            MapMemory(reinterpret_cast<void*>(pmrVirtAddr), reinterpret_cast<void*>(physAddr), false);
+            MapMemory(reinterpret_cast<void*>(pmrVirtAddr), reinterpret_cast<void*>(physAddr), true);
+        }
+    }
+}
+
+void PagingManager::CopyUserspace(PagingManager& original)
+{
+    original.lock.Acquire();
+    lock.Acquire();
+    CopyPages(original.pml4, pml4, 256, PAGING_LEVELS - 1);
+    lock.Release();
+    original.lock.Release();
+}
+
+void PagingManager::CopyPages(const PageTable* originalTable, PageTable* table, uint64_t pageCount, unsigned int level)
+{
+    for (uint64_t entryIndex = 0; entryIndex < pageCount; ++entryIndex)
+    {
+        const auto& originalEntry = originalTable->entries[entryIndex];
+        if (originalEntry.GetFlag(PagingFlag::Present))
+        {
+            auto& entry = table->entries[entryIndex];
+            Assert(!entry.GetFlag(PagingFlag::Present));
+
+            MemCopy(&entry, &originalEntry, sizeof(PageTableEntry));
+            auto originalNext = reinterpret_cast<PageTable*>(HigherHalf(entry.GetPhysicalAddress()));
+
+            uintptr_t nextPhysAddr = RequestPageFrame();
+            entry.SetPhysicalAddress(nextPhysAddr);
+            auto next = reinterpret_cast<void*>(HigherHalf(nextPhysAddr));
+
+            if (level > 0)
+            {
+                Memset(next, 0, 0x1000);
+                CopyPages(static_cast<const PageTable*>(originalNext), static_cast<PageTable*>(next), 512, level - 1);
+            }
+            else
+            {
+                MemCopy(next, originalNext, 0x1000);
+            }
         }
     }
 }
