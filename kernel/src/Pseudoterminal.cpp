@@ -46,7 +46,7 @@ uint64_t Pseudoterminal::Write(const void* buffer, uint64_t count)
 
 void Pseudoterminal::KeyboardInput(char c)
 {
-    if (c == '\b')
+    if (c == '\b' && canonical)
     {
         if (lines.GetLength() == 0 || lines.GetLast().GetLength() == 0)
         {
@@ -61,12 +61,9 @@ void Pseudoterminal::KeyboardInput(char c)
         Vector<char>& buffer = canonical ? lines.GetLast() : rawBuffer;
         buffer.Push(c);
 
-        if (c == '\n')
-        {
-            if (canonical) lines.Push({});
-            if (!unblockQueue.IsEmpty()) Scheduler::Unblock(unblockQueue.Pop(0).pid);
-        }
-        else if (!unblockQueue.IsEmpty() && unblockQueue.Get(0).requestedCount <= buffer.GetLength())
+        bool isNewline = c == '\n';
+        if (isNewline && canonical) lines.Push({});
+        else if (!unblockQueue.IsEmpty() && (isNewline || unblockQueue.Get(0).requestedCount <= buffer.GetLength()))
         {
             Scheduler::Unblock(unblockQueue.Pop(0).pid);
         }
