@@ -73,6 +73,10 @@ VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& contai
     for (unsigned int currentDepth = 0; currentDepth < pathDepth; ++currentDepth)
     {
         fileName = path.Split('/', currentDepth);
+
+        if (fileName.IsEmpty())
+            continue;
+
         Vector<VFS::Vnode*> mounts;
 
         Serial::Log("PATH TOKEN: %s", fileName.ToRawString());
