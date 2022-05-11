@@ -1,6 +1,7 @@
 #include "Pseudoterminal.h"
 #include "Terminal.h"
 #include "Scheduler.h"
+#include "Serial.h"
 
 Pseudoterminal* Pseudoterminal::instance = nullptr;
 
@@ -65,7 +66,7 @@ void Pseudoterminal::KeyboardInput(char c)
         if (isNewline && canonical) lines.Push({});
         else if (!unblockQueue.IsEmpty() && (isNewline || unblockQueue.Get(0).requestedCount <= buffer.GetLength()))
         {
-            Scheduler::Unblock(unblockQueue.Pop(0).pid);
+            Scheduler::Unsuspend(unblockQueue.Pop(0).pid, 0);
         }
     }
 

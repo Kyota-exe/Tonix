@@ -92,6 +92,18 @@ void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
     currentTask.pagingManager->SetCR3();
 }
 
+Task& Scheduler::GetTask(uint64_t pid)
+{
+    for (Task& task : *taskQueue)
+    {
+        if (task.pid == pid)
+        {
+            return task;
+        }
+    }
+    Panic();
+}
+
 void Scheduler::ConfigureTimerClosestExpiry()
 {
     uint64_t closestTime = 100;
@@ -134,23 +146,37 @@ void Scheduler::UpdateTimerEntries()
     }
 }
 
-void Scheduler::SuspendSystemCall()
+uint64_t Scheduler::SuspendSystemCall()
 {
     currentTask.blocked = true;
-    asm volatile("int $0x81");
+
+    uint64_t returnValue;
+    asm volatile("int $0x81" : "=a"(returnValue));
+
+    currentTask.blocked = false;
+    return returnValue;
 }
 
 void Scheduler::Unblock(uint64_t pid)
 {
     taskQueueLock.Acquire();
-    for (Task& task : *taskQueue)
-    {
-        if (task.pid == pid)
-        {
-            Assert(task.blocked);
-            task.blocked = false;
-        }
-    }
+
+    Task& task = GetTask(pid);
+    Assert(task.blocked);
+    task.blocked = false;
+
+    taskQueueLock.Release();
+}
+
+void Scheduler::Unsuspend(uint64_t pid, uint64_t returnValue)
+{
+    taskQueueLock.Acquire();
+
+    Task& task = GetTask(pid);
+    Assert(task.blocked);
+    task.frame.rax = returnValue;
+    task.blocked = false;
+
     taskQueueLock.Release();
 }
 
