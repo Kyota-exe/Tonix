@@ -13,7 +13,7 @@ public:
     void SwitchToNextTask(InterruptFrame* interruptFrame);
     void ExitCurrentTask(int status, InterruptFrame* interruptFrame);
     void ConfigureTimerClosestExpiry();
-    uint64_t SuspendSystemCall();
+    uint64_t SuspendSystemCall(TaskState newTaskState);
     void SleepCurrentTask(uint64_t milliseconds);
     uint64_t ForkCurrentTask(InterruptFrame* interruptFrame);
     static void InitializeQueue();

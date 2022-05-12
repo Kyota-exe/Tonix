@@ -33,6 +33,11 @@ struct InterruptFrame
     uint64_t ss;
 } __attribute__((packed));
 
+enum class TaskState
+{
+    Normal, Blocked, Terminated,
+};
+
 struct Task
 {
     uint64_t pid = 0;
@@ -45,5 +50,5 @@ struct Task
     PagingManager* pagingManager = nullptr;
     UserspaceAllocator* userspaceAllocator = nullptr;
 
-    bool blocked = false;
+    TaskState state;
 };

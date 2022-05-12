@@ -13,7 +13,7 @@ uint64_t Pseudoterminal::Read(void* buffer, uint64_t count)
     {
         Scheduler* scheduler = Scheduler::GetScheduler();
         unblockQueue.Push({scheduler->currentTask.pid, count});
-        scheduler->SuspendSystemCall();
+        scheduler->SuspendSystemCall(TaskState::Blocked);
     }
 
     uint64_t readCount;

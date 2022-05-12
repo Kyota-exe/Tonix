@@ -70,7 +70,7 @@ void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
     bool foundNewTask = false;
     for (uint64_t i = 0; i < taskQueue->GetLength(); ++i)
     {
-        if (!taskQueue->Get(i).blocked)
+        if (taskQueue->Get(i).state == TaskState::Normal)
         {
             currentTask = taskQueue->Pop(i);
             foundNewTask = true;
@@ -146,14 +146,15 @@ void Scheduler::UpdateTimerEntries()
     }
 }
 
-uint64_t Scheduler::SuspendSystemCall()
+uint64_t Scheduler::SuspendSystemCall(TaskState newTaskState)
 {
-    currentTask.blocked = true;
+    Assert(currentTask.state == TaskState::Normal);
+    currentTask.state = newTaskState;
 
     uint64_t returnValue;
     asm volatile("int $0x81" : "=a"(returnValue));
 
-    currentTask.blocked = false;
+    Assert(currentTask.state == TaskState::Normal);
     return returnValue;
 }
 
@@ -162,8 +163,8 @@ void Scheduler::Unblock(uint64_t pid)
     taskQueueLock.Acquire();
 
     Task& task = GetTask(pid);
-    Assert(task.blocked);
-    task.blocked = false;
+    Assert(task.state == TaskState::Blocked);
+    task.state = TaskState::Normal;
 
     taskQueueLock.Release();
 }
@@ -173,9 +174,9 @@ void Scheduler::Unsuspend(uint64_t pid, uint64_t returnValue)
     taskQueueLock.Acquire();
 
     Task& task = GetTask(pid);
-    Assert(task.blocked);
+    Assert(task.state == TaskState::Blocked || task.state == TaskState::WaitingForChild);
     task.frame.rax = returnValue;
-    task.blocked = false;
+    task.state = TaskState::Normal;
 
     taskQueueLock.Release();
 }
@@ -245,7 +246,7 @@ void Scheduler::SleepCurrentTask(uint64_t milliseconds)
     Assert(currentTask.pid != 0);
     Assert(milliseconds > 0);
     timerEntries.Push({milliseconds, true, currentTask.pid});
-    SuspendSystemCall();
+    SuspendSystemCall(TaskState::Blocked);
 }
 
 uint64_t Scheduler::ForkCurrentTask(InterruptFrame* interruptFrame)
