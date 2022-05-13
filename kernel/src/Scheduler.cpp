@@ -237,7 +237,16 @@ void Scheduler::ExitCurrentTask(int status, InterruptFrame* interruptFrame)
 {
     Serial::Log("Task exited with status %d.", status);
 
-    restoreFrame = false;
+    currentTask.state = TaskState::Terminated;
+
+    taskQueueLock.Acquire();
+    Task& parent = GetTask(currentTask.parentPid);
+    if (parent.state == TaskState::WaitingForChild)
+    {
+        Unsuspend(parent.pid, currentTask.pid);
+    }
+    taskQueueLock.Release();
+
     SwitchToNextTask(interruptFrame);
 }
 
@@ -262,6 +271,8 @@ uint64_t Scheduler::ForkCurrentTask(InterruptFrame* interruptFrame)
     child.frame = *interruptFrame;
     child.frame.rax = 0;
 
+    child.parentPid = currentTask.pid;
+
     // Clone system call stack
     MemCopy(child.syscallStackBottom, currentTask.syscallStackBottom, SYSCALL_STACK_PAGE_COUNT * 0x1000);
     child.syscallStackAddr = currentTask.syscallStackAddr;
@@ -271,6 +282,35 @@ uint64_t Scheduler::ForkCurrentTask(InterruptFrame* interruptFrame)
     taskQueueLock.Release();
 
     return child.pid;
+}
+
+uint64_t Scheduler::WaitForChild(Error& error)
+{
+    if (currentTask.childrenPids.IsEmpty())
+    {
+        error = Error::NoChildren;
+        return 0;
+    }
+
+    taskQueueLock.Acquire();
+    for (uint64_t childPid : currentTask.childrenPids)
+    {
+        Task& child = GetTask(childPid);
+        if (child.state == TaskState::Terminated)
+        {
+            Assert(child.pid == childPid);
+            return child.pid;
+        }
+    }
+    taskQueueLock.Release();
+
+    uint64_t childPid = SuspendSystemCall(TaskState::WaitingForChild);
+
+    taskQueueLock.Acquire();
+    Assert(GetTask(childPid).state == TaskState::Terminated);
+    taskQueueLock.Release();
+
+    return childPid;
 }
 
 void Scheduler::CreateTaskFromELF(const String& path, bool userTask)

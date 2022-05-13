@@ -1,4 +1,4 @@
-From 613ec8abd9d4608a8ee9a34be75a7acc5596f5fd Mon Sep 17 00:00:00 2001
+From 096f6e5252fd581fe596176bc471a29d267509ab Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
- sysdeps/tonix/generic/Generic.cpp            | 346 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 359 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -36,11 +36,11 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
  sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
- sysdeps/tonix/include/tonix/SystemCall.h     |  59 ++++
+ sysdeps/tonix/include/tonix/SystemCall.h     |  60 ++++
  sysdeps/tonix/include/tonix/VFS.h            |  18 +
  sysdeps/tonix/include/tonix/Warn.h           |   5 +
  sysdeps/tonix/meson.build                    |  51 +++
- 36 files changed, 565 insertions(+), 5 deletions(-)
+ 36 files changed, 579 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -177,11 +177,12 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..a2e915ce
+index 00000000..a3030eeb
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,346 @@
+@@ -0,0 +1,359 @@
 +#include <bits/ensure.h>
++#include <abi-bits/wait.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
 +#include <mlibc/thread-entry.hpp>
@@ -399,6 +400,18 @@ index 00000000..a2e915ce
 +        long ret = SystemCall(SystemCallID::Fork);
 +        if (ret < 0) return ret;
 +        *child = ret;
++        return 0;
++    }
++
++    int sys_waitpid(pid_t pid, int* status, int flags, pid_t* ret_pid)
++    {
++        mlibc::infoLogger() << "[syscall] Wait: " << pid << " Flags: " << flags << frg::endlog;
++        __ensure(pid == -1);
++        __ensure(flags == (WCONTINUED | WUNTRACED));
++        long ret = SystemCall(SystemCallID::Wait);
++        if (ret < 0) return -ret;
++        *ret_pid = ret;
++        Warn("SIGCONT and traced processes are not implemented");
 +        return 0;
 +    }
 +
@@ -748,10 +761,10 @@ index 00000000..9bda0961
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/tonix/SystemCall.h b/sysdeps/tonix/include/tonix/SystemCall.h
 new file mode 100644
-index 00000000..92905d6d
+index 00000000..a5eb3c62
 --- /dev/null
 +++ b/sysdeps/tonix/include/tonix/SystemCall.h
-@@ -0,0 +1,59 @@
+@@ -0,0 +1,60 @@
 +#pragma once
 +
 +#include <sys/types.h>
@@ -773,6 +786,7 @@ index 00000000..92905d6d
 +    GetPID = 14,
 +    GetWorkingDirectory = 15,
 +    Fork = 16,
++    Wait = 17,
 +    Panic = 254,
 +    Log = 255,
 +    NotImplemented = 253

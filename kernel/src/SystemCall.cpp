@@ -180,6 +180,11 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             return scheduler->ForkCurrentTask(interruptFrame);
         }
 
+        case SystemCallType::Wait:
+        {
+            return scheduler->WaitForChild(error);
+        }
+
         default:
             Panic();
     }

@@ -35,12 +35,13 @@ struct InterruptFrame
 
 enum class TaskState
 {
-    Normal, Blocked, Terminated,
+    Normal, Blocked, Terminated, WaitingForChild
 };
 
 struct Task
 {
     uint64_t pid = 0;
+    uint64_t parentPid = 0;
 
     InterruptFrame frame;
     void* syscallStackAddr = nullptr;
@@ -49,6 +50,7 @@ struct Task
     VFS* vfs = nullptr;
     PagingManager* pagingManager = nullptr;
     UserspaceAllocator* userspaceAllocator = nullptr;
+    Vector<uint64_t> childrenPids;
 
     TaskState state;
 };

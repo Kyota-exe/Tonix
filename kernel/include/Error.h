@@ -14,4 +14,5 @@ enum class Error : int64_t
     Fault = 1020,
     BadFileDescriptor = 1081,
     BadRange = 3,
+    NoChildren = 1012,
 };
