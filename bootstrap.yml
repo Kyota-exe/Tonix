@@ -131,7 +131,6 @@ tools:
           - '--with-sysroot=@SYSROOT_DIR@'
           # On recent compilers, binutils 2.26 causes implicit-fallthrough warnings, among others.
           - '--disable-werror'
-          - '--enable-targets=x86_64-elf,x86_64-pe'
           # -g blows up the binary size.
           - 'CFLAGS=-O2 -pipe'
     compile:
@@ -305,12 +304,6 @@ packages:
     build:
       - args: ['make', '-j@PARALLELISM@']
       - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install-strip']
-      #- args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/bin']
-      #- args: ['ln', '-s', '/usr/bin/bash', '@THIS_COLLECT_DIR@/bin/bash']
-      #- args: ['ln', '-s', '/usr/bin/bash', '@THIS_COLLECT_DIR@/bin/sh']
-      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/etc/bash']
-      - args: ['cp', '@SOURCE_ROOT@/extra-files/bash/profile', '@THIS_COLLECT_DIR@/etc/']
-      - args: ['cp', '@SOURCE_ROOT@/extra-files/bash/bashrc', '@THIS_COLLECT_DIR@/etc/bash/']
 
   - name: gcc-libs-dummy
     from_source: gcc
