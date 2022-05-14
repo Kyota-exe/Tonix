@@ -1,4 +1,4 @@
-From 096f6e5252fd581fe596176bc471a29d267509ab Mon Sep 17 00:00:00 2001
+From 1981c5a6fb28a38509f2a5f2eff35bef9b815472 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
- sysdeps/tonix/generic/Generic.cpp            | 359 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 391 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -33,14 +33,15 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/abi-bits/termios.h     |   1 +
  sysdeps/tonix/include/abi-bits/time.h        |   1 +
  sysdeps/tonix/include/abi-bits/uid_t.h       |   1 +
+ sysdeps/tonix/include/abi-bits/utsname.h     |   1 +
  sysdeps/tonix/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
  sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
- sysdeps/tonix/include/tonix/SystemCall.h     |  60 ++++
+ sysdeps/tonix/include/tonix/SystemCall.h     |  60 +++
  sysdeps/tonix/include/tonix/VFS.h            |  18 +
  sysdeps/tonix/include/tonix/Warn.h           |   5 +
  sysdeps/tonix/meson.build                    |  51 +++
- 36 files changed, 579 insertions(+), 5 deletions(-)
+ 37 files changed, 612 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -67,6 +68,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  create mode 120000 sysdeps/tonix/include/abi-bits/termios.h
  create mode 120000 sysdeps/tonix/include/abi-bits/time.h
  create mode 120000 sysdeps/tonix/include/abi-bits/uid_t.h
+ create mode 120000 sysdeps/tonix/include/abi-bits/utsname.h
  create mode 120000 sysdeps/tonix/include/abi-bits/vm-flags.h
  create mode 120000 sysdeps/tonix/include/abi-bits/wait.h
  create mode 100644 sysdeps/tonix/include/mlibc/thread-entry.hpp
@@ -177,10 +179,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..a3030eeb
+index 00000000..23ab5d05
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,359 @@
+@@ -0,0 +1,391 @@
 +#include <bits/ensure.h>
 +#include <abi-bits/wait.h>
 +#include <mlibc/debug.hpp>
@@ -538,6 +540,38 @@ index 00000000..a3030eeb
 +        return 0;
 +    }
 +
++    struct termios termiosStruct
++    {
++        IGNBRK | IGNPAR,
++        0,
++        0,
++        ICANON | ECHO,
++    };
++
++    int sys_tcgetattr(int fd, struct termios* attr)
++    {
++        int error = sys_isatty(fd);
++        if (error > 0) return error;
++
++        *attr = termiosStruct;
++        return 0;
++    }
++
++    int sys_tcsetattr(int fd, int optional_action, const struct termios* attr)
++    {
++        __ensure(attr->c_iflag == termiosStruct.c_iflag);
++        __ensure(attr->c_oflag == termiosStruct.c_oflag);
++        __ensure(attr->c_cflag == termiosStruct.c_cflag);
++        __ensure((attr->c_lflag & ~(ICANON | ECHO | ISIG)) == (termiosStruct.c_lflag & ~(ICANON | ECHO | ISIG)));
++
++        long ret = SystemCall(SystemCallID::SetTerminalSettings, fd, attr->c_lflag & ICANON, attr->c_lflag & ECHO);
++        if (ret < 0) return -ret;
++
++        termiosStruct = *attr;
++        Warn("ICANON/ECHO is implemented, ISIG and optional action is ignored, everything else is asserted");
++        return 0;
++    }
++
 +#endif // MLIBC_BUILDING_RTDL
 +}
 \ No newline at end of file
@@ -724,6 +758,14 @@ index 00000000..1113eba6
 +++ b/sysdeps/tonix/include/abi-bits/uid_t.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/uid_t.h
+\ No newline at end of file
+diff --git a/sysdeps/tonix/include/abi-bits/utsname.h b/sysdeps/tonix/include/abi-bits/utsname.h
+new file mode 120000
+index 00000000..17b993fe
+--- /dev/null
++++ b/sysdeps/tonix/include/abi-bits/utsname.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/utsname.h
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/vm-flags.h b/sysdeps/tonix/include/abi-bits/vm-flags.h
 new file mode 120000
