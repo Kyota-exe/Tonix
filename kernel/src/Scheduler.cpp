@@ -239,13 +239,16 @@ void Scheduler::ExitCurrentTask(int status, InterruptFrame* interruptFrame)
 
     currentTask.state = TaskState::Terminated;
 
-    taskQueueLock.Acquire();
-    Task& parent = GetTask(currentTask.parentPid);
-    if (parent.state == TaskState::WaitingForChild)
+    if (currentTask.pid != 1)
     {
-        Unsuspend(parent.pid, currentTask.pid);
+        taskQueueLock.Acquire();
+        Task& parent = GetTask(currentTask.parentPid);
+        if (parent.state == TaskState::WaitingForChild)
+        {
+            Unsuspend(parent.pid, currentTask.pid);
+        }
+        taskQueueLock.Release();
     }
-    taskQueueLock.Release();
 
     SwitchToNextTask(interruptFrame);
 }
