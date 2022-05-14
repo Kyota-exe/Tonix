@@ -1,4 +1,4 @@
-From fe840c57e3a9c3c9b3a57c09f2c1fec452781657 Mon Sep 17 00:00:00 2001
+From c0a116158c7142e616c814d45fcf9ce12ff5d208 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
- sysdeps/tonix/generic/Generic.cpp            | 427 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 425 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -37,11 +37,11 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
  sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
- sysdeps/tonix/include/tonix/SystemCall.h     |  60 +++
+ sysdeps/tonix/include/tonix/SystemCall.h     |  61 +++
  sysdeps/tonix/include/tonix/VFS.h            |  18 +
  sysdeps/tonix/include/tonix/Warn.h           |   5 +
  sysdeps/tonix/meson.build                    |  51 +++
- 37 files changed, 648 insertions(+), 5 deletions(-)
+ 37 files changed, 647 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -179,10 +179,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..770d31f8
+index 00000000..e119f723
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,427 @@
+@@ -0,0 +1,425 @@
 +#include <bits/ensure.h>
 +#include <abi-bits/wait.h>
 +#include <mlibc/debug.hpp>
@@ -431,9 +431,7 @@ index 00000000..770d31f8
 +
 +    pid_t sys_getppid()
 +    {
-+        __ensure(sys_getpid() == 1);
-+        Warn("Only works when called from init process");
-+        return 0;
++        return SystemCall(SystemCallID::GetParentPID);
 +    }
 +
 +    int sys_stat(fsfd_target fsfdt, int fd, const char* path, int flags, struct stat* statbuf)
@@ -839,10 +837,10 @@ index 00000000..9bda0961
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/tonix/SystemCall.h b/sysdeps/tonix/include/tonix/SystemCall.h
 new file mode 100644
-index 00000000..a5eb3c62
+index 00000000..cb20fe0c
 --- /dev/null
 +++ b/sysdeps/tonix/include/tonix/SystemCall.h
-@@ -0,0 +1,60 @@
+@@ -0,0 +1,61 @@
 +#pragma once
 +
 +#include <sys/types.h>
@@ -865,6 +863,7 @@ index 00000000..a5eb3c62
 +    GetWorkingDirectory = 15,
 +    Fork = 16,
 +    Wait = 17,
++    GetParentPID = 18,
 +    Panic = 254,
 +    Log = 255,
 +    NotImplemented = 253

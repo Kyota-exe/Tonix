@@ -141,6 +141,11 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             return scheduler->currentTask.pid;
         }
 
+        case SystemCallType::GetParentPID:
+        {
+            return scheduler->currentTask.parentPid;
+        }
+
         case SystemCallType::GetWorkingDirectory:
         {
             char* buffer = reinterpret_cast<char*>(arg0);
