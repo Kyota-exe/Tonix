@@ -18,24 +18,24 @@ void PagingManager::GetPageTableIndexes(const void* virtAddr, uint16_t* pageInde
     }
 }
 
-void PagingManager::PopulatePagingStructureEntry(PageTableEntry& entry, uintptr_t physAddr, bool user)
+void PagingManager::PopulatePagingStructureEntry(PageTableEntry& entry, uintptr_t physAddr)
 {
     entry.SetPhysicalAddress(physAddr);
 
     // Flags
     entry.SetFlag(PagingFlag::Present, true);
     entry.SetFlag(PagingFlag::AllowWrite, true);
-    entry.SetFlag(PagingFlag::UserAllowed, user);
+    entry.SetFlag(PagingFlag::UserAllowed, true);
 }
 
-PagingManager::PageTable* PagingManager::AllocatePagingStructure(PageTableEntry& entry, bool user)
+PagingManager::PageTable* PagingManager::AllocatePagingStructure(PageTableEntry& entry)
 {
     auto physAddr = RequestPageFrame();
 
     auto pagingStruct = reinterpret_cast<PageTable*>(HigherHalf(physAddr));
     Memset(pagingStruct, 0, 0x1000);
 
-    PopulatePagingStructureEntry(entry, physAddr, user);
+    PopulatePagingStructureEntry(entry, physAddr);
 
     return pagingStruct;
 }
@@ -52,7 +52,7 @@ void PagingManager::InitializePaging()
     for (uint64_t pageFrameIndex = 0; pageFrameIndex < pageFrameCount; ++pageFrameIndex)
     {
         uintptr_t physAddr = pageFrameIndex * 0x1000;
-        MapMemory(reinterpret_cast<void*>(HigherHalf(physAddr)), reinterpret_cast<void*>(physAddr), false);
+        MapMemory(reinterpret_cast<void*>(HigherHalf(physAddr)), reinterpret_cast<void*>(physAddr));
     }
 
     auto kernelBaseAddrStruct = reinterpret_cast<stivale2_struct_tag_kernel_base_address*>(GetStivale2Tag(STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID));
@@ -63,7 +63,7 @@ void PagingManager::InitializePaging()
         for (uint64_t pmrVirtAddr = pmr.base; pmrVirtAddr < pmr.base + pmr.length; pmrVirtAddr += 0x1000)
         {
             uint64_t physAddr = kernelBaseAddrStruct->physical_base_address + (pmrVirtAddr - kernelBaseAddrStruct->virtual_base_address);
-            MapMemory(reinterpret_cast<void*>(pmrVirtAddr), reinterpret_cast<void*>(physAddr), true);
+            MapMemory(reinterpret_cast<void*>(pmrVirtAddr), reinterpret_cast<void*>(physAddr));
         }
     }
 }
@@ -112,7 +112,7 @@ void PagingManager::SetCR3() const
     asm volatile("mov %0, %%cr3" : : "r" (pml4PhysAddr));
 }
 
-void PagingManager::MapMemory(const void* virtAddr, const void* physAddr, bool user)
+void PagingManager::MapMemory(const void* virtAddr, const void* physAddr)
 {
     uint16_t pageIndexes[PAGING_LEVELS];
     GetPageTableIndexes(virtAddr, pageIndexes);
@@ -124,19 +124,18 @@ void PagingManager::MapMemory(const void* virtAddr, const void* physAddr, bool u
         auto& entry = table->entries[pageIndexes[level]];
         if (entry.GetFlag(PagingFlag::Present))
         {
-            Assert(entry.GetFlag(PagingFlag::UserAllowed) == user);
             table = reinterpret_cast<PageTable*>(HigherHalf(entry.GetPhysicalAddress()));
         }
         else
         {
-            table = AllocatePagingStructure(entry, user);
+            table = AllocatePagingStructure(entry);
         }
     }
 
     PageTableEntry& page = table->entries[pageIndexes[0]];
     Assert(!page.GetFlag(PagingFlag::Present));
 
-    PopulatePagingStructureEntry(page, reinterpret_cast<uintptr_t>(physAddr), user);
+    PopulatePagingStructureEntry(page, reinterpret_cast<uintptr_t>(physAddr));
     lock.Release();
 }
 
@@ -224,11 +223,6 @@ uintptr_t PagingManager::GetTranslatedPhysAddr(const void* virtAddr)
     uintptr_t physAddr = table->entries[pageIndexes[0]].GetPhysicalAddress();
     lock.Release();
     return physAddr;
-}
-
-bool PagingManager::AddressIsAccessible(const void* virtAddr)
-{
-    return PageNotPresentLevel(virtAddr) == 0 && FlagMismatchLevel(virtAddr, PagingFlag::UserAllowed, true) == 0;
 }
 
 void PagingManager::PageTableEntry::SetFlag(PagingFlag flag, bool enable)

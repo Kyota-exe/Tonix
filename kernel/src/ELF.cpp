@@ -82,7 +82,7 @@ void ELF::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& e
         {
             auto virtAddr = reinterpret_cast<void*>(stackLowestVirtAddr + pageIndex * 0x1000);
             stackPhysAddr = RequestPageFrame();
-            pagingManager->MapMemory(virtAddr, reinterpret_cast<void*>(stackPhysAddr), true);
+            pagingManager->MapMemory(virtAddr, reinterpret_cast<void*>(stackPhysAddr));
         }
 
         uintptr_t stackHigherHalfAddr = HigherHalf(stackPhysAddr + 0x1000);
@@ -150,7 +150,7 @@ void ELF::LoadProgramHeader(int elfFile, const ProgramHeader& programHeader,
     {
         uintptr_t physAddr = RequestPageFrame();
         uintptr_t virtAddr = basePageAddr + pageIndex * 0x1000;
-        pagingManager->MapMemory(reinterpret_cast<void*>(virtAddr), reinterpret_cast<void*>(physAddr), true);
+        pagingManager->MapMemory(reinterpret_cast<void*>(virtAddr), reinterpret_cast<void*>(physAddr));
 
         uintptr_t higherHalfAddr = HigherHalf(physAddr);
         Memset(reinterpret_cast<void*>(higherHalfAddr), 0, 0x1000);

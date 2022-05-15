@@ -14,42 +14,18 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
         case SystemCallType::Open:
         {
             const char* path = reinterpret_cast<const char*>(arg0);
-
-            if (!scheduler->currentTask.pagingManager->AddressIsAccessible(path))
-            {
-                Panic();
-                error = Error::Fault;
-                return -1;
-            }
-
             return scheduler->currentTask.vfs->Open(String(path), (int)arg1, error);
         }
 
         case SystemCallType::Read:
         {
             void* buffer = reinterpret_cast<void*>(arg1);
-
-            if (!scheduler->currentTask.pagingManager->AddressIsAccessible(buffer))
-            {
-                Panic();
-                error = Error::Fault;
-                return 0;
-            }
-
             return scheduler->currentTask.vfs->Read((int)arg0, buffer, arg2, error);
         }
 
         case SystemCallType::Write:
         {
             const void* buffer = reinterpret_cast<const void*>(arg1);
-
-            if (!scheduler->currentTask.pagingManager->AddressIsAccessible(buffer))
-            {
-                Panic();
-                error = Error::Fault;
-                return 0;
-            }
-
             return scheduler->currentTask.vfs->Write((int)arg0, buffer, arg2, error);
         }
 
@@ -98,13 +74,6 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             int fd = (int)arg0;
             auto buffer = reinterpret_cast<VFS::VnodeInfo*>(arg1);
 
-            if (!scheduler->currentTask.pagingManager->AddressIsAccessible(buffer))
-            {
-                Panic();
-                error = Error::Fault;
-                return 0;
-            }
-
             *buffer = scheduler->currentTask.vfs->GetVnodeInfo(fd, error);
             return 0;
         }
@@ -118,13 +87,6 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
         case SystemCallType::Stat:
         {
             const char* path = reinterpret_cast<const char*>(arg0);
-
-            if (!scheduler->currentTask.pagingManager->AddressIsAccessible(path))
-            {
-                Panic();
-                error = Error::Fault;
-                return -1;
-            }
 
             int fd = scheduler->currentTask.vfs->Open(String(path), 0, error);
             if (error != Error::None) return -1;
@@ -154,13 +116,6 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             if (buffer == nullptr || bufferSize == 0)
             {
                 error = Error::InvalidArgument;
-                return -1;
-            }
-
-            if (!scheduler->currentTask.pagingManager->AddressIsAccessible(buffer))
-            {
-                Panic();
-                error = Error::Fault;
                 return -1;
             }
 

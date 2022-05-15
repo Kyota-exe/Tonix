@@ -22,7 +22,7 @@ void* FileMap(void* addr, uint64_t length)
         auto physAddr = RequestPageFrame();
         Memset(reinterpret_cast<void*>(HigherHalf(physAddr)), 0, 0x1000);
         auto virtAddr = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(addr) + pageIndex * 0x1000));
-        task.pagingManager->MapMemory(virtAddr, reinterpret_cast<void*>(physAddr), true);
+        task.pagingManager->MapMemory(virtAddr, reinterpret_cast<void*>(physAddr));
     }
 
     return addr;

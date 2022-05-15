@@ -20,11 +20,10 @@ public:
     void InitializePaging();
     void CopyUserspace(PagingManager& original);
     void SetCR3() const;
-    void MapMemory(const void* virtAddr, const void* physAddr, bool user);
+    void MapMemory(const void* virtAddr, const void* physAddr);
     void UnmapMemory(const void* virtAddr);
     unsigned int FlagMismatchLevel(const void* virtAddr, PagingFlag flag, bool enabled);
     unsigned int PageNotPresentLevel(const void* virtAddr);
-    bool AddressIsAccessible(const void* virtAddr);
     uintptr_t GetPageTableEntryVirtAddr(const void* virtAddr);
     uintptr_t GetTranslatedPhysAddr(const void* virtAddr);
     uintptr_t pml4PhysAddr {};
@@ -34,8 +33,8 @@ private:
     PageTable* pml4 {};
     Spinlock lock;
     static void GetPageTableIndexes(const void* virtAddr, uint16_t* pageIndexes);
-    static void PopulatePagingStructureEntry(PageTableEntry& entry, uintptr_t physAddr, bool user);
-    static PageTable* AllocatePagingStructure(PageTableEntry& entry, bool user);
+    static void PopulatePagingStructureEntry(PageTableEntry& entry, uintptr_t physAddr);
+    static PageTable* AllocatePagingStructure(PageTableEntry& entry);
     void CopyPages(const PageTable* originalTable, PageTable* table, uint64_t pageCount, unsigned int level);
 };
 
