@@ -152,7 +152,7 @@ uint64_t Scheduler::SuspendSystemCall(TaskState newTaskState)
     currentTask.state = newTaskState;
 
     uint64_t returnValue;
-    asm volatile("int $0x81" : "=a"(returnValue));
+    asm volatile("int $0x81" : "=a"(returnValue) : : "memory");
 
     Assert(currentTask.state == TaskState::Normal);
     return returnValue;
