@@ -142,19 +142,17 @@ VFS::Vnode* Ext2::FindInDirectory(VFS::Vnode* directory, const String& name)
 
         if (directoryEntry.inodeNum != 0)
         {
-            VFS::Vnode* child = VFS::SearchInCache(directoryEntry.inodeNum, this);
-
-            // SearchInCache returns nullptr if it could not find vnode in cache
-            if (child == nullptr)
-            {
-                child = CacheDirectoryEntry(directoryEntry);
-            }
-
             char nameBuffer[directoryEntry.nameLength];
             Read(directory, nameBuffer, directoryEntry.nameLength, parsedLength + sizeof(directoryEntry));
             nameBuffer[directoryEntry.nameLength] = 0;
 
             Serial::Log("[ext2]------------- Found: %s", nameBuffer);
+
+            VFS::Vnode* child = VFS::SearchInCache(directoryEntry.inodeNum, this);
+            if (child == nullptr)
+            {
+                child = CacheDirectoryEntry(directoryEntry);
+            }
 
             if (String(nameBuffer).Equals(name))
             {
