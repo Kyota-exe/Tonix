@@ -277,6 +277,9 @@ void Terminal::ProcessControlSequence(char command, const Vector<int>& arguments
                     case 49:
                         textBgColour = backgroundColour;
                         break;
+                    case 1:
+                        Warn("Bold text is not implemented");
+                        break;
                     default:
                         Panic();
                 }
