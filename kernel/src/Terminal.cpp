@@ -112,6 +112,11 @@ void Terminal::Write(const String& string)
             cursorX = textRenderer->CharsPerLine() - 1;
         }
 
+        if (cursorX < textRenderer->CharsPerLine() - 1)
+        {
+            pendingWrap = false;
+        }
+
         if (cursorX < 0) cursorX = 0;
         if (cursorY < 0) cursorY = 0;
         Assert(cursorY < textRenderer->CharsPerColumn());
