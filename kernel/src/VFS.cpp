@@ -53,18 +53,28 @@ VFS::FileDescriptor* VFS::GetFileDescriptor(int descriptor)
     return fileDescriptor;
 }
 
-VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error)
+String VFS::ConvertToAbsolutePath(const String& path)
 {
-    VFS::Vnode* currentEntry;
+    String absolutePath = path;
 
     bool pathIsAbsolute = path.Split('/', 0).IsEmpty();
     if (!pathIsAbsolute)
     {
-        path.Insert(workingDirectory, 0);
-        Assert(path.Split('/', 0).IsEmpty());
+        absolutePath.Insert(workingDirectory, 0);
+        Assert(absolutePath.Split('/', 0).IsEmpty());
     }
 
+    return absolutePath;
+}
+
+VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error)
+{
+    VFS::Vnode* currentEntry;
+
+    path = ConvertToAbsolutePath(path);
+
     // Remove first '/' from path
+    Assert(path.GetLength() > 0);
     path = path.Substring(1, path.GetLength() - 1);
 
     currentEntry = root;
@@ -443,6 +453,19 @@ VFS::VnodeInfo VFS::GetVnodeInfo(int descriptor)
 String VFS::GetWorkingDirectory()
 {
     return workingDirectory;
+}
+
+void VFS::SetWorkingDirectory(const String& newWorkingDirectory, Error& error)
+{
+    String filename;
+    VFS::Vnode* containingDirectory = nullptr;
+    FileSystem* fileSystem = nullptr;
+    TraversePath(newWorkingDirectory, filename, containingDirectory, fileSystem, error);
+
+    if (error == Error::None)
+    {
+        workingDirectory = ConvertToAbsolutePath(newWorkingDirectory);
+    }
 }
 
 VFS::Vnode* VFS::CreateDirectory(const String& path, Error& error)

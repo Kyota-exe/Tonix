@@ -32,6 +32,7 @@ public:
     VnodeInfo GetVnodeInfo(int descriptor);
     void SetTerminalSettings(int descriptor, bool canonical, bool echo, Error& error);
     String GetWorkingDirectory();
+    void SetWorkingDirectory(const String& newWorkingDirectory, Error& error);
 
     static void Mount(Vnode* mountPoint, Vnode* vnode);
     Vnode* CreateDirectory(const String& path, Error& error);
@@ -47,6 +48,7 @@ private:
 
     FileDescriptor* GetFileDescriptor(int descriptor);
     int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor);
+    String ConvertToAbsolutePath(const String& path);
 
     Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error);
 };

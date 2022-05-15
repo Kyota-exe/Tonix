@@ -22,6 +22,7 @@ enum class SystemCallType
     Fork = 16,
     Wait = 17,
     GetParentPID = 18,
+    SetWorkingDirectory = 19,
     Panic = 254,
     Log = 255
 };
