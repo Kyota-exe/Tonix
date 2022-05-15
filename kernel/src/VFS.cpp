@@ -248,6 +248,7 @@ int VFS::Open(const String& path, int flags, Error& error)
         return -1;
     }
 
+    Assert(vnode->type != VnodeType::Unknown);
     fileDescriptor->vnode = vnode;
     fileDescriptor->present = true;
     return descriptorIndex;
