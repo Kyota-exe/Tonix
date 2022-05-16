@@ -12,23 +12,117 @@
 #include "GDT.h"
 #include "IDT.h"
 #include "Heap.h"
+#include "AuxilaryVector.h"
 
 constexpr uint64_t SYSCALL_STACK_PAGE_COUNT = 3;
+constexpr uintptr_t USER_STACK_BASE = 0x0000'8000'0000'0000 - 0x1000;
+constexpr uintptr_t USER_STACK_SIZE = 0x20000;
 
 Vector<Task>* taskQueue;
 Spinlock taskQueueLock;
 
 Task CreateTask(PagingManager* pagingManager, VFS* vfs, UserspaceAllocator* userspaceAllocator,
-                uintptr_t entry, uintptr_t stackPtr, bool userTask, bool setPid)
+                uintptr_t entry, uint64_t pid, bool giveStack, const AuxilaryVector* auxilaryVector,
+                const Vector<String>* arguments, const Vector<String>* environment, bool supervisorTask = false)
 {
+    uintptr_t stackPtr = 0;
+    if (giveStack)
+    {
+        Assert(USER_STACK_SIZE % 0x1000 == 0);
+        uint64_t stackPageCount = USER_STACK_SIZE / 0x1000;
+        uintptr_t stackLowestVirtAddr = USER_STACK_BASE - USER_STACK_SIZE;
+
+        uintptr_t stackPhysAddr;
+        for (uint64_t pageIndex = 0; pageIndex < stackPageCount; ++pageIndex)
+        {
+            auto virtAddr = reinterpret_cast<void*>(stackLowestVirtAddr + pageIndex * 0x1000);
+            stackPhysAddr = RequestPageFrame();
+            pagingManager->MapMemory(virtAddr, reinterpret_cast<void*>(stackPhysAddr));
+        }
+
+        uintptr_t stackHigherHalfAddr = HigherHalf(stackPhysAddr + 0x1000);
+        auto stackHigherHalf = reinterpret_cast<uintptr_t*>(stackHigherHalfAddr);
+
+        auto push = [stackHigherHalfAddr, &stackHigherHalf] (uint64_t value)
+        {
+            uintptr_t usedStackSize = stackHigherHalfAddr - reinterpret_cast<uintptr_t>(stackHigherHalf);
+            Assert(usedStackSize + sizeof(value) <= 0x1000);
+            *--stackHigherHalf = value;
+        };
+
+        auto pushString = [push] (const String& string)
+        {
+            char* charBuffer = new char[string.GetLength() + 1];
+            charBuffer[string.GetLength()] = '\0';
+
+            for (uint64_t i = 0; i < string.GetLength(); ++i)
+                charBuffer[i] = string[i];
+
+            push(reinterpret_cast<uintptr_t>(charBuffer));
+        };
+
+        auto pushStringVectorInReverse = [pushString] (const Vector<String>& vector)
+        {
+            for (uint64_t i = vector.GetLength(); i-- > 0; )
+            {
+                pushString(vector.Get(i));
+            }
+        };
+
+        if (auxilaryVector != nullptr)
+        {
+            Assert(arguments != nullptr);
+            Assert(environment != nullptr);
+
+            push(0); // NULL
+            push(0);
+
+            push(auxilaryVector->programHeaderTableAddr);
+            push(3);
+
+            push(auxilaryVector->programHeaderTableEntrySize);
+            push(4);
+
+            push(auxilaryVector->programHeaderTableEntryCount);
+            push(5);
+
+            push(auxilaryVector->entry);
+            push(9);
+        }
+
+        if (environment != nullptr)
+        {
+            Assert(auxilaryVector != nullptr);
+            Assert(arguments != nullptr);
+            push(0); // NULL
+            pushStringVectorInReverse(*environment);
+        }
+
+        if (arguments != nullptr)
+        {
+            Assert(auxilaryVector != nullptr);
+            Assert(environment != nullptr);
+            push(0); // NULL
+            pushStringVectorInReverse(*arguments);
+            push(arguments->GetLength());
+        }
+
+        uintptr_t usedStackSize = stackHigherHalfAddr - reinterpret_cast<uintptr_t>(stackHigherHalf);
+        stackPtr = USER_STACK_BASE - usedStackSize;
+    }
+
+    Assert(vfs != nullptr);
+    Assert(pagingManager != nullptr);
+    Assert(userspaceAllocator != nullptr);
+
     Task task {};
     task.vfs = vfs;
     task.pagingManager = pagingManager;
     task.userspaceAllocator = userspaceAllocator;
 
     InterruptFrame frame {};
-    frame.cs = userTask ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
-    frame.ds = frame.ss = frame.es = userTask ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
+    frame.cs = supervisorTask ? KERNEL_CODE_SEGMENT : USER_CODE_SEGMENT;
+    frame.ds = frame.ss = frame.es = supervisorTask ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT;
     frame.rflags = INITIAL_RFLAGS;
     frame.rip = entry;
     frame.rsp = stackPtr;
@@ -39,11 +133,7 @@ Task CreateTask(PagingManager* pagingManager, VFS* vfs, UserspaceAllocator* user
     task.syscallStackAddr = reinterpret_cast<void*>(syscallStack);
     task.syscallStackBottom = reinterpret_cast<void*>(syscallStack - syscallStackSize);
 
-    if (setPid)
-    {
-        static uint64_t pid = 1;
-        task.pid = __atomic_fetch_add(&pid, 1, __ATOMIC_RELAXED);
-    }
+    task.pid = pid;
 
     return task;
 }
@@ -53,6 +143,12 @@ void Idle() { while (true) asm("hlt"); }
 void Scheduler::InitializeQueue()
 {
     taskQueue = new Vector<Task>();
+}
+
+uint64_t Scheduler::GeneratePID()
+{
+    static uint64_t pid = 1;
+    return __atomic_fetch_add(&pid, 1, __ATOMIC_RELAXED);
 }
 
 void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
@@ -269,7 +365,8 @@ uint64_t Scheduler::ForkCurrentTask(InterruptFrame* interruptFrame)
 
     auto childVfs = new VFS(*currentTask.vfs);
     auto childUserspaceAllocator = new UserspaceAllocator(*currentTask.userspaceAllocator);
-    Task child = CreateTask(pagingManager, childVfs, childUserspaceAllocator, 0, 0, true, true);
+    Task child = CreateTask(pagingManager, childVfs, childUserspaceAllocator, 0, GeneratePID(), false,
+                            nullptr, nullptr, nullptr);
 
     child.frame = *interruptFrame;
     child.frame.rax = 0;
@@ -316,16 +413,17 @@ uint64_t Scheduler::WaitForChild(Error& error)
     return childPid;
 }
 
-void Scheduler::CreateTaskFromELF(const String& path, bool userTask)
+void Scheduler::CreateTaskFromELF(const String& path, const Vector<String>* arguments, const Vector<String>* environment)
 {
     auto pagingManager = new PagingManager();
     pagingManager->InitializePaging();
 
     uintptr_t entry;
-    uintptr_t stackPtr;
-    ELF::LoadELF(path, pagingManager, entry, stackPtr);
+    AuxilaryVector* auxilaryVector;
+    ELF::LoadELF(path, pagingManager, entry, auxilaryVector);
 
-    Task task = CreateTask(pagingManager, new VFS(), new UserspaceAllocator(), entry, stackPtr, userTask, true);
+    Task task = CreateTask(pagingManager, new VFS(), new UserspaceAllocator(), entry, GeneratePID(), true,
+                           auxilaryVector, arguments, environment);
 
     int desc = task.vfs->Open(String("/dev/tty"), VFS::OpenFlag::ReadWrite);
     Assert(desc == 0);
@@ -350,12 +448,9 @@ Scheduler::Scheduler(TSS* tss) : lapic(new LAPIC()), tss(tss)
 {
     auto idlePagingManager = new PagingManager();
     idlePagingManager->InitializePaging();
-
-    uintptr_t idleStack = HigherHalf(RequestPageFrame() + 0x1000);
     auto idleEntry = reinterpret_cast<uintptr_t>(Idle);
-
-    idleTask = CreateTask(idlePagingManager, new VFS(), new UserspaceAllocator(), idleEntry, idleStack, false, false);
-    idleTask.pid = 0;
+    idleTask = CreateTask(idlePagingManager, new VFS(), new UserspaceAllocator(), idleEntry, 0, true,
+                          nullptr, nullptr, nullptr, true);
 
     currentTask = idleTask;
 }

@@ -3,11 +3,12 @@
 #include <stdint.h>
 #include "Task.h"
 #include "Memory/PagingManager.h"
+#include "AuxilaryVector.h"
 
 class ELF
 {
 public:
-    static void LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& entry, uintptr_t& stackPtr);
+    static void LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& entry, AuxilaryVector*& auxilaryVector);
 private:
     enum class ELFType : uint16_t;
     enum class ProgramHeaderType : uint32_t;

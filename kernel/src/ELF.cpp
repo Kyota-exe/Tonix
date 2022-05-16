@@ -5,12 +5,9 @@
 #include "VFS.h"
 #include "Serial.h"
 
-constexpr uintptr_t USER_STACK_BASE = 0x0000'8000'0000'0000 - 0x1000;
-constexpr uintptr_t USER_STACK_SIZE = 0x20000;
-
 constexpr uintptr_t RTDL_ADDR = 0x40000000;
 
-void ELF::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& entry, uintptr_t& stackPtr)
+void ELF::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& entry, AuxilaryVector*& auxilaryVector)
 {
     int elfFile = VFS::kernelVfs->Open(path, VFS::OpenFlag::ReadOnly);
 
@@ -57,9 +54,11 @@ void ELF::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& e
 
                 rtdlPath[programHeader.segmentSizeInFile] = 0;
 
-                LoadELF(String(rtdlPath), pagingManager, entry, stackPtr);
-                delete[] rtdlPath;
+                AuxilaryVector* auxVector = nullptr;
+                LoadELF(String(rtdlPath), pagingManager, entry, auxVector);
+                Assert(auxVector == nullptr);
 
+                delete[] rtdlPath;
                 hasDynamicLinking = true;
                 break;
             }
@@ -71,61 +70,20 @@ void ELF::LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& e
     {
         entry = RTDL_ADDR + elfHeader->entry;
     }
-    else if (elfHeader->type == ELFType::Executable)
+    else if (elfHeader->type == ELFType::Executable && !hasDynamicLinking)
     {
-        Assert(USER_STACK_SIZE % 0x1000 == 0);
-        uint64_t stackPageCount = USER_STACK_SIZE / 0x1000;
-        uintptr_t stackLowestVirtAddr = USER_STACK_BASE - USER_STACK_SIZE;
-
-        uintptr_t stackPhysAddr {};
-        for (uint64_t pageIndex = 0; pageIndex < stackPageCount; ++pageIndex)
-        {
-            auto virtAddr = reinterpret_cast<void*>(stackLowestVirtAddr + pageIndex * 0x1000);
-            stackPhysAddr = RequestPageFrame();
-            pagingManager->MapMemory(virtAddr, reinterpret_cast<void*>(stackPhysAddr));
-        }
-
-        uintptr_t stackHigherHalfAddr = HigherHalf(stackPhysAddr + 0x1000);
-        auto stackHigherHalf = reinterpret_cast<uintptr_t*>(stackHigherHalfAddr);
-
-        if (hasDynamicLinking)
-        {
-            auto push = [stackHigherHalfAddr, &stackHigherHalf] (uint64_t value)
-            {
-                uintptr_t usedStackSize = stackHigherHalfAddr - reinterpret_cast<uintptr_t>(stackHigherHalf);
-                Assert(usedStackSize + sizeof(value) <= 0x1000);
-                *--stackHigherHalf = value;
-            };
-
-            // Auxiliary vector
-            push(0); // NULL
-            push(0);
-            push(programHeaderTableAddr);
-            push(3);
-            push(elfHeader->programHeaderTableEntrySize);
-            push(4);
-            push(elfHeader->programHeaderTableEntryCount);
-            push(5);
-            push(elfHeader->entry);
-            push(9);
-
-            // Environment
-            push(0); // NULL
-
-            // Argument vector (argv)
-            push(0); // NULL
-
-            // Argument count (argc)
-            push(0);
-        }
-        else
-        {
-            entry = elfHeader->entry;
-        }
-
-        uintptr_t usedStackSize = stackHigherHalfAddr - reinterpret_cast<uintptr_t>(stackHigherHalf);
-        stackPtr = USER_STACK_BASE - usedStackSize;
+        entry = elfHeader->entry;
     }
+
+    if (hasDynamicLinking)
+    {
+        auxilaryVector = new AuxilaryVector();
+        auxilaryVector->entry = elfHeader->entry;
+        auxilaryVector->programHeaderTableAddr = programHeaderTableAddr;
+        auxilaryVector->programHeaderTableEntrySize = elfHeader->programHeaderTableEntrySize;
+        auxilaryVector->programHeaderTableEntryCount = elfHeader->programHeaderTableEntryCount;
+    }
+    else auxilaryVector = nullptr;
 
     delete elfHeader;
     delete[] programHeaderTable;

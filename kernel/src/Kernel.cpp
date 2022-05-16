@@ -11,6 +11,8 @@
 #include "Device.h"
 #include "Framebuffer.h"
 
+constexpr const char* SHELL_PATH = "/usr/bin/bash";
+
 extern "C" void _start(stivale2_struct* stivale2Struct)
 {
     InitializeStivale2Interface(stivale2Struct);
@@ -44,7 +46,20 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
     }
 
     Scheduler::InitializeQueue();
-    Scheduler::CreateTaskFromELF(String("/programs/test.elf"), true);
+
+    {
+        Vector<String> shellArguments;
+        shellArguments.Push(String(SHELL_PATH));
+        shellArguments.Push(String("--login"));
+
+        Vector<String> shellEnvironment;
+        shellEnvironment.Push(String("PATH=/usr/bin"));
+        shellEnvironment.Push(String("HOME=/root"));
+        shellEnvironment.Push(String("TERM=linux"));
+
+        Scheduler::CreateTaskFromELF(String(SHELL_PATH), &shellArguments, &shellEnvironment);
+    }
+
     Scheduler::StartCores(tss);
 
     while (true) asm("hlt");
