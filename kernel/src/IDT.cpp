@@ -119,11 +119,11 @@ void IDT::InitializeInterruptHandlers()
     SetInterruptHandler(47, reinterpret_cast<uint64_t>(ISRWrapper47));
 
     // Local LAPIC IRQs
-    SetInterruptHandler(48, reinterpret_cast<uint64_t>(ISRWrapper48));
+    SetInterruptHandler(48, reinterpret_cast<uint64_t>(ISRWrapper48), 3, 5); // Timer Interrupt
     SetInterruptHandler(255, reinterpret_cast<uint64_t>(ISRWrapper255));
 
     // Miscellaneous
-    SetInterruptHandler(0x80, reinterpret_cast<uint64_t>(ISRWrapper128), 3, 5); // System Call
+    SetInterruptHandler(0x80, reinterpret_cast<uint64_t>(ISRWrapper128), 3, 7); // System Call
     SetInterruptHandler(0x81, reinterpret_cast<uint64_t>(ISRWrapper129));
 }
 

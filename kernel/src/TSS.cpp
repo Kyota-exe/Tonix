@@ -12,6 +12,7 @@ TSS* TSS::Initialize()
     tss->ist2 = HigherHalf(RequestPageFrame() + 0x1000); // Non-Maskable Interrupt
     tss->ist3 = HigherHalf(RequestPageFrame() + 0x1000); // Machine Check
     tss->ist4 = HigherHalf(RequestPageFrame() + 0x1000); // Debug
+    tss->ist5 = HigherHalf(RequestPageFrame() + 0x1000); // Timer Interrupt
     tss->ioMapOffset = sizeof(TSS);
 
     return tss;
@@ -19,5 +20,5 @@ TSS* TSS::Initialize()
 
 void TSS::SetSystemCallStack(void* syscallStack)
 {
-    ist5 = reinterpret_cast<uintptr_t>(syscallStack);
+    ist7 = reinterpret_cast<uintptr_t>(syscallStack);
 }
