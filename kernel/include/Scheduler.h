@@ -19,7 +19,7 @@ public:
     uint64_t WaitForChild(Error& error);
     static void InitializeQueue();
     static void StartCores(TSS* bspTss);
-    static void CreateTaskFromELF(const String& path, const Vector<String>* arguments, const Vector<String>* environment);
+    static void CreateTaskFromELF(const String& path, const Vector<String>& arguments, const Vector<String>& environment);
     static void Unsuspend(uint64_t pid, uint64_t returnValue);
     static Scheduler* GetScheduler();
     explicit Scheduler(TSS* tss);

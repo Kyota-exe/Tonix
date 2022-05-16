@@ -23,7 +23,7 @@ Spinlock taskQueueLock;
 
 Task CreateTask(PagingManager* pagingManager, VFS* vfs, UserspaceAllocator* userspaceAllocator,
                 uintptr_t entry, uint64_t pid, bool giveStack, const AuxilaryVector* auxilaryVector,
-                const Vector<String>* arguments, const Vector<String>* environment, bool supervisorTask = false)
+                const Vector<String>& arguments, const Vector<String>& environment, bool supervisorTask = false)
 {
     uintptr_t stackPtr = 0;
     if (giveStack)
@@ -40,40 +40,55 @@ Task CreateTask(PagingManager* pagingManager, VFS* vfs, UserspaceAllocator* user
             pagingManager->MapMemory(virtAddr, reinterpret_cast<void*>(stackPhysAddr));
         }
 
-        uintptr_t stackHigherHalfAddr = HigherHalf(stackPhysAddr + 0x1000);
-        auto stackHigherHalf = reinterpret_cast<uintptr_t*>(stackHigherHalfAddr);
+        uintptr_t stackHighestHigherHalfAddr = HigherHalf(stackPhysAddr + 0x1000);
+        auto stackHigherHalf = reinterpret_cast<uintptr_t>(stackHighestHigherHalfAddr);
 
-        auto push = [stackHigherHalfAddr, &stackHigherHalf] (uint64_t value)
+        auto push = [stackHighestHigherHalfAddr, &stackHigherHalf] (uintptr_t value)
         {
-            uintptr_t usedStackSize = stackHigherHalfAddr - reinterpret_cast<uintptr_t>(stackHigherHalf);
+            uintptr_t usedStackSize = stackHighestHigherHalfAddr - stackHigherHalf;
             Assert(usedStackSize + sizeof(value) <= 0x1000);
-            *--stackHigherHalf = value;
+            stackHigherHalf -= sizeof(value);
+            MemCopy(reinterpret_cast<void*>(stackHigherHalf), &value, sizeof(value));
         };
 
-        auto pushString = [push] (const String& string)
+        auto pushString = [stackHighestHigherHalfAddr, &stackHigherHalf] (const String& string)
         {
-            char* charBuffer = new char[string.GetLength() + 1];
-            charBuffer[string.GetLength()] = '\0';
-
-            for (uint64_t i = 0; i < string.GetLength(); ++i)
-                charBuffer[i] = string[i];
-
-            push(reinterpret_cast<uintptr_t>(charBuffer));
-        };
-
-        auto pushStringVectorInReverse = [pushString] (const Vector<String>& vector)
-        {
-            for (uint64_t i = vector.GetLength(); i-- > 0; )
+            auto pushChar = [stackHighestHigherHalfAddr, &stackHigherHalf] (char c)
             {
-                pushString(vector.Get(i));
-            }
+                uintptr_t usedStackSize = stackHighestHigherHalfAddr - stackHigherHalf;
+                Assert(usedStackSize + 1 <= 0x1000);
+                *reinterpret_cast<char*>(--stackHigherHalf) = c;
+            };
+
+            pushChar('\0');
+            for (uint64_t i = string.GetLength(); i--
+                                                     \
+                                                      \
+                                                       > 0; )
+            <% /* ============================== */
+               /* # */ pushChar(string[i]); /* # */
+               /* ============================== */ %>
+
+            return reinterpret_cast<const char*>(stackHigherHalf);
         };
+
+        Vector<const char*> environmentStrings;
+        for (uint64_t i = 0; i < environment.GetLength(); ++i)
+        {
+            environmentStrings.Push(pushString(environment.Get(i)));
+        }
+
+        Vector<const char*> argumentStrings;
+        for (uint64_t i = 0; i < arguments.GetLength(); ++i)
+        {
+            argumentStrings.Push(pushString(arguments.Get(i)));
+        }
+
+        // B00byedge, the chaddest says this 16-byte aligns the stack (and we don't need a range check, apparently)
+        stackHigherHalf &= ~static_cast<uintptr_t>(0xf);
 
         if (auxilaryVector != nullptr)
         {
-            Assert(arguments != nullptr);
-            Assert(environment != nullptr);
-
             push(0); // NULL
             push(0);
 
@@ -90,24 +105,22 @@ Task CreateTask(PagingManager* pagingManager, VFS* vfs, UserspaceAllocator* user
             push(9);
         }
 
-        if (environment != nullptr)
+        push(0); // NULL
+        for (uint64_t i = environmentStrings.GetLength(); i-- > 0; )
         {
-            Assert(auxilaryVector != nullptr);
-            Assert(arguments != nullptr);
-            push(0); // NULL
-            pushStringVectorInReverse(*environment);
+            push(reinterpret_cast<uintptr_t>(environmentStrings.Get(i)));
         }
 
-        if (arguments != nullptr)
+        push(0); // NULL
+        for (uint64_t i = argumentStrings.GetLength(); i-- > 0; )
         {
-            Assert(auxilaryVector != nullptr);
-            Assert(environment != nullptr);
-            push(0); // NULL
-            pushStringVectorInReverse(*arguments);
-            push(arguments->GetLength());
+            push(reinterpret_cast<uintptr_t>(argumentStrings.Get(i)));
         }
 
-        uintptr_t usedStackSize = stackHigherHalfAddr - reinterpret_cast<uintptr_t>(stackHigherHalf);
+        Assert(argumentStrings.GetLength() == arguments.GetLength());
+        push(argumentStrings.GetLength());
+
+        uintptr_t usedStackSize = stackHighestHigherHalfAddr - reinterpret_cast<uintptr_t>(stackHigherHalf);
         stackPtr = USER_STACK_BASE - usedStackSize;
     }
 
@@ -366,7 +379,7 @@ uint64_t Scheduler::ForkCurrentTask(InterruptFrame* interruptFrame)
     auto childVfs = new VFS(*currentTask.vfs);
     auto childUserspaceAllocator = new UserspaceAllocator(*currentTask.userspaceAllocator);
     Task child = CreateTask(pagingManager, childVfs, childUserspaceAllocator, 0, GeneratePID(), false,
-                            nullptr, nullptr, nullptr);
+                            nullptr, <%%>, <%%>);
 
     child.frame = *interruptFrame;
     child.frame.rax = 0;
@@ -413,7 +426,7 @@ uint64_t Scheduler::WaitForChild(Error& error)
     return childPid;
 }
 
-void Scheduler::CreateTaskFromELF(const String& path, const Vector<String>* arguments, const Vector<String>* environment)
+void Scheduler::CreateTaskFromELF(const String& path, const Vector<String>& arguments, const Vector<String>& environment)
 {
     auto pagingManager = new PagingManager();
     pagingManager->InitializePaging();
@@ -450,7 +463,7 @@ Scheduler::Scheduler(TSS* tss) : lapic(new LAPIC()), tss(tss)
     idlePagingManager->InitializePaging();
     auto idleEntry = reinterpret_cast<uintptr_t>(Idle);
     idleTask = CreateTask(idlePagingManager, new VFS(), new UserspaceAllocator(), idleEntry, 0, true,
-                          nullptr, nullptr, nullptr, true);
+                          nullptr, <%%>, <%%>, true);
 
     currentTask = idleTask;
 }

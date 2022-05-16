@@ -1,5 +1,4 @@
 #include "Memory/PageFrameAllocator.h"
-#include "Memory/PagingManager.h"
 #include "Stivale2Interface.h"
 #include "IDT.h"
 #include "PIC.h"
@@ -57,7 +56,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
         shellEnvironment.Push(String("HOME=/root"));
         shellEnvironment.Push(String("TERM=linux"));
 
-        Scheduler::CreateTaskFromELF(String(SHELL_PATH), &shellArguments, &shellEnvironment);
+        Scheduler::CreateTaskFromELF(String(SHELL_PATH), shellArguments, shellEnvironment);
     }
 
     Scheduler::StartCores(tss);
