@@ -32,7 +32,7 @@ constexpr uint64_t SLABS_COUNT = 10;
 Slab slabs[SLABS_COUNT];
 
 uint64_t allocTableIndex = 0;
-constexpr uint64_t ALLOC_TABLE_SIZE = 4096;
+constexpr uint64_t ALLOC_TABLE_SIZE = 8192;
 uint64_t allocTable[ALLOC_TABLE_SIZE];
 
 void Slab::InitializeSlab(uint64_t _slotSize)

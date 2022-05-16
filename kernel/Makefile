@@ -20,6 +20,7 @@ INTERNALCFLAGS :=        \
 	-mno-sse             \
 	-mno-sse2            \
 	-mno-red-zone        \
+	-std=gnu++2a         \
 	-mcmodel=kernel
 
 INTERNALLDFLAGS :=         \

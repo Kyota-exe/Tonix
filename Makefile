@@ -1,5 +1,5 @@
 ISO_IMAGE = bin/disk.iso
-QEMUFLAGS ?= -cpu qemu64,+rdtscp -smp 1 -M q35 -M smm=off -no-reboot -m 1G -debugcon stdio
+QEMUFLAGS ?= -cpu qemu64,+rdtscp,+smep,+smap -smp 1 -M q35 -M smm=off -no-reboot -no-shutdown -m 1G -debugcon stdio
 
 .DEFAULT_GOAL := cleanbuild
 
