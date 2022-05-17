@@ -433,7 +433,7 @@ void Scheduler::CreateTaskFromELF(const String& path, const Vector<String>& argu
 
     uintptr_t entry;
     AuxilaryVector* auxilaryVector;
-    ELF::LoadELF(path, pagingManager, entry, auxilaryVector);
+    ELF::LoadELF(path, *pagingManager, *VFS::kernelVfs, entry, auxilaryVector);
 
     Task task = CreateTask(pagingManager, new VFS(), new UserspaceAllocator(), entry, GeneratePID(), true,
                            auxilaryVector, arguments, environment);

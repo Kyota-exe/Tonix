@@ -8,7 +8,8 @@
 class ELF
 {
 public:
-    static void LoadELF(const String& path, PagingManager* pagingManager, uintptr_t& entry, AuxilaryVector*& auxilaryVector);
+    static void LoadELF(const String& path, PagingManager& pagingManager, VFS& vfs, uintptr_t& entry,
+                        AuxilaryVector*& auxilaryVector);
 private:
     enum class ELFType : uint16_t;
     enum class ProgramHeaderType : uint32_t;
@@ -16,8 +17,8 @@ private:
     struct ProgramHeader;
     struct ELFHeader;
 
-    static void LoadProgramHeader(int elfFile, const ProgramHeader& programHeader,
-                                  ELFHeader* elfHeader, PagingManager* pagingManager);
+    static void LoadProgramHeader(int elfFile, const ProgramHeader& programHeader, ELFHeader* elfHeader,
+                                  PagingManager& pagingManager, VFS& vfs);
 };
 
 struct ELF::ProgramHeader
