@@ -3,6 +3,11 @@ QEMUFLAGS ?= -cpu qemu64,+rdtscp,+smep,+smap -smp 1 -M q35 -M smm=off -no-reboot
 
 .DEFAULT_GOAL := cleanbuild
 
+.PHONY: distro
+distro:
+	mkdir -p xbstrap-build
+	cd xbstrap-build && xbstrap init .. && xbstrap install -u --all
+
 .PHONY: cleanbuild
 cleanbuild:
 	make clean
