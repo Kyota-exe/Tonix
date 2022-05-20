@@ -144,7 +144,6 @@ Task CreateTask(PagingManager* pagingManager, VFS* vfs, UserspaceAllocator* user
     uintptr_t syscallStackSize = SYSCALL_STACK_PAGE_COUNT * 0x1000;
     uintptr_t syscallStack = HigherHalf(RequestPageFrames(SYSCALL_STACK_PAGE_COUNT) + syscallStackSize);
     task.syscallStackAddr = reinterpret_cast<void*>(syscallStack);
-    task.syscallStackBottom = reinterpret_cast<void*>(syscallStack - syscallStackSize);
 
     task.pid = pid;
     task.parentPid = parentPid;
@@ -384,10 +383,6 @@ uint64_t Scheduler::ForkCurrentTask(InterruptFrame* interruptFrame)
 
     child.frame = *interruptFrame;
     child.frame.rax = 0;
-
-    // Clone system call stack
-    MemCopy(child.syscallStackBottom, currentTask.syscallStackBottom, SYSCALL_STACK_PAGE_COUNT * 0x1000);
-    child.syscallStackAddr = currentTask.syscallStackAddr;
 
     taskQueueLock.Acquire();
     taskQueue->Push(child);
