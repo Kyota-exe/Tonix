@@ -384,6 +384,8 @@ uint64_t Scheduler::ForkCurrentTask(InterruptFrame* interruptFrame)
     child.frame = *interruptFrame;
     child.frame.rax = 0;
 
+    currentTask.childrenPids.Push(child.pid);
+
     taskQueueLock.Acquire();
     taskQueue->Push(child);
     taskQueueLock.Release();
