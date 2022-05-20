@@ -1,4 +1,6 @@
 # Tonix
+![build](https://github.com/Kyota-exe/Tonix/workflows/Tonix%20kernel%20CI/badge.svg)
+
 A simple UNIX-like x86_64 operating system I'm working on for fun.
 Aims to be POSIX-compliant enough to make porting Linux software easier.
 
