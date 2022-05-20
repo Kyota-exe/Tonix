@@ -39,6 +39,7 @@ OBJSUBDIRS := $(sort $(shell dirname $(OBJ)))
 all: $(KERNEL)
 
 $(KERNEL): $(OBJSUBDIRS) $(OBJ)
+	mkdir -p bin/
 	$(LD) $(OBJ) $(LDFLAGS) $(INTERNALLDFLAGS) -o $@
 
 $(OBJSUBDIRS):

@@ -1,0 +1,22 @@
+name: Tonix kernel CI
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-kernel:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install build-essential -y
+          sudo apt-get install nasm
+
+      - name: Build kernel
+        run: make kernel
+
