@@ -20,6 +20,7 @@ extern "C" void _start(stivale2_struct* stivale2Struct)
 
     InitializePageFrameAllocator();
     InitializeKernelHeap();
+    PagingManager::SaveBootloaderAddressSpace();
 
     GDT::Initialize();
     TSS* tss = TSS::Initialize();

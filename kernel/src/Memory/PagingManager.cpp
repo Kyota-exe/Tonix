@@ -5,6 +5,7 @@
 #include "Assert.h"
 
 constexpr unsigned int PAGING_LEVELS = 4;
+PagingManager::PageTableEntry* PagingManager::defaultPml4 = nullptr;
 
 void PagingManager::GetPageTableIndexes(const void* virtAddr, uint16_t* pageIndexes)
 {
@@ -42,30 +43,17 @@ PagingManager::PageTableEntry* PagingManager::AllocatePagingStructure(PageTableE
 
 void PagingManager::InitializePaging()
 {
-    lock.Acquire();
     Assert(pml4 == nullptr);
+    lock.Acquire();
+
     pml4PhysAddr = RequestPageFrame();
     pml4 = reinterpret_cast<PageTableEntry*>(HigherHalf(pml4PhysAddr));
-    memset(pml4, 0, 0x1000);
+    memset(pml4, 0, 0x1000 / 2);
+
+    Assert(defaultPml4 != nullptr);
+    memcpy(pml4 + 256, defaultPml4 + 256, 0x1000 / 2);
+
     lock.Release();
-
-    for (uint64_t pageFrameIndex = 0; pageFrameIndex < pageFrameCount; ++pageFrameIndex)
-    {
-        uintptr_t physAddr = pageFrameIndex * 0x1000;
-        MapMemory(reinterpret_cast<void*>(HigherHalf(physAddr)), reinterpret_cast<void*>(physAddr));
-    }
-
-    auto kernelBaseAddrStruct = reinterpret_cast<stivale2_struct_tag_kernel_base_address*>(GetStivale2Tag(STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID));
-    auto pmrsStruct = reinterpret_cast<stivale2_struct_tag_pmrs*>(GetStivale2Tag(STIVALE2_STRUCT_TAG_PMRS_ID));
-    for (uint64_t pmrIndex = 0; pmrIndex < pmrsStruct->entries; ++pmrIndex)
-    {
-        stivale2_pmr& pmr = pmrsStruct->pmrs[pmrIndex];
-        for (uint64_t pmrVirtAddr = pmr.base; pmrVirtAddr < pmr.base + pmr.length; pmrVirtAddr += 0x1000)
-        {
-            uint64_t physAddr = kernelBaseAddrStruct->physical_base_address + (pmrVirtAddr - kernelBaseAddrStruct->virtual_base_address);
-            MapMemory(reinterpret_cast<void*>(pmrVirtAddr), reinterpret_cast<void*>(physAddr));
-        }
-    }
 }
 
 void PagingManager::CopyUserspace(PagingManager& original)
@@ -165,6 +153,14 @@ unsigned int PagingManager::FlagMismatchLevel(const void* virtAddr, PagingFlag f
 unsigned int PagingManager::PageNotPresentLevel(const void* virtAddr)
 {
     return FlagMismatchLevel(virtAddr, PagingFlag::Present, true);
+}
+
+void PagingManager::SaveBootloaderAddressSpace()
+{
+    Assert(defaultPml4 == nullptr);
+    uint64_t bootloaderPml4PhysAddr;
+    asm volatile("mov %%cr3, %0" : "=r"(bootloaderPml4PhysAddr));
+    defaultPml4 = reinterpret_cast<PageTableEntry*>(HigherHalf(bootloaderPml4PhysAddr));
 }
 
 void PagingManager::PageTableEntry::SetFlag(PagingFlag flag, bool enable)

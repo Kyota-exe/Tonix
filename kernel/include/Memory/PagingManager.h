@@ -23,11 +23,13 @@ public:
     void MapMemory(const void* virtAddr, const void* physAddr);
     unsigned int FlagMismatchLevel(const void* virtAddr, PagingFlag flag, bool enabled);
     unsigned int PageNotPresentLevel(const void* virtAddr);
+    static void SaveBootloaderAddressSpace();
     uintptr_t pml4PhysAddr {};
 private:
     struct PageTableEntry;
     PageTableEntry* pml4 {};
     Spinlock lock;
+    static PageTableEntry* defaultPml4;
     static void GetPageTableIndexes(const void* virtAddr, uint16_t* pageIndexes);
     static void PopulatePagingStructureEntry(PageTableEntry& entry, uintptr_t physAddr);
     static PageTableEntry* AllocatePagingStructure(PageTableEntry& entry);
