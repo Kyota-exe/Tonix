@@ -23,6 +23,7 @@ enum class SystemCallType
     Wait = 17,
     GetParentPID = 18,
     SetWorkingDirectory = 19,
+    Execute = 20,
     Panic = 254,
     Log = 255
 };

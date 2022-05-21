@@ -393,6 +393,29 @@ uint64_t Scheduler::ForkCurrentTask(InterruptFrame* interruptFrame)
     return child.pid;
 }
 
+void Scheduler::Execute(const String& path, InterruptFrame* interruptFrame, const Vector<String>& arguments,
+                        const Vector<String>& environment, Error& error)
+{
+    auto pagingManager = new PagingManager();
+    pagingManager->InitializePaging();
+
+    uintptr_t entry = 0;
+    AuxilaryVector* auxilaryVector = nullptr;
+    ELF::LoadELF(path, *pagingManager, *currentTask.vfs, entry, auxilaryVector);
+
+    Task task = CreateTask(pagingManager, new VFS(*currentTask.vfs), new UserspaceAllocator(), entry, currentTask.pid,
+                           currentTask.parentPid, true, auxilaryVector, arguments, environment);
+
+    taskQueueLock.Acquire();
+    taskQueue->Push(task);
+    taskQueueLock.Release();
+
+    restoreFrame = false;
+    SwitchToNextTask(interruptFrame);
+
+    (void)error;
+}
+
 uint64_t Scheduler::WaitForChild(Error& error)
 {
     if (currentTask.childrenPids.IsEmpty())

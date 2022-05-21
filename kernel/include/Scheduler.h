@@ -16,6 +16,7 @@ public:
     uint64_t SuspendSystemCall(TaskState newTaskState);
     void SleepCurrentTask(uint64_t milliseconds);
     uint64_t ForkCurrentTask(InterruptFrame* interruptFrame);
+    void Execute(const String& path, InterruptFrame* interruptFrame, const Vector<String>& arguments, const Vector<String>& environment, Error& error);
     uint64_t WaitForChild(Error& error);
     static void InitializeQueue();
     static void StartCores(TSS* bspTss);

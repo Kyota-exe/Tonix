@@ -147,6 +147,28 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             return scheduler->ForkCurrentTask(interruptFrame);
         }
 
+        case SystemCallType::Execute:
+        {
+            String path = String(reinterpret_cast<const char*>(arg0));
+
+            Vector<String> arguments;
+            auto argumentsPtr = reinterpret_cast<char* const*>(arg1);
+            while (*argumentsPtr != nullptr)
+            {
+                arguments.Push(String(*argumentsPtr++));
+            }
+
+            Vector<String> environment;
+            auto environmentPtr = reinterpret_cast<char* const*>(arg2);
+            while (*environmentPtr != nullptr)
+            {
+                environment.Push(String(*environmentPtr++));
+            }
+
+            scheduler->Execute(path, interruptFrame, arguments, environment, error);
+            return interruptFrame->rax;
+        }
+
         case SystemCallType::Wait:
         {
             return scheduler->WaitForChild(error);
