@@ -48,7 +48,7 @@ Task CreateTask(PagingManager* pagingManager, VFS* vfs, UserspaceAllocator* user
             uintptr_t usedStackSize = stackHighestHigherHalfAddr - stackHigherHalf;
             Assert(usedStackSize + sizeof(value) <= 0x1000);
             stackHigherHalf -= sizeof(value);
-            MemCopy(reinterpret_cast<void*>(stackHigherHalf), &value, sizeof(value));
+            memcpy(reinterpret_cast<void*>(stackHigherHalf), &value, sizeof(value));
         };
 
         auto pushString = [stackHighestHigherHalfAddr, &stackHigherHalf] (const String& string)

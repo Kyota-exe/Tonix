@@ -20,7 +20,7 @@ void* FileMap(void* addr, uint64_t length)
     for (uint64_t pageIndex = 0; pageIndex < pageCount; ++pageIndex)
     {
         auto physAddr = RequestPageFrame();
-        Memset(reinterpret_cast<void*>(HigherHalf(physAddr)), 0, 0x1000);
+        memset(reinterpret_cast<void*>(HigherHalf(physAddr)), 0, 0x1000);
         auto virtAddr = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(addr) + pageIndex * 0x1000));
         task.pagingManager->MapMemory(virtAddr, reinterpret_cast<void*>(physAddr));
     }

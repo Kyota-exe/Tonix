@@ -1,23 +1,27 @@
 #include "Memory/Memory.h"
 
-void Memset(void* addr, uint8_t value, uint64_t size)
+void* memset(void* ptr, uint8_t value, uint64_t num)
 {
-    auto ptr = (uint8_t*)addr;
-    for (uint64_t i = 0; i < size; ++i)
+    auto p = reinterpret_cast<uint8_t*>(ptr);
+    for (uint64_t i = 0; i < num; ++i)
     {
-        ptr[i] = value;
+        p[i] = value;
     }
+
+    return ptr;
 }
 
-void MemCopy(void* destination, const void* source, uint64_t count)
+void* memcpy(void* destination, const void* source, uint64_t num)
 {
-    auto src = (uint8_t*)source;
-    auto dest = (uint8_t*)destination;
+    auto src = reinterpret_cast<const uint8_t*>(source);
+    auto dest = reinterpret_cast<uint8_t*>(destination);
 
-    for (uint64_t i = 0; i < count; ++i)
+    for (uint64_t i = 0; i < num; ++i)
     {
         dest[i] = src[i];
     }
+
+    return destination;
 }
 
 uintptr_t HigherHalf(uintptr_t physAddr)
@@ -25,7 +29,7 @@ uintptr_t HigherHalf(uintptr_t physAddr)
 	return physAddr + 0xffff'8000'0000'0000;
 }
 
-bool MemCompare(const void* left, const void* right, uint64_t count)
+bool memcmp(const void* left, const void* right, uint64_t count)
 {
 	auto x = static_cast<const uint8_t*>(left);
 	auto y = static_cast<const uint8_t*>(right);

@@ -5,7 +5,7 @@
 TSS* TSS::Initialize()
 {
     auto tss = new TSS;
-    Memset(tss, 0, sizeof(TSS));
+    memset(tss, 0, sizeof(TSS));
 
     tss->rsp0 = HigherHalf(RequestPageFrame() + 0x1000);
     tss->ist1 = HigherHalf(RequestPageFrame() + 0x1000); // Double Fault

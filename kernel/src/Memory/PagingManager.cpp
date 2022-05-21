@@ -33,7 +33,7 @@ PagingManager::PageTable* PagingManager::AllocatePagingStructure(PageTableEntry&
     auto physAddr = RequestPageFrame();
 
     auto pagingStruct = reinterpret_cast<PageTable*>(HigherHalf(physAddr));
-    Memset(pagingStruct, 0, 0x1000);
+    memset(pagingStruct, 0, 0x1000);
 
     PopulatePagingStructureEntry(entry, physAddr);
 
@@ -46,7 +46,7 @@ void PagingManager::InitializePaging()
     Assert(pml4 == nullptr);
     pml4PhysAddr = RequestPageFrame();
     pml4 = reinterpret_cast<PageTable*>(HigherHalf(pml4PhysAddr));
-    Memset(pml4, 0, 0x1000);
+    memset(pml4, 0, 0x1000);
     lock.Release();
 
     for (uint64_t pageFrameIndex = 0; pageFrameIndex < pageFrameCount; ++pageFrameIndex)
@@ -87,7 +87,7 @@ void PagingManager::CopyPages(const PageTable* originalTable, PageTable* table, 
             auto& entry = table->entries[entryIndex];
             Assert(!entry.GetFlag(PagingFlag::Present));
 
-            MemCopy(&entry, &originalEntry, sizeof(PageTableEntry));
+            memcpy(&entry, &originalEntry, sizeof(PageTableEntry));
             auto originalNext = reinterpret_cast<PageTable*>(HigherHalf(entry.GetPhysicalAddress()));
 
             uintptr_t nextPhysAddr = RequestPageFrame();
@@ -96,12 +96,12 @@ void PagingManager::CopyPages(const PageTable* originalTable, PageTable* table, 
 
             if (level > 0)
             {
-                Memset(next, 0, 0x1000);
+                memset(next, 0, 0x1000);
                 CopyPages(static_cast<const PageTable*>(originalNext), static_cast<PageTable*>(next), 512, level - 1);
             }
             else
             {
-                MemCopy(next, originalNext, 0x1000);
+                memcpy(next, originalNext, 0x1000);
             }
         }
     }

@@ -111,7 +111,7 @@ void ELF::LoadProgramHeader(int elfFile, const ProgramHeader& programHeader,
         pagingManager.MapMemory(reinterpret_cast<void*>(virtAddr), reinterpret_cast<void*>(physAddr));
 
         uintptr_t higherHalfAddr = HigherHalf(physAddr);
-        Memset(reinterpret_cast<void*>(higherHalfAddr), 0, 0x1000);
+        memset(reinterpret_cast<void*>(higherHalfAddr), 0, 0x1000);
 
         uint64_t count = 0x1000;
         if (pageIndex == 0)

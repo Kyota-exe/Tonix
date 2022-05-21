@@ -35,7 +35,7 @@ void InitializePageFrameAllocator()
 
     Assert(bitmapBuffer != nullptr);
 
-    Memset(bitmapBuffer, 0xff, bitmapSize);
+    memset(bitmapBuffer, 0xff, bitmapSize);
     new (&pageFrameBitmap) Bitmap(bitmapBuffer, bitmapSize, false);
 
     for (uint64_t entryIndex = 0; entryIndex < memoryMapStruct->entries; ++entryIndex)

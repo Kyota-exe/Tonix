@@ -72,7 +72,7 @@ void String::Push(char c)
     length++;
 
     char* newBuffer = new char[length + 1];
-    MemCopy(newBuffer, buffer, length - 1);
+    memcpy(newBuffer, buffer, length - 1);
     newBuffer[length - 1] = c;
     newBuffer[length] = '\0';
 
@@ -103,7 +103,7 @@ String& String::operator=(const String& newString)
         delete[] buffer;
         length = newString.length;
         buffer = new char[length + 1];
-        MemCopy(buffer, newString.buffer, length + 1);
+        memcpy(buffer, newString.buffer, length + 1);
     }
     return *this;
 }
@@ -117,7 +117,7 @@ String::String(const char* original)
     while (*originalPtr++ != '\0') length++;
 
     buffer = new char[length + 1];
-    MemCopy(buffer, original, length + 1);
+    memcpy(buffer, original, length + 1);
 }
 
 // Converts from char* with specified length
@@ -126,7 +126,7 @@ String::String(const char* original, uint64_t stringLength)
     length = stringLength;
 
     buffer = new char[length + 1];
-    MemCopy(buffer, original, length);
+    memcpy(buffer, original, length);
     buffer[length] = '\0';
 
     for (uint64_t i = 0; i < length; ++i) Assert(buffer[i] != '\0');
@@ -136,7 +136,7 @@ String::String(const String& original)
 {
     length = original.length;
     buffer = new char[length + 1];
-    MemCopy(buffer, original.buffer, length + 1);
+    memcpy(buffer, original.buffer, length + 1);
 }
 
 String::String()
@@ -176,7 +176,7 @@ String String::Substring(uint64_t index, uint64_t substringLength) const
     Assert(index + substringLength <= GetLength());
 
     char newBuffer[substringLength + 1];
-    MemCopy(newBuffer, buffer + index, substringLength);
+    memcpy(newBuffer, buffer + index, substringLength);
     newBuffer[substringLength] = '\0';
 
     return String(newBuffer);

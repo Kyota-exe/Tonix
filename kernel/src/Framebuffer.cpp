@@ -29,7 +29,7 @@ void Framebuffer::Initialize()
     greenShift = framebufferStruct->green_mask_shift;
     blueShift = framebufferStruct->blue_mask_shift;
 
-    Memset(virtAddr, 0, width * height * sizeof(uint32_t));
+    memset(virtAddr, 0, width * height * sizeof(uint32_t));
 }
 
 void Framebuffer::PlotPixel(unsigned int x, unsigned int y, Colour colour)
