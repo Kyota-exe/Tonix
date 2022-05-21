@@ -41,6 +41,7 @@ PSF2::PSF2(const String &path)
 
 PSF2Glyph PSF2::GetGlyphBitmap(char c) const
 {
+    Assert(static_cast<uint32_t>(c) < header->glyphCount);
     return {glyphBuffer + (c * header->charSize), header->charSize, Width(), Height()};
 }
 
