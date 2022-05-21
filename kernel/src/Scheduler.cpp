@@ -69,7 +69,7 @@ Task CreateTask(PagingManager* pagingManager, VFS* vfs, UserspaceAllocator* user
                /* # */ pushChar(string[i]); /* # */
                /* ============================== */ %>
 
-            return reinterpret_cast<const char*>(stackHigherHalf);
+            return reinterpret_cast<const char*>(USER_STACK_BASE - (stackHighestHigherHalfAddr - stackHigherHalf));
         };
 
         Vector<const char*> environmentStrings;
