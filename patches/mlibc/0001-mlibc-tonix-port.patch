@@ -1,4 +1,4 @@
-From d5349c8f79819e7b1d070354e401fbab6b57eef8 Mon Sep 17 00:00:00 2001
+From 3bbd337229cf5ff71ed4714df317fd881f52bc4b Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
- sysdeps/tonix/generic/Generic.cpp            | 456 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 455 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -41,7 +41,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/tonix/VFS.h            |  18 +
  sysdeps/tonix/include/tonix/Warn.h           |   5 +
  sysdeps/tonix/meson.build                    |  52 +++
- 37 files changed, 681 insertions(+), 5 deletions(-)
+ 37 files changed, 680 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -179,10 +179,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..49ff5f35
+index 00000000..4a159829
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,456 @@
+@@ -0,0 +1,455 @@
 +#include <bits/ensure.h>
 +#include <abi-bits/wait.h>
 +#include <mlibc/debug.hpp>
@@ -318,8 +318,7 @@ index 00000000..49ff5f35
 +
 +    int sys_anon_free(void* pointer, size_t size)
 +    {
-+        mlibc::infoLogger() << __FUNCTION__ << frg::endlog;
-+        SystemCall(SystemCallID::NotImplemented);
++        Warn("Stub, literally does nothing");
 +        return 0;
 +    }
 +
