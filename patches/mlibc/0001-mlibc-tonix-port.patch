@@ -1,4 +1,4 @@
-From fafa7d54a5ec3b3a2858c8aca4463a75e6f2d2a3 Mon Sep 17 00:00:00 2001
+From d5349c8f79819e7b1d070354e401fbab6b57eef8 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
- sysdeps/tonix/generic/Generic.cpp            | 445 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 456 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -41,7 +41,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/tonix/VFS.h            |  18 +
  sysdeps/tonix/include/tonix/Warn.h           |   5 +
  sysdeps/tonix/meson.build                    |  52 +++
- 37 files changed, 670 insertions(+), 5 deletions(-)
+ 37 files changed, 681 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -78,10 +78,10 @@ Subject: [PATCH 1/1] mlibc tonix port
  create mode 100644 sysdeps/tonix/meson.build
 
 diff --git a/meson.build b/meson.build
-index 6c7b4073..6a12e308 100644
+index 2f9a4f36..9f22bfd9 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -132,6 +132,10 @@ elif host_machine.system() == 'dripos'
+@@ -131,6 +131,10 @@ elif host_machine.system() == 'dripos'
  	rtdl_include_dirs += include_directories('sysdeps/dripos/include')
  	libc_include_dirs += include_directories('sysdeps/dripos/include')
  	subdir('sysdeps/dripos')
@@ -179,10 +179,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..07b06747
+index 00000000..49ff5f35
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,445 @@
+@@ -0,0 +1,456 @@
 +#include <bits/ensure.h>
 +#include <abi-bits/wait.h>
 +#include <mlibc/debug.hpp>
@@ -555,6 +555,17 @@ index 00000000..07b06747
 +    {
 +        mlibc::infoLogger() << "[syscall] SignalAction: " << signal << frg::endlog;
 +        return ENOSYS;
++    }
++
++    int sys_uname(struct utsname* buf)
++    {
++        __ensure(buf);
++        strcpy(buf->sysname, MLIBC_SYSTEM_NAME);
++        strcpy(buf->nodename, "?");
++        strcpy(buf->release, "?");
++        strcpy(buf->version, "?");
++        strcpy(buf->machine, "x86_64");
++        return 0;
 +    }
 +
 +    struct termios termiosStruct
