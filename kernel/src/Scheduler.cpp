@@ -281,13 +281,15 @@ void Scheduler::Unblock(uint64_t pid)
 void Scheduler::Unsuspend(uint64_t pid, uint64_t returnValue)
 {
     taskQueueLock.Acquire();
+    Unsuspend(GetTask(pid), returnValue);
+    taskQueueLock.Release();
+}
 
-    Task& task = GetTask(pid);
+void Scheduler::Unsuspend(Task& task, uint64_t returnValue)
+{
     Assert(task.state == TaskState::Blocked || task.state == TaskState::WaitingForChild);
     task.frame.rax = returnValue;
     task.state = TaskState::Normal;
-
-    taskQueueLock.Release();
 }
 
 Spinlock tssInitLock;
@@ -354,7 +356,7 @@ void Scheduler::ExitCurrentTask(int status, InterruptFrame* interruptFrame)
         Task& parent = GetTask(currentTask.parentPid);
         if (parent.state == TaskState::WaitingForChild)
         {
-            Unsuspend(parent.pid, currentTask.pid);
+            Unsuspend(parent, currentTask.pid);
         }
         taskQueueLock.Release();
     }
