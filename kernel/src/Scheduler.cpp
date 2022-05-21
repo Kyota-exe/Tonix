@@ -426,23 +426,27 @@ uint64_t Scheduler::WaitForChild(Error& error)
         return 0;
     }
 
+    uint64_t childPid = 0;
+
     taskQueueLock.Acquire();
-    for (uint64_t childPid : currentTask.childrenPids)
+    for (uint64_t pid : currentTask.childrenPids)
     {
-        Task& child = GetTask(childPid);
+        Task& child = GetTask(pid);
         if (child.state == TaskState::Terminated)
         {
-            Assert(child.pid == childPid);
-            return child.pid;
+            childPid = child.pid;
         }
     }
     taskQueueLock.Release();
 
-    uint64_t childPid = SuspendSystemCall(TaskState::WaitingForChild);
+    if (childPid == 0)
+    {
+        childPid = SuspendSystemCall(TaskState::WaitingForChild);
 
-    taskQueueLock.Acquire();
-    Assert(GetTask(childPid).state == TaskState::Terminated);
-    taskQueueLock.Release();
+        taskQueueLock.Acquire();
+        Assert(GetTask(childPid).state == TaskState::Terminated);
+        taskQueueLock.Release();
+    }
 
     return childPid;
 }
