@@ -245,9 +245,7 @@ int VFS::Open(const String& path, int flags, Error& error)
         fileDescriptor->writeMode = false;
     }
 
-    bool writingAllowed = (flags & OpenFlag::WriteOnly) || (flags & OpenFlag::ReadWrite);
-
-    if (writingAllowed && (flags & OpenFlag::Truncate) && vnode->type == VFS::VnodeType::RegularFile)
+    if (fileDescriptor->writeMode && (flags & OpenFlag::Truncate) && vnode->type == VFS::VnodeType::RegularFile)
     {
         vnode->fileSystem->Truncate(vnode);
     }
@@ -257,7 +255,7 @@ int VFS::Open(const String& path, int flags, Error& error)
         fileDescriptor->appendMode = true;
     }
 
-    if (writingAllowed && vnode->type == VFS::VnodeType::Directory)
+    if (fileDescriptor->writeMode && vnode->type == VFS::VnodeType::Directory)
     {
         error = Error::IsDirectory;
         return -1;
