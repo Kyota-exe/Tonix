@@ -101,7 +101,7 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
     VFS::CacheVNode(fileSystemRoot);
 }
 
-VFS::Vnode* Ext2::CacheDirectoryEntry(const DirectoryEntry& directoryEntry)
+VFS::Vnode* Ext2::ConstructVnode(const VFS::DirectoryEntry& directoryEntry)
 {
     auto vnode = new (Allocator::Permanent) VFS::Vnode();
     vnode->inodeNum = directoryEntry.inodeNum;
@@ -111,20 +111,7 @@ VFS::Vnode* Ext2::CacheDirectoryEntry(const DirectoryEntry& directoryEntry)
     vnode->context = childInode;
     Assert(childInode->size1 == 0);
     vnode->fileSize = childInode->size0;
-
-    switch (directoryEntry.typeIndicator)
-    {
-        case DEntryRegularFile:
-            vnode->type = VFS::VnodeType::RegularFile;
-            break;
-        case DEntryDirectory:
-            vnode->type = VFS::VnodeType::Directory;
-            break;
-        default:
-            vnode->type = VFS::VnodeType::Unknown;
-    }
-
-    VFS::CacheVNode(vnode);
+    vnode->type = directoryEntry.type;
 
     return vnode;
 }
@@ -137,24 +124,18 @@ VFS::Vnode* Ext2::FindInDirectory(VFS::Vnode* directory, const String& name)
     uint64_t parsedLength = 0;
     while (parsedLength < context->size0)
     {
-        DirectoryEntry directoryEntry {};
-        Read(directory, &directoryEntry, sizeof(DirectoryEntry), parsedLength);
+        VFS::DirectoryEntry directoryEntry = ReadDirectory(directory, parsedLength);
 
         if (directoryEntry.inodeNum != 0)
         {
-            char nameBuffer[directoryEntry.nameLength];
-            Read(directory, nameBuffer, directoryEntry.nameLength, parsedLength + sizeof(directoryEntry));
-            nameBuffer[directoryEntry.nameLength] = 0;
-
-            Serial::Log("[ext2]------------- Found: %s", nameBuffer);
-
             VFS::Vnode* child = VFS::SearchInCache(directoryEntry.inodeNum, this);
             if (child == nullptr)
             {
-                child = CacheDirectoryEntry(directoryEntry);
+                child = ConstructVnode(directoryEntry);
+                VFS::CacheVNode(child);
             }
 
-            if (String(nameBuffer).Equals(name))
+            if (directoryEntry.name.Equals(name))
             {
                 return child;
             }
@@ -166,6 +147,36 @@ VFS::Vnode* Ext2::FindInDirectory(VFS::Vnode* directory, const String& name)
     Serial::Log("[ext2]------------- Failed to find %s", name.ToRawString());
 
     return nullptr;
+}
+
+VFS::DirectoryEntry Ext2::ReadDirectory(VFS::Vnode* directory, uint64_t readPos)
+{
+    Ext2::DirectoryEntry ext2DirectoryEntry {};
+    Read(directory, &ext2DirectoryEntry, sizeof(ext2DirectoryEntry), readPos);
+
+    char nameBuffer[ext2DirectoryEntry.nameLength];
+    Read(directory, nameBuffer, ext2DirectoryEntry.nameLength, readPos + sizeof(ext2DirectoryEntry));
+    nameBuffer[ext2DirectoryEntry.nameLength] = 0;
+
+    VFS::VnodeType type;
+    switch (ext2DirectoryEntry.typeIndicator)
+    {
+        case Ext2::DirectoryEntryType::DEntryRegularFile:
+            type = VFS::VnodeType::RegularFile;
+            break;
+        case Ext2::DirectoryEntryType::DEntryDirectory:
+            type = VFS::VnodeType::Directory;
+            break;
+        default:
+            type = VFS::VnodeType::Unknown;
+    }
+
+    return {
+        .inodeNum = ext2DirectoryEntry.inodeNum,
+        .name = String(nameBuffer),
+        .type = type,
+        .entrySize = ext2DirectoryEntry.entrySize,
+    };
 }
 
 uint64_t Ext2::Read(VFS::Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos)
@@ -290,10 +301,10 @@ void Ext2::WriteDirectoryEntry(VFS::Vnode* directory, uint32_t inodeNum, const S
     uint8_t nameLength = name.GetLength();
     uint8_t nameLengthPadding = 4 - (nameLength % 4);
 
-    DirectoryEntry directoryEntry {};
+    Ext2::DirectoryEntry directoryEntry {};
     directoryEntry.typeIndicator = type;
     directoryEntry.inodeNum = inodeNum;
-    directoryEntry.entrySize = sizeof(DirectoryEntry) + nameLength + nameLengthPadding;
+    directoryEntry.entrySize = sizeof(Ext2::DirectoryEntry) + nameLength + nameLengthPadding;
     directoryEntry.nameLength = nameLength;
 
     uint8_t zero = 0;

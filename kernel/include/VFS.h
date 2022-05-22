@@ -14,6 +14,7 @@ public:
     enum class VnodeType;
     enum OpenFlag : int;
     enum class SeekType;
+    struct DirectoryEntry;
 
     static VFS* kernelVfs;
 
@@ -107,4 +108,12 @@ enum class VFS::SeekType
     Set = 0,
     Cursor = 1,
     End = 2
+};
+
+struct VFS::DirectoryEntry
+{
+    uint32_t inodeNum;
+    String name;
+    VnodeType type;
+    uint64_t entrySize;
 };

@@ -27,7 +27,8 @@ private:
     uint32_t GetBlockAddr(VFS::Vnode* vnode, uint32_t requestedBlockIndex, bool allocateMissingBlock);
     Inode* GetInode(uint32_t inodeNum);
     void WriteDirectoryEntry(VFS::Vnode* directory, uint32_t inodeNum, const String& name, DirectoryEntryType type);
-    VFS::Vnode* CacheDirectoryEntry(const DirectoryEntry& directoryEntry);
+    VFS::Vnode* ConstructVnode(const VFS::DirectoryEntry& directoryEntry);
+    VFS::DirectoryEntry ReadDirectory(VFS::Vnode* directory, uint64_t readPos);
     uint64_t Read(uint32_t block, void* buffer, uint64_t count, uint64_t readPos);
     uint32_t Allocate(AllocationType allocationType);
     uint64_t DiskOperation(IOType ioType, VFS::Vnode* vnode, void* buffer, uint64_t count, uint64_t position);
