@@ -126,19 +126,17 @@ VFS::Vnode* Ext2::FindInDirectory(VFS::Vnode* directory, const String& name)
     {
         VFS::DirectoryEntry directoryEntry = ReadDirectory(directory, parsedLength);
 
-        if (directoryEntry.inodeNum != 0)
+        Assert(directoryEntry.inodeNum != 0);
+        VFS::Vnode* child = VFS::SearchInCache(directoryEntry.inodeNum, this);
+        if (child == nullptr)
         {
-            VFS::Vnode* child = VFS::SearchInCache(directoryEntry.inodeNum, this);
-            if (child == nullptr)
-            {
-                child = ConstructVnode(directoryEntry);
-                VFS::CacheVNode(child);
-            }
+            child = ConstructVnode(directoryEntry);
+            VFS::CacheVNode(child);
+        }
 
-            if (directoryEntry.name.Equals(name))
-            {
-                return child;
-            }
+        if (directoryEntry.name.Equals(name))
+        {
+            return child;
         }
 
         parsedLength += directoryEntry.entrySize;
