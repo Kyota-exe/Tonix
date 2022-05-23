@@ -25,9 +25,9 @@ void Terminal::Write(const String& string)
             {
                 cursorX = 0;
                 cursorY++;
-                if (cursorY >= textRenderer->CharsPerColumn())
+                if (cursorY >= textRenderer->GetWindowSize().rowCount)
                 {
-                    Assert(cursorY == textRenderer->CharsPerColumn());
+                    Assert(cursorY == textRenderer->GetWindowSize().rowCount);
                     textRenderer->ScrollDown(backgroundColour);
                     cursorY--;
                 }
@@ -41,6 +41,7 @@ void Terminal::Write(const String& string)
             }
             case '\t': // Horizontal Tab
             {
+                Panic();
                 cursorX += 4;
                 break;
             }
@@ -109,17 +110,17 @@ void Terminal::Write(const String& string)
 
         if (CursorAtRightEdge())
         {
-            cursorX = textRenderer->CharsPerLine() - 1;
+            cursorX = textRenderer->GetWindowSize().columnCount - 1;
         }
 
-        if (cursorX < textRenderer->CharsPerLine() - 1)
+        if (cursorX < textRenderer->GetWindowSize().columnCount - 1)
         {
             pendingWrap = false;
         }
 
         if (cursorX < 0) cursorX = 0;
         if (cursorY < 0) cursorY = 0;
-        Assert(cursorY < textRenderer->CharsPerColumn());
+        Assert(cursorY < textRenderer->GetWindowSize().rowCount);
 
         if (eraseCharacter)
         {
@@ -243,20 +244,20 @@ void Terminal::ProcessControlSequence(char command, const Vector<int>& arguments
             }
             break;
         case 'K':
-            if (argCount == 0) EraseRangeInclusive(cursorX, cursorY, textRenderer->CharsPerLine() - 1, cursorY);
+            if (argCount == 0) EraseRangeInclusive(cursorX, cursorY, textRenderer->GetWindowSize().columnCount - 1, cursorY);
             else
             {
                 Assert(argCount == 1);
                 switch (arguments.Get(0))
                 {
                     case 0:
-                        EraseRangeInclusive(cursorX, cursorY, textRenderer->CharsPerLine() - 1, cursorY);
+                        EraseRangeInclusive(cursorX, cursorY, textRenderer->GetWindowSize().columnCount - 1, cursorY);
                         break;
                     case 1:
                         EraseRangeInclusive(0, cursorY, cursorX, cursorY);
                         break;
                     case 2:
-                        EraseRangeInclusive(0, cursorY, textRenderer->CharsPerLine() - 1, cursorY);
+                        EraseRangeInclusive(0, cursorY, textRenderer->GetWindowSize().columnCount - 1, cursorY);
                         break;
                 }
             }
@@ -293,7 +294,7 @@ void Terminal::ProcessControlSequence(char command, const Vector<int>& arguments
         case 'r':
             Assert(argCount == 2);
             Assert(arguments.Get(0) == 1);
-            Assert(arguments.Get(1) == textRenderer->CharsPerColumn());
+            Assert(arguments.Get(1) == textRenderer->GetWindowSize().rowCount);
             break;
         case 'l':
             Assert(argCount == 1);
@@ -328,10 +329,15 @@ void Terminal::EraseRangeInclusive(long minX, long minY, long maxX, long maxY)
 
 void Terminal::EraseScreenFrom(long x, long y)
 {
-    EraseRangeInclusive(x, y, textRenderer->CharsPerLine() - 1, textRenderer->CharsPerColumn() - 1);
+    EraseRangeInclusive(x, y, textRenderer->GetWindowSize().columnCount - 1, textRenderer->GetWindowSize().rowCount - 1);
 }
 
 bool Terminal::CursorAtRightEdge()
 {
-    return cursorX >= textRenderer->CharsPerLine();
+    return cursorX >= textRenderer->GetWindowSize().columnCount;
+}
+
+WindowSize Terminal::GetWindowSize()
+{
+    return textRenderer->GetWindowSize();
 }

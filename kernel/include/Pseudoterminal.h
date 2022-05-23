@@ -12,6 +12,7 @@ public:
     uint64_t Write(const void* buffer, uint64_t count) override;
     void KeyboardInput(char c);
     Pseudoterminal(const String& name, uint32_t inodeNum);
+    WindowSize GetWindowSize();
     static Pseudoterminal* instance;
     bool canonical;
     bool echo;

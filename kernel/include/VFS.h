@@ -4,6 +4,7 @@
 #include "Vector.h"
 #include "Error.h"
 #include "Pseudoterminal.h"
+#include "WindowSize.h"
 
 class FileSystem;
 
@@ -33,6 +34,7 @@ public:
     VnodeInfo GetVnodeInfo(int descriptor, Error& error);
     VnodeInfo GetVnodeInfo(int descriptor);
     void SetTerminalSettings(int descriptor, bool canonical, bool echo, Error& error);
+    WindowSize GetTerminalWindowSize(int descriptor, Error& error);
     String GetWorkingDirectory();
     void SetWorkingDirectory(const String& newWorkingDirectory, Error& error);
 

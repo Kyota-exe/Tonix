@@ -84,3 +84,8 @@ Pseudoterminal::Pseudoterminal(const String& name, uint32_t inodeNum) : Device(n
     canonical = true;
     echo = true;
 }
+
+WindowSize Pseudoterminal::GetWindowSize()
+{
+    return terminal->GetWindowSize();
+}

@@ -1,4 +1,4 @@
-From ce409e081c2999dcbaf687b2191a1ba84ded4079 Mon Sep 17 00:00:00 2001
+From 916ba67c5e6ea14c65acce39974fa7949b623c0d Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
- sysdeps/tonix/generic/Generic.cpp            | 516 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 528 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -37,11 +37,11 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
  sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
- sysdeps/tonix/include/tonix/SystemCall.h     |  64 +++
+ sysdeps/tonix/include/tonix/SystemCall.h     |  65 +++
  sysdeps/tonix/include/tonix/VFS.h            |  26 +
  sysdeps/tonix/include/tonix/Warn.h           |   5 +
  sysdeps/tonix/meson.build                    |  52 ++
- 37 files changed, 750 insertions(+), 5 deletions(-)
+ 37 files changed, 763 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -179,10 +179,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..9e85a4c6
+index 00000000..349be1a2
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,516 @@
+@@ -0,0 +1,528 @@
 +#include <bits/ensure.h>
 +#include <abi-bits/wait.h>
 +#include <mlibc/debug.hpp>
@@ -637,11 +637,10 @@ index 00000000..9e85a4c6
 +        return 0;
 +    }
 +
-+    struct winsize windowSize
++    int sys_get_window_size(int fd, winsize* buffer)
 +    {
-+        38, 102,
-+        1024, 768
-+    };
++        return -SystemCall(SystemCallID::GetTerminalWindowSize, fd, buffer);
++    }
 +
 +    int sys_ioctl(int fd, unsigned long request, void* arg, int* result)
 +    {
@@ -649,21 +648,34 @@ index 00000000..9e85a4c6
 +        {
 +            case TIOCGWINSZ:
 +            {
-+                long error = sys_isatty(fd);
-+                if (error > 0) return error;
++                int error = sys_get_window_size(fd, static_cast<winsize*>(arg));
++                if (error > 0)
++                {
++                    *result = -1;
++                    return error;
++                }
 +
-+                *static_cast<winsize*>(arg) = windowSize;
 +                *result = 0;
-+                Warn("TIOCGWINSZ returns hardcoded values, assumes terminal window size is always the same");
 +                break;
 +            }
 +            case TIOCSWINSZ:
 +            {
 +                winsize* newWindowSize = static_cast<winsize*>(arg);
-+                __ensure(newWindowSize->ws_row == windowSize.ws_row);
-+                __ensure(newWindowSize->ws_col == windowSize.ws_col);
-+                __ensure(newWindowSize->ws_xpixel == windowSize.ws_xpixel);
-+                __ensure(newWindowSize->ws_ypixel == windowSize.ws_ypixel);
++
++                winsize currentWindowSize {};
++                int error = sys_get_window_size(fd, &currentWindowSize);
++                if (error > 0)
++                {
++                    *result = -1;
++                    return error;
++                }
++
++                __ensure(currentWindowSize.ws_row == newWindowSize->ws_row);
++                __ensure(currentWindowSize.ws_col == newWindowSize->ws_col);
++                __ensure(currentWindowSize.ws_xpixel == newWindowSize->ws_xpixel);
++                __ensure(currentWindowSize.ws_ypixel == newWindowSize->ws_ypixel);
++
++                *result = 0;
 +                break;
 +            }
 +            case TIOCGPGRP:
@@ -928,10 +940,10 @@ index 00000000..9bda0961
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/tonix/SystemCall.h b/sysdeps/tonix/include/tonix/SystemCall.h
 new file mode 100644
-index 00000000..2b0fd536
+index 00000000..7352f387
 --- /dev/null
 +++ b/sysdeps/tonix/include/tonix/SystemCall.h
-@@ -0,0 +1,64 @@
+@@ -0,0 +1,65 @@
 +#pragma once
 +
 +#include <sys/types.h>
@@ -950,6 +962,7 @@ index 00000000..2b0fd536
 +    Stat = 10,
 +    FStat = 11,
 +    SetTerminalSettings = 12,
++    GetTerminalWindowSize = 13,
 +    GetPID = 14,
 +    GetWorkingDirectory = 15,
 +    Fork = 16,

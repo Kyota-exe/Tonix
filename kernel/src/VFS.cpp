@@ -438,6 +438,19 @@ void VFS::SetTerminalSettings(int descriptor, bool canonical, bool echo, Error& 
     terminal->echo = echo;
 }
 
+WindowSize VFS::GetTerminalWindowSize(int descriptor, Error& error)
+{
+    auto terminal = GetTerminal(descriptor, error);
+    if (error != Error::None)
+    {
+        Assert(terminal == nullptr);
+        return {};
+    }
+
+    Assert(terminal != nullptr);
+    return terminal->GetWindowSize();
+}
+
 Pseudoterminal* VFS::GetTerminal(int descriptor, Error& error)
 {
     VnodeInfo vnodeInfo = GetVnodeInfo(descriptor, error);

@@ -12,6 +12,7 @@ public:
     Terminal();
     ~Terminal();
     Terminal& operator=(const Terminal&) = delete;
+    WindowSize GetWindowSize();
 
 private:
     struct EscapeSequence;

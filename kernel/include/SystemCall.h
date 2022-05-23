@@ -17,6 +17,7 @@ enum class SystemCallType
     Stat = 10,
     FStat = 11,
     SetTerminalSettings = 12,
+    GetTerminalWindowSize = 13,
     GetPID = 14,
     GetWorkingDirectory = 15,
     Fork = 16,

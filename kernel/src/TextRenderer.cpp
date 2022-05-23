@@ -42,14 +42,12 @@ void TextRenderer::ScrollDown(const Colour& fillColour)
     Framebuffer::TranslateVertical(font->Height(), fillColour);
 }
 
-long TextRenderer::CharsPerLine()
+WindowSize TextRenderer::GetWindowSize()
 {
-    Assert(Framebuffer::Width() / font->Width() == 102);
-    return Framebuffer::Width() / font->Width();
-}
-
-long TextRenderer::CharsPerColumn()
-{
-    Assert(Framebuffer::Height() / font->Height() == 38);
-    return Framebuffer::Height() / font->Height();
+    return {
+        .rowCount = static_cast<unsigned short>(Framebuffer::Height() / font->Height()),
+        .columnCount = static_cast<unsigned short>(Framebuffer::Width() / font->Width()),
+        .width = static_cast<unsigned short>(Framebuffer::Width()),
+        .height = static_cast<unsigned short>(Framebuffer::Height()),
+    };
 }

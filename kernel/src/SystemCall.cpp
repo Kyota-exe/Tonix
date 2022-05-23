@@ -84,6 +84,13 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             return 0;
         }
 
+        case SystemCallType::GetTerminalWindowSize:
+        {
+            auto windowSize = reinterpret_cast<WindowSize*>(arg1);
+            *windowSize = scheduler->currentTask.vfs->GetTerminalWindowSize((int)arg0, error);
+            return 0;
+        }
+
         case SystemCallType::Stat:
         {
             const char* path = reinterpret_cast<const char*>(arg0);
