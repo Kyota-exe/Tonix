@@ -71,7 +71,7 @@ struct VFS::Vnode
     uint32_t fileSize = 0;
     FileSystem* fileSystem = nullptr;
 
-    Vnode* mountedVNode = nullptr;
+    Vnode* mountedVnode = nullptr;
     Vnode* nextInCache = nullptr;
 };
 

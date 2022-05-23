@@ -108,7 +108,7 @@ VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& contai
                 return nullptr;
             }
 
-            currentEntry = currentEntry->mountedVNode;
+            currentEntry = currentEntry->mountedVnode;
         } while (currentEntry != nullptr);
 
         do
@@ -158,11 +158,11 @@ VFS::Vnode* VFS::SearchInCache(uint32_t inodeNum, FileSystem* fileSystem)
 void VFS::Mount(VFS::Vnode* mountPoint, VFS::Vnode* vnode)
 {
     VFS::Vnode* currentMountPoint = mountPoint;
-    while (currentMountPoint->mountedVNode != nullptr)
+    while (currentMountPoint->mountedVnode != nullptr)
     {
-        currentMountPoint = currentMountPoint->mountedVNode;
+        currentMountPoint = currentMountPoint->mountedVnode;
     }
-    currentMountPoint->mountedVNode = vnode;
+    currentMountPoint->mountedVnode = vnode;
 }
 
 int VFS::FindFreeFileDescriptor(FileDescriptor*& fileDescriptor)
