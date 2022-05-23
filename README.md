@@ -4,6 +4,8 @@
 A simple UNIX-like x86_64 operating system I'm working on for fun.
 Aims to be POSIX-compliant enough to make porting Linux software easier.
 
+![Screenshot](/screenshot.png "Screenshot")
+
 ## Features
 - VFS with ext2 and devfs
 - Dynamically-linked ELF user processes
