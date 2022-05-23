@@ -1,7 +1,7 @@
 #include "TextRenderer.h"
 #include "Framebuffer.h"
 
-const char* FONT_PATH = "/fonts/Uni2-Terminus20x10.psf";
+const char* FONT_PATH = "/fonts/ibm/iv9x16u.psfu";
 
 TextRenderer::TextRenderer() : font(new PSF2(String(FONT_PATH))) {}
 

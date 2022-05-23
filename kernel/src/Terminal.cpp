@@ -136,10 +136,13 @@ void Terminal::Write(const String& string)
 }
 
 Terminal::Terminal() : textRenderer(new TextRenderer()),
-                       textColour(255, 255, 255),
-                       backgroundColour(0, 0, 0),
+                       textColour(0xdb, 0xe0, 0xeb),
+                       backgroundColour(0x28, 0x2c, 0x34),
                        originalTextColour(textColour),
-                       textBgColour(backgroundColour) {}
+                       textBgColour(backgroundColour)
+{
+    EraseScreenFrom(0, 0);
+}
 
 Terminal::~Terminal()
 {
