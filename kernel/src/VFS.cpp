@@ -426,15 +426,33 @@ uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, VFS::SeekType se
 
 void VFS::SetTerminalSettings(int descriptor, bool canonical, bool echo, Error& error)
 {
+    auto terminal = GetTerminal(descriptor, error);
+    if (error != Error::None)
+    {
+        Assert(terminal == nullptr);
+        return;
+    }
+
+    Assert(terminal != nullptr);
+    terminal->canonical = canonical;
+    terminal->echo = echo;
+}
+
+Pseudoterminal* VFS::GetTerminal(int descriptor, Error& error)
+{
     VnodeInfo vnodeInfo = GetVnodeInfo(descriptor, error);
+    if (error != Error::None) return nullptr;
+
     if (vnodeInfo.type == VnodeType::CharacterDevice)
     {
         FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-        auto terminal = static_cast<Pseudoterminal*>(fileDescriptor->vnode->context);
-        terminal->canonical = canonical;
-        terminal->echo = echo;
+        return static_cast<Pseudoterminal*>(fileDescriptor->vnode->context);
     }
-    else error = Error::NotTerminal;
+    else
+    {
+        error = Error::NotTerminal;
+        return nullptr;
+    }
 }
 
 uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, SeekType seekType)

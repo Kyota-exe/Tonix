@@ -3,6 +3,7 @@
 #include "String.h"
 #include "Vector.h"
 #include "Error.h"
+#include "Pseudoterminal.h"
 
 class FileSystem;
 
@@ -50,6 +51,7 @@ private:
     FileDescriptor* GetFileDescriptor(int descriptor);
     int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor);
     String ConvertToAbsolutePath(const String& path);
+    Pseudoterminal* GetTerminal(int descriptor, Error& error);
 
     Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error);
 };
