@@ -435,6 +435,7 @@ uint64_t Scheduler::WaitForChild(Error& error)
         if (child.state == TaskState::Terminated)
         {
             childPid = child.pid;
+            break;
         }
     }
     taskQueueLock.Release();
@@ -447,6 +448,19 @@ uint64_t Scheduler::WaitForChild(Error& error)
         Assert(GetTask(childPid).state == TaskState::Terminated);
         taskQueueLock.Release();
     }
+
+    // Child PID must be removed from currentTask.childrenPids so it doesn't get waited for twice
+    bool removed = false;
+    for (uint64_t i = 0; i < currentTask.childrenPids.GetLength(); ++i)
+    {
+        if (currentTask.childrenPids.Get(i) == childPid)
+        {
+            currentTask.childrenPids.Pop(i);
+            removed = true;
+            break;
+        }
+    }
+    Assert(removed);
 
     return childPid;
 }
