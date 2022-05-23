@@ -1,4 +1,4 @@
-From c48b6d7881bf2e55943ea5e08a0ba3b5d8ae9bc7 Mon Sep 17 00:00:00 2001
+From c60e9935bf3bea92932b09d43a4d7c542c8bb161 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -890,7 +890,7 @@ index 00000000..9bda0961
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/tonix/SystemCall.h b/sysdeps/tonix/include/tonix/SystemCall.h
 new file mode 100644
-index 00000000..b0738004
+index 00000000..2e85efe4
 --- /dev/null
 +++ b/sysdeps/tonix/include/tonix/SystemCall.h
 @@ -0,0 +1,63 @@
@@ -927,28 +927,28 @@ index 00000000..b0738004
 +static ssize_t SystemCallOverload(SystemCallID call)
 +{
 +    ssize_t ret;
-+    asm volatile("int $0x80" : "=a"(ret) : "a"(call));
++    asm volatile("int $0x80" : "=a"(ret) : "a"(call) : "memory");
 +    return ret;
 +}
 +
 +static ssize_t SystemCallOverload(SystemCallID call, ssize_t arg0)
 +{
 +    ssize_t ret;
-+    asm volatile("int $0x80" : "=a"(ret) : "a"(call), "D"(arg0));
++    asm volatile("int $0x80" : "=a"(ret) : "a"(call), "D"(arg0) : "memory");
 +    return ret;
 +}
 +
 +static ssize_t SystemCallOverload(SystemCallID call, ssize_t arg0, ssize_t arg1)
 +{
 +    ssize_t ret;
-+    asm volatile("int $0x80" : "=a"(ret) : "a"(call), "D"(arg0), "S"(arg1));
++    asm volatile("int $0x80" : "=a"(ret) : "a"(call), "D"(arg0), "S"(arg1) : "memory");
 +    return ret;
 +}
 +
 +static ssize_t SystemCallOverload(SystemCallID call, ssize_t arg0, ssize_t arg1, ssize_t arg2)
 +{
 +    ssize_t ret;
-+    asm volatile("int $0x80" : "=a"(ret) : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2));
++    asm volatile("int $0x80" : "=a"(ret) : "a"(call), "D"(arg0), "S"(arg1), "d"(arg2) : "memory");
 +    return ret;
 +}
 +
