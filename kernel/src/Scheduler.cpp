@@ -215,7 +215,7 @@ Task& Scheduler::GetTask(uint64_t pid)
 
 void Scheduler::ConfigureTimerClosestExpiry()
 {
-    uint64_t closestTime = 100;
+    uint64_t closestTime = 5;
     for (uint64_t i = 0; i < timerEntries.GetLength(); ++i)
     {
         auto time = timerEntries.Get(i);
