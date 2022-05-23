@@ -24,6 +24,7 @@ enum class SystemCallType
     GetParentPID = 18,
     SetWorkingDirectory = 19,
     Execute = 20,
+    ReadDirectory = 21,
     Panic = 254,
     Log = 255
 };

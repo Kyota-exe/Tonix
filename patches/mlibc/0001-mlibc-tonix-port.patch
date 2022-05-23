@@ -1,4 +1,4 @@
-From c60e9935bf3bea92932b09d43a4d7c542c8bb161 Mon Sep 17 00:00:00 2001
+From ce409e081c2999dcbaf687b2191a1ba84ded4079 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
- sysdeps/tonix/generic/Generic.cpp            | 478 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 516 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -37,11 +37,11 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
  sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
- sysdeps/tonix/include/tonix/SystemCall.h     |  63 +++
- sysdeps/tonix/include/tonix/VFS.h            |  18 +
+ sysdeps/tonix/include/tonix/SystemCall.h     |  64 +++
+ sysdeps/tonix/include/tonix/VFS.h            |  26 +
  sysdeps/tonix/include/tonix/Warn.h           |   5 +
  sysdeps/tonix/meson.build                    |  52 ++
- 37 files changed, 703 insertions(+), 5 deletions(-)
+ 37 files changed, 750 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -179,10 +179,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..41db49df
+index 00000000..9e85a4c6
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,478 @@
+@@ -0,0 +1,516 @@
 +#include <bits/ensure.h>
 +#include <abi-bits/wait.h>
 +#include <mlibc/debug.hpp>
@@ -550,6 +550,44 @@ index 00000000..41db49df
 +        return 0;
 +    }
 +
++    int sys_open_dir(const char* path, int* handle)
++    {
++        return sys_open(path, O_DIRECTORY | O_RDONLY, handle);
++    }
++
++    int sys_read_entries(int handle, void* buffer, size_t max_size, size_t* bytes_read)
++    {
++        mlibc::infoLogger() << "ReadDirectory: " << handle << frg::endlog;
++
++        __ensure(max_size >= sizeof(dirent));
++
++        DirectoryEntryInfo directoryEntryInfo {};
++        auto ret = SystemCall(SystemCallID::ReadDirectory, handle, &directoryEntryInfo);
++        if (ret < 0) return -ret;
++
++        dirent* directoryEntry = static_cast<dirent*>(buffer);
++        directoryEntry->d_ino = directoryEntryInfo.inodeNum;
++        directoryEntry->d_off = 0;
++        directoryEntry->d_reclen = directoryEntryInfo.entrySize;
++
++        switch (directoryEntryInfo.type)
++        {
++            case VnodeType::RegularFile:
++                directoryEntry->d_type = DT_REG;
++                break;
++            case VnodeType::Directory:
++                directoryEntry->d_type = DT_DIR;
++                break;
++            default:
++                directoryEntry->d_type = DT_UNKNOWN;
++        }
++
++        strcpy(directoryEntry->d_name, directoryEntryInfo.name);
++
++        *bytes_read = directoryEntry->d_reclen;
++        return 0;
++    }
++
 +    int sys_sigaction(int signal, const struct sigaction* __restrict action, struct sigaction* __restrict oldAction)
 +    {
 +        mlibc::infoLogger() << "[syscall] SignalAction: " << signal << frg::endlog;
@@ -890,10 +928,10 @@ index 00000000..9bda0961
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/tonix/SystemCall.h b/sysdeps/tonix/include/tonix/SystemCall.h
 new file mode 100644
-index 00000000..2e85efe4
+index 00000000..2b0fd536
 --- /dev/null
 +++ b/sysdeps/tonix/include/tonix/SystemCall.h
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,64 @@
 +#pragma once
 +
 +#include <sys/types.h>
@@ -919,6 +957,7 @@ index 00000000..2e85efe4
 +    GetParentPID = 18,
 +    SetWorkingDirectory = 19,
 +    Execute = 20,
++    ReadDirectory = 21,
 +    Panic = 254,
 +    Log = 255,
 +    NotImplemented = 253
@@ -960,10 +999,10 @@ index 00000000..2e85efe4
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/tonix/VFS.h b/sysdeps/tonix/include/tonix/VFS.h
 new file mode 100644
-index 00000000..7ae3d15b
+index 00000000..15267984
 --- /dev/null
 +++ b/sysdeps/tonix/include/tonix/VFS.h
-@@ -0,0 +1,18 @@
+@@ -0,0 +1,26 @@
 +#pragma once
 +
 +#include <stdint.h>
@@ -982,6 +1021,14 @@ index 00000000..7ae3d15b
 +    uint32_t inodeNum;
 +    uint32_t fileSize;
 +} __attribute__((packed));
++
++struct DirectoryEntryInfo
++{
++    uint32_t inodeNum;
++    VnodeType type;
++    char name[1024];
++    uint64_t entrySize;
++};
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/tonix/Warn.h b/sysdeps/tonix/include/tonix/Warn.h
 new file mode 100644

@@ -9,6 +9,7 @@ public:
     uint64_t Read(VFS::Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos) override;
     uint64_t Write(VFS::Vnode* vnode, const void* buffer, uint64_t count, uint64_t writePos) override;
     VFS::Vnode* FindInDirectory(VFS::Vnode* directory, const String& name) override;
+    VFS::DirectoryEntry ReadDirectory(VFS::Vnode* directory, uint64_t readPos) override;
     void Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name) override;
     void Truncate(VFS::Vnode* vnode) override;
     explicit Ext2(Disk* disk);
@@ -28,7 +29,6 @@ private:
     Inode* GetInode(uint32_t inodeNum);
     void WriteDirectoryEntry(VFS::Vnode* directory, uint32_t inodeNum, const String& name, DirectoryEntryType type);
     VFS::Vnode* ConstructVnode(const VFS::DirectoryEntry& directoryEntry);
-    VFS::DirectoryEntry ReadDirectory(VFS::Vnode* directory, uint64_t readPos);
     uint64_t Read(uint32_t block, void* buffer, uint64_t count, uint64_t readPos);
     uint32_t Allocate(AllocationType allocationType);
     uint64_t DiskOperation(IOType ioType, VFS::Vnode* vnode, void* buffer, uint64_t count, uint64_t position);

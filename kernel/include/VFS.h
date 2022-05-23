@@ -87,6 +87,7 @@ struct VFS::FileDescriptor
     bool present = false;
     uint64_t offset = 0;
     Vnode* vnode = nullptr;
+    bool directoryMode = false;
     bool appendMode = false;
     bool readMode = false;
     bool writeMode = false;
@@ -100,7 +101,8 @@ enum VFS::OpenFlag : int
     Exclude = 0x40,
     ReadOnly = 0x2,
     WriteOnly = 0x5,
-    ReadWrite = 0x3
+    ReadWrite = 0x3,
+    DirectoryMode = 0x20,
 };
 
 enum class VFS::SeekType

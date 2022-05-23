@@ -174,6 +174,33 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             return scheduler->WaitForChild(error);
         }
 
+        case SystemCallType::ReadDirectory:
+        {
+            VFS::DirectoryEntry directoryEntry {};
+            scheduler->currentTask.vfs->Read((int)arg0, &directoryEntry, sizeof(directoryEntry), error);
+
+            if (error != Error::None) return -1;
+
+            struct DirectoryEntryInfo
+            {
+                uint32_t inodeNum;
+                VFS::VnodeType type;
+                char name[1024];
+                uint64_t entrySize;
+            };
+
+            auto buffer = reinterpret_cast<DirectoryEntryInfo*>(arg1);
+            buffer->inodeNum = directoryEntry.inodeNum;
+            buffer->type = directoryEntry.type;
+            buffer->entrySize = directoryEntry.entrySize;
+
+            for (uint64_t i = 0; i < directoryEntry.name.GetLength(); ++i)
+                buffer->name[i] = directoryEntry.name[i];
+            buffer->name[directoryEntry.name.GetLength()] = '\0';
+
+            return 0;
+        }
+
         default:
             Panic();
     }

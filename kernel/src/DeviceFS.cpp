@@ -61,6 +61,14 @@ VFS::Vnode* DeviceFS::FindInDirectory(VFS::Vnode* directory, const String& name)
     return nullptr;
 }
 
+VFS::DirectoryEntry DeviceFS::ReadDirectory(VFS::Vnode* directory, uint64_t readPos)
+{
+    Panic();
+
+    (void)directory;
+    (void)readPos;
+}
+
 void DeviceFS::Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name)
 {
     Panic();

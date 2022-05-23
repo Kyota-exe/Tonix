@@ -255,6 +255,17 @@ int VFS::Open(const String& path, int flags, Error& error)
         fileDescriptor->appendMode = true;
     }
 
+    if (flags & OpenFlag::DirectoryMode)
+    {
+        fileDescriptor->directoryMode = true;
+
+        if (vnode->type != VnodeType::Directory)
+        {
+            error = Error::NotDirectory;
+            return -1;
+        }
+    }
+
     if (fileDescriptor->writeMode && vnode->type == VFS::VnodeType::Directory)
     {
         error = Error::IsDirectory;
@@ -294,15 +305,36 @@ uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count, Error& error)
 
     VFS::Vnode* vnode = fileDescriptor->vnode;
 
-    if (vnode->type == VnodeType::Directory)
+    uint64_t readCount = 0;
+
+    if (!fileDescriptor->directoryMode)
     {
-        error = Error::IsDirectory;
-        return 0;
+        if (vnode->type == VnodeType::Directory)
+        {
+            error = Error::IsDirectory;
+            return -1;
+        }
+
+        readCount = vnode->fileSystem->Read(vnode, buffer, count, fileDescriptor->offset);
+    }
+    else
+    {
+        Assert(count == sizeof(DirectoryEntry));
+        Assert(vnode->type == VnodeType::Directory);
+
+        if (fileDescriptor->offset < vnode->fileSize)
+        {
+            auto directoryEntry = static_cast<DirectoryEntry*>(buffer);
+            *directoryEntry = vnode->fileSystem->ReadDirectory(vnode, fileDescriptor->offset);
+            readCount = directoryEntry->entrySize;
+        }
+        else
+        {
+            readCount = 0;
+        }
     }
 
-    uint64_t readCount = vnode->fileSystem->Read(vnode, buffer, count, fileDescriptor->offset);
-
-    if (vnode->type == VnodeType::RegularFile)
+    if (vnode->type == VnodeType::RegularFile || vnode->type == VnodeType::Directory)
     {
         fileDescriptor->offset += readCount;
     }
