@@ -60,11 +60,7 @@ String VFS::ConvertToAbsolutePath(const String& path)
     bool pathIsAbsolute = path.Split('/', 0).IsEmpty();
     if (!pathIsAbsolute)
     {
-        if (workingDirectory[workingDirectory.GetLength() - 1] != '/')
-        {
-            workingDirectory.Push('/');
-        }
-
+        absolutePath.Insert(String('/'), 0);
         absolutePath.Insert(workingDirectory, 0);
         Assert(absolutePath.Split('/', 0).IsEmpty());
     }
