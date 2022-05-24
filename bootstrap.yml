@@ -163,6 +163,7 @@ tools:
           - '--with-sysroot=@SYSROOT_DIR@'
           # On recent compilers, binutils 2.26 causes implicit-fallthrough warnings, among others.
           - '--disable-werror'
+          - '--enable-targets=x86_64-elf,x86_64-pe'
           # -g blows up the binary size.
           - 'CFLAGS=-O2 -pipe'
     compile:
