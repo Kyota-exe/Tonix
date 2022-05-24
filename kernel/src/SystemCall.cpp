@@ -134,7 +134,7 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
                 return -1;
             }
 
-            for (uint64_t i = 0; i < bufferSize; ++i)
+            for (uint64_t i = 0; i < workingDirectory.GetLength(); ++i)
             {
                 buffer[i] = workingDirectory[i];
             }
