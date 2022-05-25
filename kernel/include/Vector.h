@@ -38,8 +38,8 @@ const uint64_t VECTOR_DEFAULT_CAPACITY = 1;
 template <typename T>
 Vector<T>::Vector()
 {
-    buffer = new T[VECTOR_DEFAULT_CAPACITY];
     capacity = VECTOR_DEFAULT_CAPACITY;
+    buffer = new T[capacity];
     length = 0;
 }
 
@@ -48,7 +48,7 @@ Vector<T>::Vector(const Vector<T>& original)
 {
     capacity = original.capacity;
     length = original.length;
-    buffer = new T[length];
+    buffer = new T[capacity];
 
     for (uint64_t i = 0; i < length; ++i)
     {
