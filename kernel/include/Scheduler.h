@@ -13,11 +13,11 @@ public:
     void SwitchToNextTask(InterruptFrame* interruptFrame);
     void ExitCurrentTask(int status, InterruptFrame* interruptFrame);
     void ConfigureTimerClosestExpiry();
-    uint64_t SuspendSystemCall(TaskState newTaskState);
+    uint64_t SuspendSystemCall(TaskState newTaskState, uint64_t argument = 0);
     void SleepCurrentTask(uint64_t milliseconds);
     uint64_t ForkCurrentTask(InterruptFrame* interruptFrame);
     void Execute(const String& path, InterruptFrame* interruptFrame, const Vector<String>& arguments, const Vector<String>& environment, Error& error);
-    uint64_t WaitForChild(Error& error);
+    uint64_t WaitForChild(uint64_t pid, Error& error);
     static void InitializeQueue();
     static void StartCores(TSS* bspTss);
     static void CreateTaskFromELF(const String& path, const Vector<String>& arguments, const Vector<String>& environment);

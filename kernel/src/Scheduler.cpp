@@ -255,10 +255,11 @@ void Scheduler::UpdateTimerEntries()
     }
 }
 
-uint64_t Scheduler::SuspendSystemCall(TaskState newTaskState)
+uint64_t Scheduler::SuspendSystemCall(TaskState newTaskState, uint64_t argument)
 {
     Assert(currentTask.state == TaskState::Normal);
     currentTask.state = newTaskState;
+    currentTask.suspensionArg = argument;
 
     uint64_t returnValue;
     asm volatile("int $0x81" : "=a"(returnValue) : : "memory");
@@ -354,7 +355,7 @@ void Scheduler::ExitCurrentTask(int status, InterruptFrame* interruptFrame)
     {
         taskQueueLock.Acquire();
         Task& parent = GetTask(currentTask.parentPid);
-        if (parent.state == TaskState::WaitingForChild)
+        if (parent.state == TaskState::WaitingForChild && (parent.suspensionArg == 0 || parent.suspensionArg == currentTask.pid))
         {
             Unsuspend(parent, currentTask.pid);
         }
@@ -418,7 +419,7 @@ void Scheduler::Execute(const String& path, InterruptFrame* interruptFrame, cons
     (void)error;
 }
 
-uint64_t Scheduler::WaitForChild(Error& error)
+uint64_t Scheduler::WaitForChild(uint64_t pid, Error& error)
 {
     if (currentTask.childrenPids.IsEmpty())
     {
@@ -429,10 +430,10 @@ uint64_t Scheduler::WaitForChild(Error& error)
     uint64_t childPid = 0;
 
     taskQueueLock.Acquire();
-    for (uint64_t pid : currentTask.childrenPids)
+    for (uint64_t potentialPid : currentTask.childrenPids)
     {
-        Task& child = GetTask(pid);
-        if (child.state == TaskState::Terminated)
+        Task& child = GetTask(potentialPid);
+        if (child.state == TaskState::Terminated && (pid == 0 || pid == child.pid))
         {
             childPid = child.pid;
             break;
@@ -442,10 +443,10 @@ uint64_t Scheduler::WaitForChild(Error& error)
 
     if (childPid == 0)
     {
-        childPid = SuspendSystemCall(TaskState::WaitingForChild);
+        childPid = SuspendSystemCall(TaskState::WaitingForChild, pid);
 
         taskQueueLock.Acquire();
-        Assert(GetTask(childPid).state == TaskState::Terminated);
+        Assert(GetTask(childPid).state == TaskState::Terminated && (pid == 0 || pid == childPid));
         taskQueueLock.Release();
     }
 

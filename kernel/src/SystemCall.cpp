@@ -178,7 +178,7 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
 
         case SystemCallType::Wait:
         {
-            return scheduler->WaitForChild(error);
+            return scheduler->WaitForChild(arg0, error);
         }
 
         case SystemCallType::ReadDirectory:
