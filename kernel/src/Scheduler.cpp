@@ -449,6 +449,19 @@ uint64_t Scheduler::WaitForChild(Error& error)
         taskQueueLock.Release();
     }
 
+    bool removedTask = false;
+    taskQueueLock.Acquire();
+    for (uint64_t i = 0; i < taskQueue->GetLength(); ++i)
+    {
+        if (taskQueue->Get(i).pid == childPid)
+        {
+            removedTask = true;
+            taskQueue->Pop(i);
+        }
+    }
+    taskQueueLock.Release();
+    Assert(removedTask);
+
     // Child PID must be removed from currentTask.childrenPids so it doesn't get waited for twice
     bool removed = false;
     for (uint64_t i = 0; i < currentTask.childrenPids.GetLength(); ++i)
