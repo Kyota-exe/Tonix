@@ -331,11 +331,16 @@ uint32_t Ext2::GetBlockAddr(VFS::Vnode* vnode, uint32_t requestedBlockIndex, boo
     {
         uint64_t readPos = sizeof(blockPtr) * (requestedBlockIndex - 12);
         Read(context->singlyIndirectBlockPtr, &blockPtr, sizeof(blockPtr), readPos);
-        return blockPtr;
     }
     else if (requestedBlockIndex < (12 + pointersPerBlock * pointersPerBlock))
     {
-        Panic();
+        uint64_t index = requestedBlockIndex - (12 + pointersPerBlock);
+
+        uint64_t doublyIndirectBlockReadPos = sizeof(blockPtr) * (index / pointersPerBlock);
+        Read(context->doublyIndirectBlockPtr, &blockPtr, sizeof(blockPtr), doublyIndirectBlockReadPos);
+
+        uint64_t singlyIndirectBlockReadPos = sizeof(blockPtr) * (index % pointersPerBlock);
+        Read(blockPtr, &blockPtr, sizeof(blockPtr), singlyIndirectBlockReadPos);
     }
     else if (requestedBlockIndex < (12 + pointersPerBlock * pointersPerBlock * pointersPerBlock))
     {
