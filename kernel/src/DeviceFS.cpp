@@ -16,7 +16,7 @@ DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
     devices.Push(terminal);
 
     auto terminalVnode = new (Allocator::Permanent) VFS::Vnode();
-    terminalVnode->inodeNum = terminal->inodeNum;
+    terminalVnode->inodeNum = terminal->GetInodeNumber();
     terminalVnode->fileSystem = this;
     terminalVnode->context = terminal;
     terminalVnode->fileSize = 0;
@@ -46,11 +46,11 @@ VFS::Vnode* DeviceFS::FindInDirectory(VFS::Vnode* directory, const String& name)
 
     for (Device* device : devices)
     {
-        Serial::Log("[/dev]------------- Found: %s", device->name.ToRawString());
+        Serial::Log("[/dev]------------- Found: %s", device->GetName().ToRawString());
 
-        if (device->name.Equals(name))
+        if (device->GetName().Equals(name))
         {
-            VFS::Vnode* file = VFS::SearchInCache(device->inodeNum, this);
+            VFS::Vnode* file = VFS::SearchInCache(device->GetInodeNumber(), this);
 
             Assert(file != nullptr);
 
