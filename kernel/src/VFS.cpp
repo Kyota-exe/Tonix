@@ -15,17 +15,12 @@ void VFS::Initialize(void* ext2RamDisk)
 {
     kernelVfs = new VFS();
 
-    root = new (Allocator::Permanent) VFS::Vnode();
-    root->type = VFS::VnodeType::Directory;
-    root->inodeNum = 2; // Root always has inode number 2
-    currentInCache = root;
-
     FileSystem* ext2FileSystem;
     ext2FileSystem = new Ext2(new RAMDisk(ext2RamDisk));
-    Mount(root, ext2FileSystem->fileSystemRoot);
+    root = ext2FileSystem->fileSystemRoot;
+    currentInCache = root;
 
     VFS::Vnode* devMountPoint = kernelVfs->CreateDirectory(String("/dev"));
-
     FileSystem* deviceFileSystem;
     deviceFileSystem = new DeviceFS(nullptr);
     Mount(devMountPoint, deviceFileSystem->fileSystemRoot);
