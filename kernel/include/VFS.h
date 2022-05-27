@@ -63,7 +63,7 @@ enum class VFS::VnodeType
     Unknown = 0,
     RegularFile = 1,
     Directory = 2,
-    CharacterDevice = 3
+    Terminal = 3,
 };
 
 struct VFS::Vnode

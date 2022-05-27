@@ -390,7 +390,7 @@ uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, VFS::SeekType se
 
     VFS::Vnode* vnode = fileDescriptor->vnode;
 
-    if (vnode->type == VFS::VnodeType::CharacterDevice)
+    if (vnode->type == VFS::VnodeType::Terminal)
     {
         error = Error::IsPipe;
         return -1;
@@ -447,7 +447,7 @@ Pseudoterminal* VFS::GetTerminal(int descriptor, Error& error)
     VnodeInfo vnodeInfo = GetVnodeInfo(descriptor, error);
     if (error != Error::None) return nullptr;
 
-    if (vnodeInfo.type == VnodeType::CharacterDevice)
+    if (vnodeInfo.type == VnodeType::Terminal)
     {
         FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
         return static_cast<Pseudoterminal*>(fileDescriptor->vnode->context);

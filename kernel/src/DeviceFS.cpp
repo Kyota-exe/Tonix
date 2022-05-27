@@ -20,7 +20,7 @@ DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
     terminalVnode->fileSystem = this;
     terminalVnode->context = terminal;
     terminalVnode->fileSize = 0;
-    terminalVnode->type = VFS::VnodeType::CharacterDevice;
+    terminalVnode->type = VFS::VnodeType::Terminal;
     VFS::CacheVNode(terminalVnode);
 }
 

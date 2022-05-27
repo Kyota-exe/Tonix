@@ -1,4 +1,4 @@
-From aa7ff0cf550acb41feeabca00cfc06fe8b065dc2 Mon Sep 17 00:00:00 2001
+From 60ef8e0f3aa4d8f132734c70a314570a50225840 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
- sysdeps/tonix/generic/Generic.cpp            | 541 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 536 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -41,7 +41,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/tonix/VFS.h            |  26 +
  sysdeps/tonix/include/tonix/Warn.h           |   5 +
  sysdeps/tonix/meson.build                    |  52 ++
- 37 files changed, 776 insertions(+), 5 deletions(-)
+ 37 files changed, 771 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -179,10 +179,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..49ee785e
+index 00000000..429e8317
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,541 @@
+@@ -0,0 +1,536 @@
 +#include <bits/ensure.h>
 +#include <abi-bits/wait.h>
 +#include <mlibc/debug.hpp>
@@ -324,14 +324,9 @@ index 00000000..49ee785e
 +    int sys_isatty(int fd)
 +    {
 +        mlibc::infoLogger() << "[syscall] IsTerminal: " << fd << frg::endlog;
-+
-+        struct stat buffer;
-+        int ret = sys_stat(fsfd_target::fd, fd, nullptr, 0, &buffer);
-+
-+        if (ret > 0) return ret;
-+
-+        // Assuming that all character device files are ttys
-+        return S_ISCHR(buffer.st_mode) ? 0 : ENOTTY;
++        winsize windowSize {};
++        int result;
++        return sys_ioctl(fd, TIOCGWINSZ, &windowSize, &result);
 +    }
 +
 +#ifndef MLIBC_BUILDING_RTDL
@@ -479,7 +474,7 @@ index 00000000..49ee785e
 +            case VnodeType::Directory:
 +                statbuf->st_mode |= S_IFDIR;
 +                break;
-+            case VnodeType::CharacterDevice:
++            case VnodeType::Terminal:
 +                statbuf->st_mode |= S_IFCHR;
 +                statbuf->st_rdev = vnodeInfo.inodeNum;
 +                break;
@@ -1025,7 +1020,7 @@ index 00000000..7352f387
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/tonix/VFS.h b/sysdeps/tonix/include/tonix/VFS.h
 new file mode 100644
-index 00000000..15267984
+index 00000000..6dc4cef6
 --- /dev/null
 +++ b/sysdeps/tonix/include/tonix/VFS.h
 @@ -0,0 +1,26 @@
@@ -1038,7 +1033,7 @@ index 00000000..15267984
 +    Unknown = 0,
 +    RegularFile = 1,
 +    Directory = 2,
-+    CharacterDevice = 3
++    Terminal = 3,
 +};
 +
 +struct VnodeInfo
