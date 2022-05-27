@@ -1,11 +1,11 @@
-#include "Pseudoterminal.h"
+#include "TerminalDevice.h"
 #include "Terminal.h"
 #include "Scheduler.h"
 #include "Serial.h"
 
-Pseudoterminal* Pseudoterminal::instance = nullptr;
+TerminalDevice* TerminalDevice::instance = nullptr;
 
-uint64_t Pseudoterminal::Read(void* buffer, uint64_t count)
+uint64_t TerminalDevice::Read(void* buffer, uint64_t count)
 {
     char* charBuffer = static_cast<char*>(buffer);
 
@@ -39,13 +39,13 @@ uint64_t Pseudoterminal::Read(void* buffer, uint64_t count)
     return readCount;
 }
 
-uint64_t Pseudoterminal::Write(const void* buffer, uint64_t count)
+uint64_t TerminalDevice::Write(const void* buffer, uint64_t count)
 {
     terminal->Write(String(static_cast<const char*>(buffer), count));
     return count;
 }
 
-void Pseudoterminal::KeyboardInput(char c)
+void TerminalDevice::KeyboardInput(char c)
 {
     if (c == '\b' && canonical)
     {
@@ -73,7 +73,7 @@ void Pseudoterminal::KeyboardInput(char c)
     if (echo || canonical) terminal->Write(String(c));
 }
 
-Pseudoterminal::Pseudoterminal(const String& name, uint32_t inodeNum) : Device(name, inodeNum)
+TerminalDevice::TerminalDevice(const String& name, uint32_t inodeNum) : Device(name, inodeNum)
 {
     Assert(instance == nullptr);
     instance = this;
@@ -85,7 +85,7 @@ Pseudoterminal::Pseudoterminal(const String& name, uint32_t inodeNum) : Device(n
     echo = true;
 }
 
-WindowSize Pseudoterminal::GetWindowSize()
+WindowSize TerminalDevice::GetWindowSize()
 {
     return terminal->GetWindowSize();
 }

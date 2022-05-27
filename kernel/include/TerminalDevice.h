@@ -5,15 +5,15 @@
 #include "Vector.h"
 #include "Terminal.h"
 
-class Pseudoterminal : public Device
+class TerminalDevice : public Device
 {
 public:
     uint64_t Read(void* buffer, uint64_t count) override;
     uint64_t Write(const void* buffer, uint64_t count) override;
     void KeyboardInput(char c);
-    Pseudoterminal(const String& name, uint32_t inodeNum);
+    TerminalDevice(const String& name, uint32_t inodeNum);
     WindowSize GetWindowSize();
-    static Pseudoterminal* instance;
+    static TerminalDevice* instance;
     bool canonical;
     bool echo;
 private:
@@ -24,7 +24,7 @@ private:
     Terminal* terminal;
 };
 
-struct Pseudoterminal::ReadRequest
+struct TerminalDevice::ReadRequest
 {
     uint64_t pid;
     uint64_t requestedCount;

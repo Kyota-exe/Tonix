@@ -1,6 +1,6 @@
 #include "DeviceFS.h"
 #include "Device.h"
-#include "Pseudoterminal.h"
+#include "TerminalDevice.h"
 #include "Serial.h"
 #include "Heap.h"
 
@@ -12,7 +12,7 @@ DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
     fileSystemRoot->fileSystem = this;
     VFS::CacheVNode(fileSystemRoot);
 
-    Device* terminal = new Pseudoterminal(String("tty"), currentInodeNum++);
+    Device* terminal = new TerminalDevice(String("tty"), currentInodeNum++);
     devices.Push(terminal);
 
     auto terminalVnode = new (Allocator::Permanent) VFS::Vnode();

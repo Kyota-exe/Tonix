@@ -5,7 +5,7 @@
 #include "Serial.h"
 #include "RAMDisk.h"
 #include "Heap.h"
-#include "Pseudoterminal.h"
+#include "TerminalDevice.h"
 
 VFS::Vnode* root;
 VFS::Vnode* currentInCache = nullptr;
@@ -442,7 +442,7 @@ WindowSize VFS::GetTerminalWindowSize(int descriptor, Error& error)
     return terminal->GetWindowSize();
 }
 
-Pseudoterminal* VFS::GetTerminal(int descriptor, Error& error)
+TerminalDevice* VFS::GetTerminal(int descriptor, Error& error)
 {
     VnodeInfo vnodeInfo = GetVnodeInfo(descriptor, error);
     if (error != Error::None) return nullptr;
@@ -450,7 +450,7 @@ Pseudoterminal* VFS::GetTerminal(int descriptor, Error& error)
     if (vnodeInfo.type == VnodeType::Terminal)
     {
         FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-        return static_cast<Pseudoterminal*>(fileDescriptor->vnode->context);
+        return static_cast<TerminalDevice*>(fileDescriptor->vnode->context);
     }
     else
     {

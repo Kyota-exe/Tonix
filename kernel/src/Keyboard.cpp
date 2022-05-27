@@ -1,5 +1,5 @@
 #include "Keyboard.h"
-#include "Pseudoterminal.h"
+#include "TerminalDevice.h"
 
 bool leftShifting = false;
 bool rightShifting = false;
@@ -17,5 +17,5 @@ void Keyboard::SendKeyToTerminal(uint8_t scanCode)
     char c = leftShifting || rightShifting ? shiftChars[scanCode] : chars[scanCode];
     if (c == '\e') return;
 
-    Pseudoterminal::instance->KeyboardInput(c);
+    TerminalDevice::instance->KeyboardInput(c);
 }
