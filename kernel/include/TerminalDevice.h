@@ -8,8 +8,8 @@
 class TerminalDevice : public Device
 {
 public:
-    uint64_t Read(void* buffer, uint64_t count) override;
-    uint64_t Write(const void* buffer, uint64_t count) override;
+    uint64_t Read(void* buffer, uint64_t count, uint64_t position) override;
+    uint64_t Write(const void* buffer, uint64_t count, uint64_t position) override;
     void KeyboardInput(char c);
     TerminalDevice(const String& name, uint32_t inodeNum);
     WindowSize GetWindowSize();

@@ -69,3 +69,8 @@ long Framebuffer::Height()
 {
     return height;
 }
+
+uint32_t* Framebuffer::GetBuffer()
+{
+    return virtAddr;
+}

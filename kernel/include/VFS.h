@@ -64,6 +64,7 @@ enum class VFS::VnodeType
     RegularFile = 1,
     Directory = 2,
     Terminal = 3,
+    Framebuffer = 4,
 };
 
 struct VFS::Vnode

@@ -1,6 +1,7 @@
 #include "DeviceFS.h"
 #include "Device.h"
 #include "TerminalDevice.h"
+#include "FramebufferDevice.h"
 #include "Serial.h"
 #include "Heap.h"
 
@@ -22,22 +23,28 @@ DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
     terminalVnode->fileSize = 0;
     terminalVnode->type = VFS::VnodeType::Terminal;
     VFS::CacheVNode(terminalVnode);
+
+    Device* framebuffer = new FramebufferDevice(String("fb"), currentInodeNum++);
+    devices.Push(framebuffer);
+
+    auto framebufferVnode = new (Allocator::Permanent) VFS::Vnode();
+    framebufferVnode->inodeNum = framebuffer->GetInodeNumber();
+    framebufferVnode->fileSystem = this;
+    framebufferVnode->context = framebuffer;
+    framebufferVnode->fileSize = 0;
+    framebufferVnode->type = VFS::VnodeType::Framebuffer;
 }
 
 uint64_t DeviceFS::Read(VFS::Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos)
 {
-    auto device = (Device*)vnode->context;
-    return device->Read(buffer, count);
-
-    (void)readPos;
+    auto device = reinterpret_cast<Device*>(vnode->context);
+    return device->Read(buffer, count, readPos);
 }
 
 uint64_t DeviceFS::Write(VFS::Vnode* vnode, const void* buffer, uint64_t count, uint64_t writePos)
 {
-    auto device = (Device*)vnode->context;
-    return device->Write(buffer, count);
-
-    (void)writePos;
+    auto device = reinterpret_cast<Device*>(vnode->context);
+    return device->Write(buffer, count, writePos);
 }
 
 VFS::Vnode* DeviceFS::FindInDirectory(VFS::Vnode* directory, const String& name)

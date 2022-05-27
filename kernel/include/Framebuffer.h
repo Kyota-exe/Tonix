@@ -10,6 +10,7 @@ public:
     static void Initialize();
     static long Width();
     static long Height();
+    static uint32_t* GetBuffer();
 private:
     static uint32_t* virtAddr;
     static uint16_t width;

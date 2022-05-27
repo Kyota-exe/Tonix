@@ -5,8 +5,10 @@
 
 TerminalDevice* TerminalDevice::instance = nullptr;
 
-uint64_t TerminalDevice::Read(void* buffer, uint64_t count)
+uint64_t TerminalDevice::Read(void* buffer, uint64_t count, uint64_t position)
 {
+    Assert(position == 0);
+
     char* charBuffer = static_cast<char*>(buffer);
 
     if (count > (canonical ? lines.Get(0).GetLength() : rawBuffer.GetLength()))
@@ -39,8 +41,11 @@ uint64_t TerminalDevice::Read(void* buffer, uint64_t count)
     return readCount;
 }
 
-uint64_t TerminalDevice::Write(const void* buffer, uint64_t count)
+
+uint64_t TerminalDevice::Write(const void* buffer, uint64_t count, uint64_t position)
 {
+    Assert(position == 0);
+
     terminal->Write(String(static_cast<const char*>(buffer), count));
     return count;
 }
