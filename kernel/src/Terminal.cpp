@@ -136,8 +136,8 @@ void Terminal::Write(const String& string)
 }
 
 Terminal::Terminal() : textRenderer(new TextRenderer()),
-                       textColour(0xdb, 0xe0, 0xeb),
-                       backgroundColour(0x28, 0x2c, 0x34),
+                       textColour(0xd7, 0xe3, 0xfe),
+                       backgroundColour(0x26, 0x2c, 0x37),
                        originalTextColour(textColour),
                        textBgColour(backgroundColour)
 {

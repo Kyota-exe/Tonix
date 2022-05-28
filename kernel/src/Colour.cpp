@@ -28,7 +28,7 @@ Colour Colour::FromANSICode(unsigned int code)
     {
         case ForegroundBlack:
         case BackgroundBlack:
-            return {0x28, 0x2c, 0x34};
+            return {0x26, 0x2c, 0x37};
 
         case ForegroundRed:
         case BackgroundRed:
@@ -36,7 +36,7 @@ Colour Colour::FromANSICode(unsigned int code)
 
         case ForegroundGreen:
         case BackgroundGreen:
-            return {0x98, 0xc3, 0x79};
+            return {0x99, 0xcd, 0x73};
 
         case ForegroundYellow:
         case BackgroundYellow:
@@ -44,7 +44,7 @@ Colour Colour::FromANSICode(unsigned int code)
 
         case ForegroundBlue:
         case BackgroundBlue:
-            return {0x62, 0xaf, 0xef};
+            return {0x5c, 0xb0, 0xf7};
 
         case ForegroundMagenta:
         case BackgroundMagenta:
@@ -56,7 +56,7 @@ Colour Colour::FromANSICode(unsigned int code)
 
         case ForegroundWhite:
         case BackgroundWhite:
-            return {0xdc, 0xdf, 0xe4};
+            return {0xd7, 0xe3, 0xfe};
 
         default:
             Panic();
