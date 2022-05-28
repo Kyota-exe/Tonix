@@ -379,7 +379,7 @@ uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count, Error& e
     return wroteCount;
 }
 
-uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, VFS::SeekType seekType, Error& error)
+uint64_t VFS::RepositionOffset(int descriptor, int64_t offset, VFS::SeekType seekType, Error& error)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
     if (fileDescriptor == nullptr)
@@ -459,7 +459,7 @@ TerminalDevice* VFS::GetTerminal(int descriptor, Error& error)
     }
 }
 
-uint64_t VFS::RepositionOffset(int descriptor, uint64_t offset, SeekType seekType)
+uint64_t VFS::RepositionOffset(int descriptor, int64_t offset, SeekType seekType)
 {
     Error error = Error::None;
     auto newOffset = RepositionOffset(descriptor, offset, seekType, error);

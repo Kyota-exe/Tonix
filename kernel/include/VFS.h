@@ -26,8 +26,8 @@ public:
     void Read(int descriptor, void* buffer, uint64_t count);
     uint64_t Write(int descriptor, const void* buffer, uint64_t count, Error& error);
     void Write(int descriptor, const void* buffer, uint64_t count);
-    uint64_t RepositionOffset(int descriptor, uint64_t offset, SeekType seekType, Error& error);
-    uint64_t RepositionOffset(int descriptor, uint64_t offset, SeekType seekType);
+    uint64_t RepositionOffset(int descriptor, int64_t offset, SeekType seekType, Error& error);
+    uint64_t RepositionOffset(int descriptor, int64_t offset, SeekType seekType);
     void Close(int descriptor, Error& error);
     void Close(int descriptor);
 

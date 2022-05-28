@@ -30,7 +30,8 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
         }
 
         case SystemCallType::Seek:
-            return scheduler->currentTask.vfs->RepositionOffset((int)arg0, arg1, (VFS::SeekType)arg2, error);
+            return scheduler->currentTask.vfs->RepositionOffset(static_cast<int>(arg0), static_cast<int64_t>(arg1),
+                                                                static_cast<VFS::SeekType>(arg2), error);
 
         case SystemCallType::Close:
             scheduler->currentTask.vfs->Close((int)arg0); return 0;
