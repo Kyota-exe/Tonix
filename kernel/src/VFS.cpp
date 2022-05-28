@@ -363,7 +363,7 @@ uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count, Error& e
         auto originalFileSize = vnode->fileSize;
         for (uint64_t i = 0; i < fileDescriptor->offset - originalFileSize; ++i)
         {
-            vnode->fileSystem->Write(vnode, &null, 1, originalFileSize + i - 1);
+            vnode->fileSystem->Write(vnode, &null, 1, originalFileSize + i);
         }
 
         Assert(vnode->fileSize == fileDescriptor->offset);
