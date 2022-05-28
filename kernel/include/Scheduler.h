@@ -17,7 +17,7 @@ public:
     void SleepCurrentTask(uint64_t milliseconds);
     uint64_t ForkCurrentTask(InterruptFrame* interruptFrame);
     void Execute(const String& path, InterruptFrame* interruptFrame, const Vector<String>& arguments, const Vector<String>& environment, Error& error);
-    uint64_t WaitForChild(uint64_t pid, Error& error);
+    uint64_t WaitForChild(uint64_t pid, int& status, Error& error);
     static void InitializeQueue();
     static void StartCores(TSS* bspTss);
     static void CreateTaskFromELF(const String& path, const Vector<String>& arguments, const Vector<String>& environment);

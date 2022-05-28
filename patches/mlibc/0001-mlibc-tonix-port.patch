@@ -1,4 +1,4 @@
-From c891dd403be704c6323f4a843d1e4f4605647331 Mon Sep 17 00:00:00 2001
+From d56a2f9f9984393bdb23ce230e3d83107d72b7d6 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -179,7 +179,7 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..24e9e551
+index 00000000..cfbce9aa
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
 @@ -0,0 +1,531 @@
@@ -410,7 +410,7 @@ index 00000000..24e9e551
 +            pid = 0;
 +        }
 +
-+        long ret = SystemCall(SystemCallID::Wait, pid);
++        long ret = SystemCall(SystemCallID::Wait, pid, status);
 +        if (ret < 0) return -ret;
 +
 +        __ensure(ret > 0);

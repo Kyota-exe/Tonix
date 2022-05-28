@@ -350,6 +350,7 @@ void Scheduler::ExitCurrentTask(int status, InterruptFrame* interruptFrame)
     Serial::Log("Task exited with status %d.", status);
 
     currentTask.state = TaskState::Terminated;
+    currentTask.exitStatus = status;
 
     if (currentTask.pid != 1)
     {
@@ -419,7 +420,7 @@ void Scheduler::Execute(const String& path, InterruptFrame* interruptFrame, cons
     (void)error;
 }
 
-uint64_t Scheduler::WaitForChild(uint64_t pid, Error& error)
+uint64_t Scheduler::WaitForChild(uint64_t pid, int& status, Error& error)
 {
     if (currentTask.childrenPids.IsEmpty())
     {
@@ -454,10 +455,12 @@ uint64_t Scheduler::WaitForChild(uint64_t pid, Error& error)
     taskQueueLock.Acquire();
     for (uint64_t i = 0; i < taskQueue->GetLength(); ++i)
     {
-        if (taskQueue->Get(i).pid == childPid)
+        Task& task = taskQueue->Get(i);
+        if (task.pid == childPid)
         {
             removedTask = true;
             taskQueue->Pop(i);
+            status = task.exitStatus;
         }
     }
     taskQueueLock.Release();

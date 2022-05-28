@@ -53,4 +53,5 @@ struct Task
     Vector<uint64_t> childrenPids;
 
     TaskState state;
+    int exitStatus = 0;
 };
