@@ -22,6 +22,7 @@ void PageFaultHandler()
     Serial::Log("Error code: %x", interruptFrame->errorCode);
     Serial::Log("RIP: %x", interruptFrame->rip);
     Serial::Log("RSP: %x", interruptFrame->rsp);
+    Serial::Log("PID: %d", Scheduler::GetScheduler()->currentTask.pid);
     Serial::Log("Core: %d", CPU::GetCoreID());
 
     if (interruptFrame->interruptNumber == 0xe) PageFaultHandler();
