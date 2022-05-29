@@ -269,7 +269,7 @@ void Ext2::Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name)
             inode->typePermissions = DEFAULT_DIRECTORY_TYPE_PERMISSIONS;
             break;
         default:
-            WriteDirectoryEntry(directory, inodeNum, name, DEntryUnknown);
+            Panic();
     }
 
     vnode->context = inode;
