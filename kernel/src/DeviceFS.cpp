@@ -76,6 +76,12 @@ VFS::DirectoryEntry DeviceFS::ReadDirectory(VFS::Vnode* directory, uint64_t read
     (void)readPos;
 }
 
+String DeviceFS::GetPathFromSymbolicLink(VFS::Vnode* symLinkVnode)
+{
+    Panic();
+    (void)symLinkVnode;
+}
+
 void DeviceFS::Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name)
 {
     Panic();

@@ -5,6 +5,8 @@
 #include "String.h"
 #include "RAMDisk.h"
 #include "Heap.h"
+#include "Memory/Memory.h"
+#include "Math.h"
 
 enum InodeTypePermissions : uint16_t
 {
@@ -164,6 +166,9 @@ VFS::DirectoryEntry Ext2::ReadDirectory(VFS::Vnode* directory, uint64_t readPos)
             break;
         case Ext2::DirectoryEntryType::DEntryDirectory:
             type = VFS::VnodeType::Directory;
+            break;
+        case Ext2::DirectoryEntryType::DEntrySymLink:
+            type = VFS::VnodeType::SymbolicLink;
             break;
         default:
             type = VFS::VnodeType::Unknown;
@@ -444,6 +449,42 @@ Ext2::Inode* Ext2::GetInode(uint32_t inodeNum)
     disk->Read(diskAddr, inode, sizeof(Inode));
 
     return inode;
+}
+
+String Ext2::GetPathFromSymbolicLink(VFS::Vnode* symLinkVnode)
+{
+    Assert(symLinkVnode->type == VFS::VnodeType::SymbolicLink);
+
+    char* string = new char[symLinkVnode->fileSize + 1];
+    string[symLinkVnode->fileSize] = '\0';
+
+    // Symbolic link paths are stored in the 60 bytes taken in the inode by the 12 direct and 3 indirect
+    // block pointers, but only if the length of the path (file size in the inode) is under 60.
+    Assert(symLinkVnode->fileSize <= 60);
+
+    auto context = static_cast<Inode*>(symLinkVnode->context);
+    uint64_t remainingChars = symLinkVnode->fileSize;
+    uint64_t readCount;
+
+    Assert(sizeof(context->directBlockPointers) == 48);
+    remainingChars -= (readCount = Min(remainingChars, sizeof(context->directBlockPointers)));
+    memcpy(string, context->directBlockPointers, readCount);
+
+    Assert(sizeof(context->singlyIndirectBlockPtr) == 4);
+    remainingChars -= (readCount = Min(remainingChars, sizeof(context->singlyIndirectBlockPtr)));
+    memcpy(string + 48, &context->singlyIndirectBlockPtr, readCount);
+
+    Assert(sizeof(context->doublyIndirectBlockPtr) == 4);
+    remainingChars -= (readCount = Min(remainingChars, sizeof(context->doublyIndirectBlockPtr)));
+    memcpy(string + 52, &context->doublyIndirectBlockPtr, readCount);
+
+    Assert(sizeof(context->triplyIndirectBlockPtr) == 4);
+    remainingChars -= readCount = Min(remainingChars, sizeof(context->triplyIndirectBlockPtr));
+    memcpy(string + 56, &context->triplyIndirectBlockPtr, readCount);
+
+    Assert(remainingChars == 0);
+
+    return String(string);
 }
 
 Ext2::~Ext2()

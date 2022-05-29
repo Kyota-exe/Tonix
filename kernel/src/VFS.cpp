@@ -48,7 +48,7 @@ VFS::FileDescriptor* VFS::GetFileDescriptor(int descriptor)
     return fileDescriptor;
 }
 
-String VFS::ConvertToAbsolutePath(const String& path)
+String VFS::ConvertToAbsolutePath(const String& path, const String& currentDirectoryPath)
 {
     String absolutePath = path;
 
@@ -56,7 +56,7 @@ String VFS::ConvertToAbsolutePath(const String& path)
     if (!pathIsAbsolute)
     {
         absolutePath.Insert(String('/'), 0);
-        absolutePath.Insert(workingDirectory, 0);
+        absolutePath.Insert(currentDirectoryPath, 0);
         Assert(absolutePath.Split('/', 0).IsEmpty());
     }
 
@@ -65,30 +65,23 @@ String VFS::ConvertToAbsolutePath(const String& path)
 
 VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error)
 {
-    VFS::Vnode* currentEntry;
+    Assert(!path.IsEmpty());
 
-    path = ConvertToAbsolutePath(path);
+    path = ConvertToAbsolutePath(path, workingDirectory);
+    VFS::Vnode* currentEntry = root;
 
-    // Remove first '/' from path
-    Assert(path.GetLength() > 0);
-    path = path.Substring(1, path.GetLength() - 1);
-
-    currentEntry = root;
-
-    unsigned int pathDepth = path.IsEmpty() ? 0 : path.Count('/') + 1;
+    uint64_t parsedLength = 1;
+    unsigned int pathDepth = path.GetLength() == 1 ? 0 : path.Count('/');
     for (unsigned int currentDepth = 0; currentDepth < pathDepth; ++currentDepth)
     {
-        fileName = path.Split('/', currentDepth);
-
-        if (fileName.IsEmpty())
-            continue;
-
-        Vector<VFS::Vnode*> mounts;
+        fileName = path.Split('/', currentDepth + 1);
+        Assert(!fileName.IsEmpty());
 
         Serial::Log("PATH TOKEN: %s", fileName.ToRawString());
 
         // We make a stack of vnodes mounted on this directory so that we can attempt to find the next
         // file from the most recently mounted vnode.
+        Vector<VFS::Vnode*> mounts;
         do
         {
             mounts.Push(currentEntry);
@@ -123,6 +116,19 @@ VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& contai
             error = Error::NoFile;
             return nullptr;
         }
+
+        if (currentEntry->type == VnodeType::SymbolicLink)
+        {
+            Assert(currentDepth == pathDepth - 1);
+
+            String symLinkPath = currentEntry->fileSystem->GetPathFromSymbolicLink(currentEntry);
+            String currentDirectory = path.Substring(0, parsedLength);
+            String symLinkAbsolutePath = ConvertToAbsolutePath(symLinkPath, currentDirectory);
+
+            currentEntry = TraversePath(symLinkAbsolutePath, fileName, containingDirectory, fileSystem, error);
+        }
+
+        parsedLength += fileName.GetLength();
     }
 
     return currentEntry;
@@ -521,7 +527,7 @@ void VFS::SetWorkingDirectory(const String& newWorkingDirectory, Error& error)
 
     if (error == Error::None)
     {
-        workingDirectory = ConvertToAbsolutePath(newWorkingDirectory);
+        workingDirectory = ConvertToAbsolutePath(newWorkingDirectory, workingDirectory);
     }
 }
 

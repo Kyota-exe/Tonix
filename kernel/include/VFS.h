@@ -48,14 +48,14 @@ public:
 private:
     struct FileDescriptor;
     Vector<FileDescriptor> fileDescriptors;
-    String workingDirectory = String("/");
+    String workingDirectory;
 
     FileDescriptor* GetFileDescriptor(int descriptor);
     int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor);
-    String ConvertToAbsolutePath(const String& path);
     TerminalDevice* GetTerminal(int descriptor, Error& error);
 
     Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error);
+    static String ConvertToAbsolutePath(const String& path, const String& currentDirectoryPath);
 };
 
 enum class VFS::VnodeType
@@ -65,6 +65,7 @@ enum class VFS::VnodeType
     Directory = 2,
     Terminal = 3,
     Framebuffer = 4,
+    SymbolicLink = 5,
 };
 
 struct VFS::Vnode
