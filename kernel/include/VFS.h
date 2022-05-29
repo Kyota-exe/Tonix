@@ -48,7 +48,7 @@ public:
 private:
     struct FileDescriptor;
     Vector<FileDescriptor> fileDescriptors;
-    String workingDirectory;
+    String workingDirectory = String('/');
 
     FileDescriptor* GetFileDescriptor(int descriptor);
     int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor);

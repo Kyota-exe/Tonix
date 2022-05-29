@@ -55,9 +55,14 @@ String VFS::ConvertToAbsolutePath(const String& path, const String& currentDirec
     bool pathIsAbsolute = path.Split('/', 0).IsEmpty();
     if (!pathIsAbsolute)
     {
-        absolutePath.Insert(String('/'), 0);
+        Assert(currentDirectoryPath[currentDirectoryPath.GetLength() - 1] == '/');
         absolutePath.Insert(currentDirectoryPath, 0);
-        Assert(absolutePath.Split('/', 0).IsEmpty());
+    }
+
+    // Remove the trailing '/' if there is one
+    if (absolutePath[absolutePath.GetLength() - 1] == '/')
+    {
+        absolutePath = absolutePath.Substring(0, absolutePath.GetLength() - 1);
     }
 
     return absolutePath;
@@ -71,7 +76,7 @@ VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& contai
     VFS::Vnode* currentEntry = root;
 
     uint64_t parsedLength = 1;
-    unsigned int pathDepth = path.GetLength() == 1 ? 0 : path.Count('/');
+    unsigned int pathDepth = path.Count('/');
     for (unsigned int currentDepth = 0; currentDepth < pathDepth; ++currentDepth)
     {
         fileName = path.Split('/', currentDepth + 1);
@@ -123,11 +128,10 @@ VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& contai
             String symLinkPath = currentEntry->fileSystem->GetPathFromSymbolicLink(currentEntry);
             String currentDirectory = path.Substring(0, parsedLength);
             String symLinkAbsolutePath = ConvertToAbsolutePath(symLinkPath, currentDirectory);
-
             currentEntry = TraversePath(symLinkAbsolutePath, fileName, containingDirectory, error);
         }
 
-        parsedLength += fileName.GetLength();
+        parsedLength += fileName.GetLength() + 1;
     }
 
     return currentEntry;
@@ -518,13 +522,16 @@ String VFS::GetWorkingDirectory()
 
 void VFS::SetWorkingDirectory(const String& newWorkingDirectory, Error& error)
 {
+    Assert(!newWorkingDirectory.IsEmpty());
+
     String filename;
-    VFS::Vnode* containingDirectory = nullptr;
+    VFS::Vnode* containingDirectory;
     TraversePath(newWorkingDirectory, filename, containingDirectory, error);
 
     if (error == Error::None)
     {
         workingDirectory = ConvertToAbsolutePath(newWorkingDirectory, workingDirectory);
+        workingDirectory.Push('/');
     }
 }
 
