@@ -9,13 +9,15 @@ Aims to be POSIX-compliant enough to make porting Linux software easier.
 ## Features
 - VFS with ext2 and devfs
 - Dynamically-linked ELF user processes
-- Terminal with raw/cooked mode (supports ANSI escape sequences!)
+- Terminal with raw/cooked mode (with ANSI escape sequences)
 - Multi-core scheduling
 - ncurses port
 - Bash port
+- GNU coreutils port (`ls`, `stat`, `cat`, `echo`, `sha512sum`, `cksum`, etc.)
 
 ## Work In Progress
-- GNU coreutils port (`ls`, `cat`, `echo`, `mkdir`, etc.)
+- GCC port
+- DOOM port
 
 ## Building and Running
 Build the distro: `make distro`
