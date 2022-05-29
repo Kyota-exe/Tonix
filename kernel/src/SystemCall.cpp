@@ -3,6 +3,7 @@
 #include "FileMap.h"
 #include "VFS.h"
 #include "Scheduler.h"
+#include "CPU.h"
 
 uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t arg2,
                     InterruptFrame* interruptFrame, Error& error)
@@ -48,11 +49,9 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
 
         case SystemCallType::TCBSet:
         {
-            // TODO: Make this better
-            asm volatile("mov %0, %%fs" : : "r"(0b10011));
-            uint32_t low = arg0 & 0xFFFFFFFF;
-            uint32_t high = arg0 >> 32;
-            asm volatile("wrmsr" : : "c"(0xC0000100), "a"(low), "d"(high));
+            void* taskControlBlock = reinterpret_cast<void*>(arg0);
+            scheduler->currentTask.taskControlBlock = taskControlBlock;
+            CPU::SetTCB(taskControlBlock);
             return 0;
         }
 

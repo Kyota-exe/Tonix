@@ -44,6 +44,8 @@ struct Task
     uint64_t parentPid = 0;
 
     InterruptFrame frame;
+
+    void* taskControlBlock = nullptr;
     void* syscallStackAddr = nullptr;
     uint64_t suspensionArg = 0;
 

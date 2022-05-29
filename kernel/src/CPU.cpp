@@ -45,3 +45,12 @@ void CPU::InitializeCPUStruct(Scheduler* scheduler)
     Assert(cpuList->Get(coreId).scheduler == nullptr);
     cpuList->Get(coreId).scheduler = scheduler;
 }
+
+void CPU::SetTCB(const void* tcbAddr)
+{
+    asm volatile("mov %0, %%fs" : : "r"(0b10011));
+    uintptr_t value = reinterpret_cast<uintptr_t>(tcbAddr);
+    uint32_t low = value & 0xffffffff;
+    uint32_t high = value >> 32;
+    asm volatile("wrmsr" : : "c"(0xC0000100), "a"(low), "d"(high));
+}

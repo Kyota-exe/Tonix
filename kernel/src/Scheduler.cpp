@@ -199,6 +199,7 @@ void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
     tss->SetSystemCallStack(currentTask.syscallStackAddr);
     *interruptFrame = currentTask.frame;
     currentTask.pagingManager->SetCR3();
+    CPU::SetTCB(currentTask.taskControlBlock);
 }
 
 Task& Scheduler::GetTask(uint64_t pid)
@@ -387,6 +388,8 @@ uint64_t Scheduler::ForkCurrentTask(InterruptFrame* interruptFrame)
 
     child.frame = *interruptFrame;
     child.frame.rax = 0;
+
+    child.taskControlBlock = currentTask.taskControlBlock;
 
     currentTask.childrenPids.Push(child.pid);
 
