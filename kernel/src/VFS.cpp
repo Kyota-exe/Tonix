@@ -63,7 +63,7 @@ String VFS::ConvertToAbsolutePath(const String& path, const String& currentDirec
     return absolutePath;
 }
 
-VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error)
+VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& containingDirectory, Error& error)
 {
     Assert(!path.IsEmpty());
 
@@ -105,10 +105,9 @@ VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& contai
                 continue;
             }
 
-            fileSystem = currentEntry->fileSystem;
             containingDirectory = currentEntry;
 
-            currentEntry = fileSystem->FindInDirectory(containingDirectory, fileName);
+            currentEntry = containingDirectory->fileSystem->FindInDirectory(containingDirectory, fileName);
         } while (currentEntry == nullptr && mounts.GetLength() > 0);
 
         if (currentEntry == nullptr)
@@ -125,7 +124,7 @@ VFS::Vnode* VFS::TraversePath(String path, String& fileName, VFS::Vnode*& contai
             String currentDirectory = path.Substring(0, parsedLength);
             String symLinkAbsolutePath = ConvertToAbsolutePath(symLinkPath, currentDirectory);
 
-            currentEntry = TraversePath(symLinkAbsolutePath, fileName, containingDirectory, fileSystem, error);
+            currentEntry = TraversePath(symLinkAbsolutePath, fileName, containingDirectory, error);
         }
 
         parsedLength += fileName.GetLength();
@@ -195,8 +194,7 @@ int VFS::Open(const String& path, int flags, Error& error)
 
     String filename;
     VFS::Vnode* containingDirectory = nullptr;
-    FileSystem* fileSystem = nullptr;
-    VFS::Vnode* vnode = TraversePath(path, filename, containingDirectory, fileSystem, error);
+    VFS::Vnode* vnode = TraversePath(path, filename, containingDirectory, error);
 
     if (flags & OpenFlag::Create)
     {
@@ -206,8 +204,8 @@ int VFS::Open(const String& path, int flags, Error& error)
 
             vnode = new (Allocator::Permanent) VFS::Vnode();
             vnode->type = VFS::VnodeType::RegularFile;
-            vnode->fileSystem = fileSystem;
-            fileSystem->Create(vnode, containingDirectory, filename);
+            vnode->fileSystem = containingDirectory->fileSystem;
+            vnode->fileSystem->Create(vnode, containingDirectory, filename);
             error = Error::None;
         }
         else if (flags & OpenFlag::Exclude)
@@ -522,8 +520,7 @@ void VFS::SetWorkingDirectory(const String& newWorkingDirectory, Error& error)
 {
     String filename;
     VFS::Vnode* containingDirectory = nullptr;
-    FileSystem* fileSystem = nullptr;
-    TraversePath(newWorkingDirectory, filename, containingDirectory, fileSystem, error);
+    TraversePath(newWorkingDirectory, filename, containingDirectory, error);
 
     if (error == Error::None)
     {
@@ -535,8 +532,7 @@ VFS::Vnode* VFS::CreateDirectory(const String& path, Error& error)
 {
     String directoryName;
     VFS::Vnode* containingDirectory = nullptr;
-    FileSystem* fileSystem = nullptr;
-    VFS::Vnode* vnode = TraversePath(path, directoryName, containingDirectory, fileSystem, error);
+    VFS::Vnode* vnode = TraversePath(path, directoryName, containingDirectory, error);
 
     if (containingDirectory == nullptr)
     {
@@ -547,8 +543,8 @@ VFS::Vnode* VFS::CreateDirectory(const String& path, Error& error)
 
     vnode = new (Allocator::Permanent) VFS::Vnode();
     vnode->type = VFS::VnodeType::Directory;
-    vnode->fileSystem = fileSystem;
-    fileSystem->Create(vnode, containingDirectory, directoryName);
+    vnode->fileSystem = containingDirectory->fileSystem;
+    vnode->fileSystem->Create(vnode, containingDirectory, directoryName);
 
     error = Error::None;
 

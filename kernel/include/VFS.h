@@ -54,7 +54,7 @@ private:
     int FindFreeFileDescriptor(FileDescriptor*& fileDescriptor);
     TerminalDevice* GetTerminal(int descriptor, Error& error);
 
-    Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, FileSystem*& fileSystem, Error& error);
+    Vnode* TraversePath(String path, String& fileName, Vnode*& containingDirectory, Error& error);
     static String ConvertToAbsolutePath(const String& path, const String& currentDirectoryPath);
 };
 
