@@ -38,3 +38,13 @@ uint64_t CeilLog2(uint64_t value)
 
     return output;
 }
+
+uint64_t Min(uint64_t a, uint64_t b)
+{
+    return a < b ? a : b;
+}
+
+uint64_t Max(uint64_t a, uint64_t b)
+{
+    return a > b ? a : b;
+}
