@@ -3,8 +3,8 @@
 
 bool leftShifting = false;
 bool rightShifting = false;
-char chars[] = "\e\e1234567890-=\b\eqwertyuiop[]\n\easdfghjkl;\'`\e\\zxcvbnm,./\e*\e ";
-char shiftChars[] = "\e\e!@#$%^&*()_+\b\eQWERTYUIOP{}\n\eASDFGHJKL:\"~\e|ZXCVBNM<>?\e*\e ";
+const char chars[] = "\e\e1234567890-=\b\tqwertyuiop[]\n\easdfghjkl;\'`\e\\zxcvbnm,./\e*\e ";
+const char shiftChars[] = "\e\e!@#$%^&*()_+\b\tQWERTYUIOP{}\n\eASDFGHJKL:\"~\e|ZXCVBNM<>?\e*\e ";
 
 void Keyboard::SendKeyToTerminal(uint8_t scanCode)
 {
