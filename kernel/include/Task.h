@@ -56,4 +56,11 @@ struct Task
 
     TaskState state;
     int exitStatus = 0;
+
+    void FreeResources()
+    {
+        delete vfs;
+        delete pagingManager;
+        delete userspaceAllocator;
+    }
 };

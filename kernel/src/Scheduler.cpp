@@ -461,9 +461,10 @@ uint64_t Scheduler::WaitForChild(uint64_t pid, int& status, Error& error)
         Task& task = taskQueue->Get(i);
         if (task.pid == childPid)
         {
-            removedTask = true;
-            taskQueue->Pop(i);
             status = task.exitStatus;
+            taskQueue->Pop(i).FreeResources();
+            removedTask = true;
+            break;
         }
     }
     taskQueueLock.Release();
