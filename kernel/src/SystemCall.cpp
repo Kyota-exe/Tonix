@@ -128,6 +128,10 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
 
             String workingDirectory = scheduler->currentTask.vfs->GetWorkingDirectory();
 
+            // Chop off the last character '/'
+            Assert(workingDirectory[workingDirectory.GetLength() - 1] == '/');
+            workingDirectory = workingDirectory.Substring(0, workingDirectory.GetLength() - 1);
+
             if (bufferSize < workingDirectory.GetLength())
             {
                 error = Error::BadRange;
