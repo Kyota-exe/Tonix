@@ -10,7 +10,7 @@
 #include "Device.h"
 #include "Framebuffer.h"
 
-constexpr const char* SHELL_PATH = "/usr/bin/bash";
+constexpr const char* SHELL_PATH = "/bin/bash";
 
 extern "C" void _start(stivale2_struct* stivale2Struct)
 {
