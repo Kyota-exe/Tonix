@@ -35,7 +35,8 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
                                                                 static_cast<VFS::SeekType>(arg2), error);
 
         case SystemCallType::Close:
-            scheduler->currentTask.vfs->Close((int)arg0); return 0;
+            scheduler->currentTask.vfs->Close(static_cast<int>(arg0), error);
+            return 0;
 
         case SystemCallType::FileMap:
             return reinterpret_cast<uintptr_t>(FileMap((void*)arg0, arg1));
