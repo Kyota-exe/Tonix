@@ -244,25 +244,19 @@ int VFS::Open(const String& path, int flags, Error& error)
         fileDescriptor->writeMode = false;
     }
 
-    if (fileDescriptor->writeMode && (flags & OpenFlag::Truncate) && vnode->type == VFS::VnodeType::RegularFile)
+    if (fileDescriptor->writeMode && (flags & OpenFlag::Truncate))
     {
+        Assert(vnode->type == VFS::VnodeType::RegularFile);
         vnode->fileSystem->Truncate(vnode);
     }
 
-    if ((flags & OpenFlag::Append))
-    {
-        fileDescriptor->appendMode = true;
-    }
+    fileDescriptor->appendMode = flags & OpenFlag::Append;
+    fileDescriptor->directoryMode = flags & OpenFlag::DirectoryMode;
 
-    if (flags & OpenFlag::DirectoryMode)
+    if (fileDescriptor->directoryMode && vnode->type != VnodeType::Directory)
     {
-        fileDescriptor->directoryMode = true;
-
-        if (vnode->type != VnodeType::Directory)
-        {
-            error = Error::NotDirectory;
-            return -1;
-        }
+        error = Error::NotDirectory;
+        return -1;
     }
 
     if (fileDescriptor->writeMode && vnode->type == VFS::VnodeType::Directory)
