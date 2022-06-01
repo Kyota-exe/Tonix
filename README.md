@@ -14,9 +14,10 @@ Aims to be POSIX-compliant enough to make porting Linux software easier.
 - ncurses port
 - Bash port
 - GNU coreutils port (`ls`, `stat`, `cat`, `echo`, `sha512sum`, `cksum`, etc.)
+- GCC port
+- FIGlet port
 
 ## Work In Progress
-- GCC port
 - DOOM port
 
 ## Building and Running

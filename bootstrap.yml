@@ -1,4 +1,9 @@
 sources:
+  - name: figlet
+    subdir: '3rdparty'
+    git: 'https://github.com/cmatsuoka/figlet.git'
+    branch: 'master'
+
   - name: gnulib
     subdir: '3rdparty'
     git: 'https://git.savannah.gnu.org/git/gnulib.git'
@@ -225,6 +230,19 @@ tools:
           - args: ['make', 'install-strip-target-libstdc++-v3']
 
 packages:
+  - name: figlet
+    from_source: figlet
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+    build:
+      - args: ['make', 'install', 'prefix=/usr', 'CC=x86_64-tonix-gcc', 'LD=x86_64-tonix-gcc']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   - name: ncurses
     from_source: ncurses
     tools_required:
@@ -301,7 +319,6 @@ packages:
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
-
 
   - name: bash
     source:
