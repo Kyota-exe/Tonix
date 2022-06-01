@@ -41,7 +41,6 @@ void Terminal::Write(const String& string)
             }
             case '\t': // Horizontal Tab
             {
-                Panic();
                 cursorX += 4;
                 break;
             }
