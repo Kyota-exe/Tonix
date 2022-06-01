@@ -156,6 +156,11 @@ String::String(char c)
     buffer[1] = '\0';
 }
 
+String::String(String&& original) : buffer(original.buffer), length(original.length)
+{
+    original.buffer = nullptr;
+}
+
 String::~String()
 {
     delete[] buffer;
