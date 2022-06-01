@@ -64,11 +64,13 @@ void* Slab::Alloc()
     Assert(addr != nullptr);
     head = head->next;
 
-    Assert(allocTableIndex < ALLOC_TABLE_SIZE);
-    allocTable[allocTableIndex++] = reinterpret_cast<uintptr_t>(addr);
+    if (DEBUG_DOUBLE_FREE)
+    {
+        Assert(allocTableIndex < ALLOC_TABLE_SIZE);
+        allocTable[allocTableIndex++] = reinterpret_cast<uintptr_t>(addr);
+    }
 
     lock.Release();
-
     return addr;
 }
 
@@ -80,22 +82,25 @@ void Slab::Free(void* ptr)
     head = static_cast<FreeSlot*>(ptr);
     head->next = previousHead;
 
-    bool foundAddr = false;
-    for (uint64_t i = 0; i < allocTableIndex + 1; ++i)
+    if (DEBUG_DOUBLE_FREE)
     {
-        if (allocTable[i] == (uint64_t)ptr)
+        bool foundAddr = false;
+        for (uint64_t i = 0; i < allocTableIndex + 1; ++i)
         {
-            allocTable[i] = 0;
-            foundAddr = true;
-            break;
+            if (allocTable[i] == (uint64_t)ptr)
+            {
+                allocTable[i] = 0;
+                foundAddr = true;
+                break;
+            }
         }
-    }
-    if (!foundAddr)
-    {
-        Serial::Log("Double free!");
-        Serial::Log("DF addr: %x", (uint64_t) ptr);
-        Serial::Log("DF Slot size: %d", (uint64_t) slotSize);
-        Panic();
+        if (!foundAddr)
+        {
+            Serial::Log("Double free!");
+            Serial::Log("DF addr: %x", (uint64_t) ptr);
+            Serial::Log("DF Slot size: %d", (uint64_t) slotSize);
+            Panic();
+        }
     }
 
     lock.Release();
