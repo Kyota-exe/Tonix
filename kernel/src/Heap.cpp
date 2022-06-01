@@ -20,7 +20,8 @@ private:
 
 public:
     uint64_t slabBase;
-    void InitializeSlab(uint64_t _slotSize);
+    uint64_t slabSize;
+    void InitializeSlab(uint64_t _slotSize, uint64_t _slabSize);
     void* Alloc();
     void Free(void* ptr);
 
@@ -34,15 +35,18 @@ Slab slabs[SLABS_COUNT];
 uint64_t allocTableIndex = 0;
 constexpr uint64_t ALLOC_TABLE_SIZE = 8192;
 uint64_t allocTable[ALLOC_TABLE_SIZE];
+constexpr bool DEBUG_DOUBLE_FREE = false;
 
-void Slab::InitializeSlab(uint64_t _slotSize)
+void Slab::InitializeSlab(uint64_t _slotSize, uint64_t _slabSize)
 {
+    Assert(slabSize % 0x1000 == 0);
+    slabSize = _slabSize;
     slotSize = _slotSize;
-    slabBase = HigherHalf(RequestPageFrame());
 
-    uint64_t slotCount = 0x1000 / slotSize;
+    slabBase = HigherHalf(RequestPageFrames(slabSize / 0x1000));
+
     FreeSlot* previous = nullptr;
-    for (uint64_t slotIndex = slotCount; slotIndex-- > 0; )
+    for (uint64_t slotIndex = slabSize / slotSize; slotIndex-- > 0; )
     {
         auto freeSlot = reinterpret_cast<FreeSlot*>(slabBase + slotIndex * slotSize);
         freeSlot->next = previous;
@@ -118,7 +122,7 @@ void KFree(void* ptr)
     auto address = reinterpret_cast<uintptr_t>(ptr);
     for (auto& slab : slabs)
     {
-        if (slab.slabBase <= address && address < slab.slabBase + 0x1000)
+        if (address >= slab.slabBase && address < slab.slabBase + slab.slabSize)
         {
             slab.Free(ptr);
             return;
@@ -132,7 +136,7 @@ void InitializeKernelHeap()
 {
     for (uint64_t i = 0; i < SLABS_COUNT; ++i)
     {
-        slabs[i].InitializeSlab(Pow(2, 3 + i));
+        slabs[i].InitializeSlab(Pow(2, 3 + i), 0x1000 * 2);
     }
 }
 
