@@ -65,8 +65,8 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
         case SystemCallType::Sleep:
         {
             auto nanoseconds = static_cast<int64_t>(arg1);
-            Assert(nanoseconds == 0);
-            scheduler->SleepCurrentTask(arg0 * 1000 + nanoseconds / 1'000'000);
+            Assert(nanoseconds % 1000000 == 0);
+            scheduler->SleepCurrentTask(arg0 * 1000 + nanoseconds / 1000000);
             return 0;
         }
 
