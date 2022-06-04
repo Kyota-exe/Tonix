@@ -12,9 +12,9 @@ uint64_t FramebufferDevice::Read(void* buffer, uint64_t count, uint64_t position
 
 uint64_t FramebufferDevice::Write(const void* buffer, uint64_t count, uint64_t position)
 {
-    Assert(position == 0);
-    Assert(count == sizeof(uint32_t) * Framebuffer::Height() * Framebuffer::Width());
-    memcpy(Framebuffer::GetBuffer(), buffer, count);
+    Assert(count % 4 == 0);
+    Assert(position % 4 == 0);
+    memcpy(Framebuffer::GetBuffer() + (position / 4), buffer, count);
     return count;
 }
 
