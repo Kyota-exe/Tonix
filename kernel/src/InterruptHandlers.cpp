@@ -5,6 +5,7 @@
 #include "SystemCall.h"
 #include "CPU.h"
 #include "Keyboard.h"
+#include "KeyboardDevice.h"
 #include "IO.h"
 
 void PageFaultHandler()
@@ -32,7 +33,10 @@ void PageFaultHandler()
 
 void KeyboardInterruptHandler()
 {
-    Keyboard::SendKeyToTerminal(inb(0x60));
+    uint8_t scanCode = inb(0x60);
+    Assert(scanCode != 0);
+    Keyboard::SendKeyToTerminal(scanCode);
+    KeyboardDevice::instance->Write(&scanCode, 1, 0);
     PICSendEIO(1);
 }
 

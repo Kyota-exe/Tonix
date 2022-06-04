@@ -66,6 +66,7 @@ enum class VFS::VnodeType
     Terminal = 3,
     Framebuffer = 4,
     SymbolicLink = 5,
+    Keyboard = 6,
 };
 
 struct VFS::Vnode

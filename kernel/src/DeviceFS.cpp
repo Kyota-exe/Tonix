@@ -2,6 +2,7 @@
 #include "Device.h"
 #include "TerminalDevice.h"
 #include "FramebufferDevice.h"
+#include "KeyboardDevice.h"
 #include "Serial.h"
 #include "Heap.h"
 
@@ -33,6 +34,18 @@ DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
     framebufferVnode->context = framebuffer;
     framebufferVnode->fileSize = 0;
     framebufferVnode->type = VFS::VnodeType::Framebuffer;
+    VFS::CacheVNode(framebufferVnode);
+
+    Device* keyboard = new KeyboardDevice(String("kbd"), currentInodeNum++);
+    devices.Push(keyboard);
+
+    auto keyboardVnode = new (Allocator::Permanent) VFS::Vnode();
+    keyboardVnode->inodeNum = keyboard->GetInodeNumber();
+    keyboardVnode->fileSystem = this;
+    keyboardVnode->context = keyboard;
+    keyboardVnode->fileSize = 0;
+    keyboardVnode->type = VFS::VnodeType::Keyboard;
+    VFS::CacheVNode(keyboardVnode);
 }
 
 uint64_t DeviceFS::Read(VFS::Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos)
