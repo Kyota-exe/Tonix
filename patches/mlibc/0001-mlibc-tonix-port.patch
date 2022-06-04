@@ -1,4 +1,4 @@
-From 738ede2fa9f3807ae51662482d814d1432d0a4fa Mon Sep 17 00:00:00 2001
+From c3f1ec1578862c15f523733fbca9ff65be82adfa Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Thu, 21 Apr 2022 16:06:02 -0400
 Subject: [PATCH 1/2] mlibc tonix port
@@ -179,7 +179,7 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..b0c57361
+index 00000000..5f58b4ce
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
 @@ -0,0 +1,537 @@
@@ -219,7 +219,7 @@ index 00000000..b0c57361
 +        __ensure(!(flags & O_DSYNC));
 +        __ensure(!(flags & O_LARGEFILE));
 +        __ensure(!(flags & O_NOATIME));
-+        __ensure(!(flags & O_NOCTTY));
++        //__ensure(!(flags & O_NOCTTY));
 +        __ensure(!(flags & O_NOFOLLOW));
 +        //__ensure(!(flags & O_NONBLOCK));
 +        //__ensure(!(flags & O_NDELAY));
