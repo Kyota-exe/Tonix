@@ -22,6 +22,7 @@ public:
     static void StartCores(TSS* bspTss);
     static void CreateTaskFromELF(const String& path, const Vector<String>& arguments, const Vector<String>& environment);
     static void Unsuspend(uint64_t pid, uint64_t returnValue);
+    static uint64_t GetClock();
     static Scheduler* GetScheduler();
     explicit Scheduler(TSS* tss);
     Task currentTask;

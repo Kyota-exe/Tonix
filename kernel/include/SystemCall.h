@@ -12,6 +12,7 @@ enum class SystemCallType
     Close = 4,
     FileMap = 5,
     TCBSet = 6,
+    Clock = 7,
     Exit = 8,
     Sleep = 9,
     Stat = 10,

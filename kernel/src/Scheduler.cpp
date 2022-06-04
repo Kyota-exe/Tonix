@@ -18,6 +18,8 @@ constexpr uint64_t SYSCALL_STACK_PAGE_COUNT = 3;
 constexpr uintptr_t USER_STACK_BASE = 0x0000'8000'0000'0000 - 0x1000;
 constexpr uintptr_t USER_STACK_SIZE = 0x20000;
 
+uint64_t millisecondsPassed = 0;
+
 Vector<Task>* taskQueue;
 Spinlock taskQueueLock;
 
@@ -234,7 +236,9 @@ void Scheduler::UpdateTimerEntries()
 {
     uint64_t remainingTime = lapic->GetTimeRemainingMilliseconds();
     Assert(currentTimerTime > remainingTime);
+
     uint64_t deltaTime = currentTimerTime - remainingTime;
+    millisecondsPassed += deltaTime;
 
     for (uint64_t i = timerEntries.GetLength(); i-- > 0; )
     {
@@ -484,6 +488,11 @@ uint64_t Scheduler::WaitForChild(uint64_t pid, int& status, Error& error)
     Assert(removed);
 
     return childPid;
+}
+
+uint64_t Scheduler::GetClock()
+{
+    return millisecondsPassed;
 }
 
 void Scheduler::CreateTaskFromELF(const String& path, const Vector<String>& arguments, const Vector<String>& environment)
