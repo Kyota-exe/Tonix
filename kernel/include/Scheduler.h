@@ -32,7 +32,6 @@ private:
     void UpdateTimerEntries();
     static uint64_t GeneratePID();
     static Task& GetTask(uint64_t pid);
-    static void Unblock(uint64_t pid);
     static void Unsuspend(Task& task, uint64_t returnValue);
 
     TSS* tss;

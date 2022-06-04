@@ -168,15 +168,18 @@ uint64_t Scheduler::GeneratePID()
 
 void Scheduler::SwitchToNextTask(InterruptFrame* interruptFrame)
 {
-    UpdateTimerEntries();
     taskQueueLock.Acquire();
-
     if (restoreFrame)
     {
         currentTask.frame = *interruptFrame;
         taskQueue->Push(currentTask);
     }
-    else restoreFrame = true;
+    restoreFrame = true;
+    taskQueueLock.Release();
+
+    UpdateTimerEntries();
+
+    taskQueueLock.Acquire();
 
     bool foundNewTask = false;
     for (uint64_t i = 0; i < taskQueue->GetLength(); ++i)
@@ -248,7 +251,7 @@ void Scheduler::UpdateTimerEntries()
             if (timerEntry.unblockOnExpire)
             {
                 Assert(timerEntry.pid != 0);
-                Scheduler::Unblock(timerEntry.pid);
+                Scheduler::Unsuspend(timerEntry.pid, 0);
             }
 
             timerEntries.Pop(i);
@@ -271,17 +274,6 @@ uint64_t Scheduler::SuspendSystemCall(TaskState newTaskState, uint64_t argument)
 
     Assert(currentTask.state == TaskState::Normal);
     return returnValue;
-}
-
-void Scheduler::Unblock(uint64_t pid)
-{
-    taskQueueLock.Acquire();
-
-    Task& task = GetTask(pid);
-    Assert(task.state == TaskState::Blocked);
-    task.state = TaskState::Normal;
-
-    taskQueueLock.Release();
 }
 
 void Scheduler::Unsuspend(uint64_t pid, uint64_t returnValue)
