@@ -527,3 +527,18 @@ packages:
       - args: ['sh', '-c', 'cp -rv @BUILD_ROOT@/tools/host-gcc/x86_64-tonix/lib/* @THIS_COLLECT_DIR@/usr/lib/']
       - args: ['sh', '-c', 'cp -rv @BUILD_ROOT@/tools/host-gcc/x86_64-tonix/include/* @THIS_COLLECT_DIR@/usr/include/']
       - args: ['ln', '-s', '/usr/bin/gcc', '@THIS_COLLECT_DIR@/usr/bin/cc']
+
+  - name: doomgeneric
+    source:
+      subdir: '3rdparty'
+      git: 'https://github.com/ozkl/doomgeneric.git'
+      branch: 'master'
+      commit: '2d9b24f07c78c36becf41d89db30fa99863463e5'
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    build:
+      - args: ['make', '-C', '@THIS_SOURCE_DIR@/doomgeneric', '-f', 'Makefile.tonix', '-j@PARALLELISM@']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/bin']
+      - args: ['cp', '@THIS_SOURCE_DIR@/doomgeneric/doomgeneric', '@THIS_COLLECT_DIR@/usr/bin/doomgeneric']
