@@ -1,10 +1,14 @@
 # Tonix
 ![build](https://github.com/Kyota-exe/Tonix/workflows/Tonix%20kernel%20CI/badge.svg)
 
-A simple UNIX-like x86_64 operating system I'm working on for fun.
-Aims to be POSIX-compliant enough to make porting Linux software easier.
+A modern UNIX-like x86_64 operating system and monolithic kernel I'm working on for fun.
+It aims to be POSIX-compliant enough to make porting Linux software easier. 
+Contributions are always welcome and highly encouraged!
 
 ![Demo](/demo.gif "Demo")
+
+## Can it run DOOM? Of course!
+![DOOM](/doom.gif "DOOM")
 
 ## Features
 - VFS with ext2 and devfs
@@ -16,9 +20,10 @@ Aims to be POSIX-compliant enough to make porting Linux software easier.
 - GNU coreutils port (`ls`, `stat`, `cat`, `echo`, `sha512sum`, `cksum`, etc.)
 - GCC port
 - FIGlet port
+- DOOM port
 
 ## Work In Progress
-- DOOM port
+- Python port
 
 ## Building and Running
 Build the distro: `make distro`
