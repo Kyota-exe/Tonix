@@ -354,6 +354,12 @@ uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count, Error& e
 
     VFS::Vnode* vnode = fileDescriptor->vnode;
 
+    if (vnode->type == VnodeType::Directory)
+    {
+        error = Error::IsDirectory;
+        return 0;
+    }
+
     if (fileDescriptor->appendMode)
     {
         fileDescriptor->offset = fileDescriptor->vnode->fileSize;
