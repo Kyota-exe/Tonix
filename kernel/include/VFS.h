@@ -30,6 +30,7 @@ public:
     uint64_t RepositionOffset(int descriptor, int64_t offset, SeekType seekType);
     void Close(int descriptor, Error& error);
     void Close(int descriptor);
+    void OnExecute();
 
     VnodeInfo GetVnodeInfo(int descriptor, Error& error);
     VnodeInfo GetVnodeInfo(int descriptor);
@@ -98,6 +99,7 @@ struct VFS::FileDescriptor
     bool appendMode = false;
     bool readMode = false;
     bool writeMode = false;
+    bool closeOnExecute = false;
 };
 
 enum VFS::OpenFlag : int
@@ -110,6 +112,7 @@ enum VFS::OpenFlag : int
     WriteOnly = 0x5,
     ReadWrite = 0x3,
     DirectoryMode = 0x20,
+    CloseOnExecute = 0x4000,
 };
 
 enum class VFS::SeekType

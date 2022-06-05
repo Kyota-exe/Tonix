@@ -402,11 +402,14 @@ void Scheduler::Execute(const String& path, InterruptFrame* interruptFrame, cons
     auto pagingManager = new PagingManager();
     pagingManager->InitializePaging();
 
+    auto vfs = new VFS(*currentTask.vfs);
+    vfs->OnExecute();
+
     uintptr_t entry = 0;
     AuxilaryVector* auxilaryVector = nullptr;
-    ELF::LoadELF(path, *pagingManager, *currentTask.vfs, entry, auxilaryVector);
+    ELF::LoadELF(path, *pagingManager, *vfs, entry, auxilaryVector);
 
-    Task task = CreateTask(pagingManager, new VFS(*currentTask.vfs), new UserspaceAllocator(), entry, currentTask.pid,
+    Task task = CreateTask(pagingManager, vfs, new UserspaceAllocator(), entry, currentTask.pid,
                            currentTask.parentPid, true, auxilaryVector, arguments, environment);
 
     taskQueueLock.Acquire();

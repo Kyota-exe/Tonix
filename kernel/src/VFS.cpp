@@ -169,17 +169,19 @@ int VFS::FindFreeFileDescriptor(FileDescriptor*& fileDescriptor)
 {
     int descriptorIndex = -1;
 
-    for (int i = 0; (uint64_t)i < fileDescriptors.GetLength(); ++i)
+    for (uint64_t i = 0; i < fileDescriptors.GetLength(); ++i)
     {
         if (!fileDescriptors.Get(i).present)
         {
-            descriptorIndex = i;
+            Assert(i <= INT32_MAX);
+            descriptorIndex = static_cast<int>(i);
         }
     }
 
     if (descriptorIndex == -1)
     {
-        descriptorIndex = (int)fileDescriptors.GetLength();
+        Assert(fileDescriptors.GetLength() <= INT32_MAX);
+        descriptorIndex = static_cast<int>(fileDescriptors.GetLength());
         fileDescriptors.Push({false, 0, nullptr});
     }
 
@@ -252,6 +254,7 @@ int VFS::Open(const String& path, int flags, Error& error)
 
     fileDescriptor->appendMode = flags & OpenFlag::Append;
     fileDescriptor->directoryMode = flags & OpenFlag::DirectoryMode;
+    fileDescriptor->closeOnExecute = flags & OpenFlag::CloseOnExecute;
 
     if (fileDescriptor->directoryMode && vnode->type != VnodeType::Directory)
     {
@@ -564,4 +567,16 @@ VFS::Vnode* VFS::CreateDirectory(const String& path)
     auto result = CreateDirectory(path, error);
     Assert(error == Error::None);
     return result;
+}
+
+void VFS::OnExecute()
+{
+    for (uint64_t i = 0; i < fileDescriptors.GetLength(); ++i)
+    {
+        FileDescriptor& fileDescriptor = fileDescriptors.Get(i);
+        if (fileDescriptor.present && fileDescriptor.closeOnExecute)
+        {
+            Close(static_cast<int>(i));
+        }
+    }
 }
