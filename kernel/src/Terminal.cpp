@@ -178,10 +178,16 @@ void Terminal::ProcessControlSequence(char command, const Vector<int>& arguments
 
     if (decPrivate)
     {
-        Assert(command == 'h');
-        Assert(argCount == 1);
-        Assert(arguments.Get(0) == 7);
-        Warn("ESC[?7h does nothing; wraparound mode is always enabled");
+        if (command == 'h' && argCount == 1 && arguments.Get(0) == 7)
+        {
+            Warn("ESC[?7h does nothing; wraparound mode is always enabled");
+        }
+        else if (command == 'l' && argCount == 1 && arguments.Get(0) == 25)
+        {
+            Warn("ESC[?25l is not implemented; cursor cannot be hidden");
+        }
+        else Panic();
+
         return;
     }
 
@@ -287,6 +293,10 @@ void Terminal::ProcessControlSequence(char command, const Vector<int>& arguments
                         break;
                     case 1:
                         Warn("Bold text is not implemented");
+                        break;
+                    case 5:
+                    case 25:
+                        Warn("Blinking mode is not implemented");
                         break;
                     default:
                         Panic();
