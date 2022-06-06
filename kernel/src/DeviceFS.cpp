@@ -3,6 +3,7 @@
 #include "TerminalDevice.h"
 #include "FramebufferDevice.h"
 #include "KeyboardDevice.h"
+#include "RandomDevice.h"
 #include "Serial.h"
 #include "Heap.h"
 
@@ -46,6 +47,17 @@ DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
     keyboardVnode->fileSize = 0;
     keyboardVnode->type = VFS::VnodeType::Keyboard;
     VFS::CacheVNode(keyboardVnode);
+
+    Device* random = new RandomDevice(String("urandom"), currentInodeNum++);
+    devices.Push(random);
+
+    auto randomVnode = new (Allocator::Permanent) VFS::Vnode();
+    randomVnode->inodeNum = random->GetInodeNumber();
+    randomVnode->fileSystem = this;
+    randomVnode->context = random;
+    randomVnode->fileSize = 0;
+    randomVnode->type = VFS::VnodeType::Random;
+    VFS::CacheVNode(randomVnode);
 }
 
 uint64_t DeviceFS::Read(VFS::Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos)

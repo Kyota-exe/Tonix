@@ -68,6 +68,7 @@ enum class VFS::VnodeType
     Framebuffer = 4,
     SymbolicLink = 5,
     Keyboard = 6,
+    Random = 7,
 };
 
 struct VFS::Vnode
