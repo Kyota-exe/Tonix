@@ -13,7 +13,7 @@ public:
     virtual VFS::Vnode* FindInDirectory(VFS::Vnode* directory, const String& name) = 0;
     virtual VFS::DirectoryEntry ReadDirectory(VFS::Vnode* directory, uint64_t readPos) = 0;
     virtual String GetPathFromSymbolicLink(VFS::Vnode* symLinkVnode) = 0;
-    virtual void Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name) = 0;
+    virtual VFS::Vnode* Create(VFS::Vnode* directory, const String& name, VFS::VnodeType vnodeType) = 0;
     virtual void Truncate(VFS::Vnode* vnode) = 0;
     explicit FileSystem(Disk* disk);
     virtual ~FileSystem();

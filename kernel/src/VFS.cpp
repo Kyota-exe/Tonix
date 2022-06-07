@@ -182,7 +182,7 @@ int VFS::FindFreeFileDescriptor(FileDescriptor*& fileDescriptor)
     {
         Assert(fileDescriptors.GetLength() <= INT32_MAX);
         descriptorIndex = static_cast<int>(fileDescriptors.GetLength());
-        fileDescriptors.Push({false, 0, nullptr});
+        fileDescriptors.Push({false, 0, nullptr, {}});
     }
 
     fileDescriptor = &fileDescriptors.Get(descriptorIndex);
@@ -207,11 +207,7 @@ int VFS::Open(const String& path, int flags, Error& error)
         if (error == Error::NoFile)
         {
             Assert(vnode == nullptr);
-
-            vnode = new (Allocator::Permanent) VFS::Vnode();
-            vnode->type = VFS::VnodeType::RegularFile;
-            vnode->fileSystem = containingDirectory->fileSystem;
-            vnode->fileSystem->Create(vnode, containingDirectory, filename);
+            vnode = containingDirectory->fileSystem->Create(containingDirectory, filename, VFS::VnodeType::RegularFile);
             error = Error::None;
         }
         else if (flags & OpenFlag::Exclude)
@@ -232,37 +228,37 @@ int VFS::Open(const String& path, int flags, Error& error)
     int accessBits = flags & 0b111;
     if (accessBits == OpenFlag::WriteOnly)
     {
-        fileDescriptor->readMode = false;
-        fileDescriptor->writeMode = true;
+        fileDescriptor->flags.readMode = false;
+        fileDescriptor->flags.writeMode = true;
     }
     else if (accessBits == OpenFlag::ReadWrite)
     {
-        fileDescriptor->readMode = true;
-        fileDescriptor->writeMode = true;
+        fileDescriptor->flags.readMode = true;
+        fileDescriptor->flags.writeMode = true;
     }
     else
     {
-        fileDescriptor->readMode = true;
-        fileDescriptor->writeMode = false;
+        fileDescriptor->flags.readMode = true;
+        fileDescriptor->flags.writeMode = false;
     }
 
-    if (fileDescriptor->writeMode && (flags & OpenFlag::Truncate))
+    if (fileDescriptor->flags.writeMode && (flags & OpenFlag::Truncate))
     {
         Assert(vnode->type == VFS::VnodeType::RegularFile);
         vnode->fileSystem->Truncate(vnode);
     }
 
-    fileDescriptor->appendMode = flags & OpenFlag::Append;
-    fileDescriptor->directoryMode = flags & OpenFlag::DirectoryMode;
-    fileDescriptor->closeOnExecute = flags & OpenFlag::CloseOnExecute;
+    fileDescriptor->flags.appendMode = flags & OpenFlag::Append;
+    fileDescriptor->flags.directoryMode = flags & OpenFlag::DirectoryMode;
+    fileDescriptor->flags.closeOnExecute = flags & OpenFlag::CloseOnExecute;
 
-    if (fileDescriptor->directoryMode && vnode->type != VnodeType::Directory)
+    if (fileDescriptor->flags.directoryMode && vnode->type != VnodeType::Directory)
     {
         error = Error::NotDirectory;
         return -1;
     }
 
-    if (fileDescriptor->writeMode && vnode->type == VFS::VnodeType::Directory)
+    if (fileDescriptor->flags.writeMode && vnode->type == VFS::VnodeType::Directory)
     {
         error = Error::IsDirectory;
         return -1;
@@ -293,7 +289,7 @@ void VFS::Read(int descriptor, void* buffer, uint64_t count)
 uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count, Error& error)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-    if (fileDescriptor == nullptr || !fileDescriptor->readMode)
+    if (fileDescriptor == nullptr || !fileDescriptor->flags.readMode)
     {
         error = Error::BadFileDescriptor;
         return 0;
@@ -303,7 +299,7 @@ uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count, Error& error)
 
     uint64_t readCount = 0;
 
-    if (!fileDescriptor->directoryMode)
+    if (!fileDescriptor->flags.directoryMode)
     {
         if (vnode->type == VnodeType::Directory)
         {
@@ -349,7 +345,7 @@ void VFS::Write(int descriptor, const void* buffer, uint64_t count)
 uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count, Error& error)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-    if (fileDescriptor == nullptr || !fileDescriptor->writeMode)
+    if (fileDescriptor == nullptr || !fileDescriptor->flags.writeMode)
     {
         error = Error::BadFileDescriptor;
         return 0;
@@ -363,7 +359,7 @@ uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count, Error& e
         return 0;
     }
 
-    if (fileDescriptor->appendMode)
+    if (fileDescriptor->flags.appendMode)
     {
         fileDescriptor->offset = fileDescriptor->vnode->fileSize;
     }
@@ -544,17 +540,11 @@ VFS::Vnode* VFS::CreateDirectory(const String& path, Error& error)
     VFS::Vnode* containingDirectory = nullptr;
     VFS::Vnode* vnode = TraversePath(path, directoryName, containingDirectory, error);
 
-    if (containingDirectory == nullptr)
-    {
-        return nullptr;
-    }
+    if (containingDirectory == nullptr) return nullptr;
+    Assert(vnode == nullptr);
+    Assert(error == Error::NoFile);
 
-    Assert(vnode == nullptr && error == Error::NoFile);
-
-    vnode = new (Allocator::Permanent) VFS::Vnode();
-    vnode->type = VFS::VnodeType::Directory;
-    vnode->fileSystem = containingDirectory->fileSystem;
-    vnode->fileSystem->Create(vnode, containingDirectory, directoryName);
+    vnode = containingDirectory->fileSystem->Create(containingDirectory, directoryName, VFS::VnodeType::Directory);
 
     error = Error::None;
 
@@ -569,12 +559,25 @@ VFS::Vnode* VFS::CreateDirectory(const String& path)
     return result;
 }
 
+VFS::Vnode* VFS::ConstructVnode(uint32_t inodeNum, FileSystem* fileSystem, void* context, uint64_t fileSize, VnodeType type)
+{
+    auto vnode = new (Allocator::Permanent) VFS::Vnode();
+    vnode->inodeNum = inodeNum;
+    vnode->fileSystem = fileSystem;
+    vnode->context = context;
+    vnode->fileSize = fileSize;
+    vnode->type = type;
+    VFS::CacheVNode(vnode);
+
+    return vnode;
+}
+
 void VFS::OnExecute()
 {
     for (uint64_t i = 0; i < fileDescriptors.GetLength(); ++i)
     {
         FileDescriptor& fileDescriptor = fileDescriptors.Get(i);
-        if (fileDescriptor.present && fileDescriptor.closeOnExecute)
+        if (fileDescriptor.present && fileDescriptor.flags.closeOnExecute)
         {
             Close(static_cast<int>(i));
         }

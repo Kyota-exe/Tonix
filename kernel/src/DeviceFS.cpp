@@ -9,55 +9,23 @@
 
 DeviceFS::DeviceFS(Disk* disk) : FileSystem(disk)
 {
-    fileSystemRoot = new (Allocator::Permanent) VFS::Vnode();
-    fileSystemRoot->inodeNum = currentInodeNum++;
-    fileSystemRoot->type = VFS::VnodeType::Directory;
-    fileSystemRoot->fileSystem = this;
-    VFS::CacheVNode(fileSystemRoot);
+    fileSystemRoot = VFS::ConstructVnode(currentInodeNum++, this, nullptr, 0, VFS::VnodeType::Directory);
 
     Device* terminal = new TerminalDevice(String("tty"), currentInodeNum++);
     devices.Push(terminal);
-
-    auto terminalVnode = new (Allocator::Permanent) VFS::Vnode();
-    terminalVnode->inodeNum = terminal->GetInodeNumber();
-    terminalVnode->fileSystem = this;
-    terminalVnode->context = terminal;
-    terminalVnode->fileSize = 0;
-    terminalVnode->type = VFS::VnodeType::Terminal;
-    VFS::CacheVNode(terminalVnode);
+    VFS::ConstructVnode(terminal->GetInodeNumber(), this, terminal, 0, VFS::VnodeType::Terminal);
 
     Device* framebuffer = new FramebufferDevice(String("fb"), currentInodeNum++);
     devices.Push(framebuffer);
-
-    auto framebufferVnode = new (Allocator::Permanent) VFS::Vnode();
-    framebufferVnode->inodeNum = framebuffer->GetInodeNumber();
-    framebufferVnode->fileSystem = this;
-    framebufferVnode->context = framebuffer;
-    framebufferVnode->fileSize = 0;
-    framebufferVnode->type = VFS::VnodeType::Framebuffer;
-    VFS::CacheVNode(framebufferVnode);
+    VFS::ConstructVnode(framebuffer->GetInodeNumber(), this, framebuffer, 0, VFS::VnodeType::Framebuffer);
 
     Device* keyboard = new KeyboardDevice(String("kbd"), currentInodeNum++);
     devices.Push(keyboard);
-
-    auto keyboardVnode = new (Allocator::Permanent) VFS::Vnode();
-    keyboardVnode->inodeNum = keyboard->GetInodeNumber();
-    keyboardVnode->fileSystem = this;
-    keyboardVnode->context = keyboard;
-    keyboardVnode->fileSize = 0;
-    keyboardVnode->type = VFS::VnodeType::Keyboard;
-    VFS::CacheVNode(keyboardVnode);
+    VFS::ConstructVnode(keyboard->GetInodeNumber(), this, keyboard, 0, VFS::VnodeType::Keyboard);
 
     Device* random = new RandomDevice(String("urandom"), currentInodeNum++);
     devices.Push(random);
-
-    auto randomVnode = new (Allocator::Permanent) VFS::Vnode();
-    randomVnode->inodeNum = random->GetInodeNumber();
-    randomVnode->fileSystem = this;
-    randomVnode->context = random;
-    randomVnode->fileSize = 0;
-    randomVnode->type = VFS::VnodeType::Random;
-    VFS::CacheVNode(randomVnode);
+    VFS::ConstructVnode(random->GetInodeNumber(), this, random, 0, VFS::VnodeType::Random);
 }
 
 uint64_t DeviceFS::Read(VFS::Vnode* vnode, void* buffer, uint64_t count, uint64_t readPos)
@@ -107,13 +75,14 @@ String DeviceFS::GetPathFromSymbolicLink(VFS::Vnode* symLinkVnode)
     (void)symLinkVnode;
 }
 
-void DeviceFS::Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name)
+VFS::Vnode* DeviceFS::Create(VFS::Vnode* directory, const String& name, VFS::VnodeType vnodeType)
 {
     Panic();
+    return nullptr;
 
-    (void)vnode;
     (void)directory;
     (void)name;
+    (void)vnodeType;
 }
 
 void DeviceFS::Truncate(VFS::Vnode* vnode)

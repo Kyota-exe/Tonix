@@ -12,7 +12,7 @@ public:
     VFS::Vnode* FindInDirectory(VFS::Vnode* directory, const String& name) override;
     VFS::DirectoryEntry ReadDirectory(VFS::Vnode* directory, uint64_t readPos) override;
     String GetPathFromSymbolicLink(VFS::Vnode* symLinkVnode) override;
-    void Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name) override;
+    VFS::Vnode* Create(VFS::Vnode* directory, const String& name, VFS::VnodeType vnodeType) override;
     void Truncate(VFS::Vnode* vnode) override;
     explicit DeviceFS(Disk* disk);
 private:

@@ -90,32 +90,9 @@ Ext2::Ext2(Disk* disk) : FileSystem(disk)
     uint32_t blockGroupDescTableDiskAddr = blockSize * (blockSize == 1024 ? 2 : 1);
     disk->Read(blockGroupDescTableDiskAddr, blockGroupDescTable, sizeof(BlockGroupDescriptor) * blockGroupsCount);
 
-    fileSystemRoot = new (Allocator::Permanent) VFS::Vnode();
-    fileSystemRoot->type = VFS::VnodeType::Directory;
-    fileSystemRoot->inodeNum = INODE_ROOT_DIR;
-    fileSystemRoot->fileSystem = this;
-
     Inode* rootInode = GetInode(INODE_ROOT_DIR);
-    fileSystemRoot->context = rootInode;
     Assert(rootInode->size1 == 0);
-    fileSystemRoot->fileSize = rootInode->size0;
-
-    VFS::CacheVNode(fileSystemRoot);
-}
-
-VFS::Vnode* Ext2::ConstructVnode(const VFS::DirectoryEntry& directoryEntry)
-{
-    auto vnode = new (Allocator::Permanent) VFS::Vnode();
-    vnode->inodeNum = directoryEntry.inodeNum;
-    vnode->fileSystem = this;
-
-    Inode* childInode = GetInode(vnode->inodeNum);
-    vnode->context = childInode;
-    Assert(childInode->size1 == 0);
-    vnode->fileSize = childInode->size0;
-    vnode->type = directoryEntry.type;
-
-    return vnode;
+    fileSystemRoot = VFS::ConstructVnode(INODE_ROOT_DIR, this, rootInode, rootInode->size0, VFS::VnodeType::Directory);
 }
 
 VFS::Vnode* Ext2::FindInDirectory(VFS::Vnode* directory, const String& name)
@@ -127,13 +104,14 @@ VFS::Vnode* Ext2::FindInDirectory(VFS::Vnode* directory, const String& name)
     while (parsedLength < context->size0)
     {
         VFS::DirectoryEntry directoryEntry = ReadDirectory(directory, parsedLength);
-
         Assert(directoryEntry.inodeNum != 0);
+
         VFS::Vnode* child = VFS::SearchInCache(directoryEntry.inodeNum, this);
         if (child == nullptr)
         {
-            child = ConstructVnode(directoryEntry);
-            VFS::CacheVNode(child);
+            Inode* childInode = GetInode(directoryEntry.inodeNum);
+            Assert(childInode->size1 == 0);
+            child = VFS::ConstructVnode(directoryEntry.inodeNum, this, childInode, childInode->size0, directoryEntry.type);
         }
 
         if (directoryEntry.name.Equals(name))
@@ -249,19 +227,22 @@ uint64_t Ext2::DiskOperation(IOType ioType, VFS::Vnode* vnode, void* buffer, uin
     return completedCount;
 }
 
-void Ext2::Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name)
+VFS::Vnode* Ext2::Create(VFS::Vnode* directory, const String& name, VFS::VnodeType vnodeType)
 {
     auto directoryContext = static_cast<Inode*>(directory->context);
-
     Assert(directoryContext->typePermissions & Directory);
 
     uint32_t inodeNum = Allocate(AllocationType::Inode);
+    Assert(inodeNum != 0);
+
     Inode* inode = GetInode(inodeNum);
-    Assert(inode != nullptr && inodeNum != 0);
+    Assert(inode != nullptr);
 
     // TODO: Support file ACL and other fields in ext2 directory
     inode->hardLinksCount = 1;
     inode->size0 = 0;
+
+    VFS::Vnode* vnode = VFS::ConstructVnode(inodeNum, this, inode, inode->size0, vnodeType);
 
     switch (vnode->type)
     {
@@ -270,25 +251,16 @@ void Ext2::Create(VFS::Vnode* vnode, VFS::Vnode* directory, const String& name)
             inode->typePermissions = DEFAULT_FILE_TYPE_PERMISSIONS;
             break;
         case VFS::VnodeType::Directory:
-            WriteDirectoryEntry(directory, inodeNum, name, DEntryDirectory);
             inode->typePermissions = DEFAULT_DIRECTORY_TYPE_PERMISSIONS;
+            WriteDirectoryEntry(directory, inodeNum, name, DEntryDirectory);
+            WriteDirectoryEntry(vnode, vnode->inodeNum, String("."), DEntryDirectory);
+            WriteDirectoryEntry(vnode, directory->inodeNum, String(".."), DEntryDirectory);
             break;
         default:
             Panic();
     }
 
-    vnode->context = inode;
-    vnode->inodeNum = inodeNum;
-    vnode->fileSystem = this;
-    vnode->fileSize = inode->size0;
-
-    if (vnode->type == VFS::VnodeType::Directory)
-    {
-        WriteDirectoryEntry(vnode, vnode->inodeNum, String("."), DEntryDirectory);
-        WriteDirectoryEntry(vnode, directory->inodeNum, String(".."), DEntryDirectory);
-    }
-
-    VFS::CacheVNode(vnode);
+    return vnode;
 }
 
 void Ext2::Truncate(VFS::Vnode* vnode)
@@ -368,7 +340,7 @@ uint32_t Ext2::GetBlockAddr(VFS::Vnode* vnode, uint32_t requestedBlockIndex, boo
 
 uint32_t Ext2::Allocate(AllocationType allocationType)
 {
-    uint32_t object {};
+    uint32_t object = 0;
 
     for (uint32_t blockGroupIndex = 0; blockGroupIndex < blockGroupsCount; ++blockGroupIndex)
     {

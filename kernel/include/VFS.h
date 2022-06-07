@@ -13,6 +13,7 @@ class VFS
 public:
     struct Vnode;
     struct VnodeInfo;
+    struct FileDescriptorFlags;
     enum class VnodeType;
     enum OpenFlag : int;
     enum class SeekType;
@@ -45,6 +46,7 @@ public:
 
     static void Initialize(void* ext2RamDisk);
     static void CacheVNode(Vnode* vnode);
+    static Vnode* ConstructVnode(uint32_t inodeNum, FileSystem* fileSystem, void* context, uint64_t fileSize, VnodeType type);
     static Vnode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem);
 private:
     struct FileDescriptor;
@@ -91,16 +93,21 @@ struct VFS::VnodeInfo
     uint32_t fileSize;
 } __attribute__((packed));
 
-struct VFS::FileDescriptor
+struct VFS::FileDescriptorFlags
 {
-    bool present = false;
-    uint64_t offset = 0;
-    Vnode* vnode = nullptr;
     bool directoryMode = false;
     bool appendMode = false;
     bool readMode = false;
     bool writeMode = false;
     bool closeOnExecute = false;
+};
+
+struct VFS::FileDescriptor
+{
+    bool present = false;
+    uint64_t offset = 0;
+    Vnode* vnode = nullptr;
+    FileDescriptorFlags flags;
 };
 
 enum VFS::OpenFlag : int
