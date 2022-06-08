@@ -214,6 +214,13 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             return 0;
         }
 
+        case SystemCallType::GetFileDescriptorFlags:
+        {
+            auto flagsBuffer = reinterpret_cast<VFS::FileDescriptorFlags*>(arg1);
+            *flagsBuffer = scheduler->currentTask.vfs->GetFileDescriptorFlags(static_cast<int>(arg0), error);
+            return 0;
+        }
+
         case SystemCallType::Clock:
             return Scheduler::GetClock();
 

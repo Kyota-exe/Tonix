@@ -514,6 +514,30 @@ VFS::VnodeInfo VFS::GetVnodeInfo(int descriptor)
     return result;
 }
 
+VFS::FileDescriptorFlags VFS::GetFileDescriptorFlags(int descriptor, Error& error)
+{
+    FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
+    if (fileDescriptor == nullptr)
+    {
+        error = Error::InvalidFileDescriptor;
+        return {};
+    }
+
+    return fileDescriptor->flags;
+}
+
+void VFS::SetFileDescriptorFlags(int descriptor, const FileDescriptorFlags& flags, Error& error)
+{
+    FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
+    if (fileDescriptor == nullptr)
+    {
+        error = Error::InvalidFileDescriptor;
+        return;
+    }
+
+    fileDescriptor->flags = flags;
+}
+
 String VFS::GetWorkingDirectory()
 {
     return workingDirectory;

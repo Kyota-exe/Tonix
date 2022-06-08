@@ -1,7 +1,7 @@
-From 4569c11dbe3e6deca8b0d1097d7f1eb375e4eb39 Mon Sep 17 00:00:00 2001
+From f86d071d82438a1ffaace906ba43c3213057ffaa Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
-Date: Thu, 21 Apr 2022 16:06:02 -0400
-Subject: [PATCH 1/2] mlibc tonix port
+Date: Wed, 8 Jun 2022 22:29:36 -0400
+Subject: [PATCH 1/1] mlibc tonix port
 
 ---
  meson.build                                  |   4 +
@@ -9,8 +9,9 @@ Subject: [PATCH 1/2] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
- sysdeps/tonix/generic/Generic.cpp            | 536 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 565 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
+ sysdeps/tonix/include/abi-bits/access.h      |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
  sysdeps/tonix/include/abi-bits/blksize_t.h   |   1 +
@@ -37,15 +38,16 @@ Subject: [PATCH 1/2] mlibc tonix port
  sysdeps/tonix/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
  sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
- sysdeps/tonix/include/tonix/SystemCall.h     |  66 +++
- sysdeps/tonix/include/tonix/VFS.h            |  26 +
+ sysdeps/tonix/include/tonix/SystemCall.h     |  67 +++
+ sysdeps/tonix/include/tonix/VFS.h            |  35 ++
  sysdeps/tonix/include/tonix/Warn.h           |   5 +
- sysdeps/tonix/meson.build                    |  52 ++
- 37 files changed, 772 insertions(+), 5 deletions(-)
+ sysdeps/tonix/meson.build                    |  53 ++
+ 38 files changed, 813 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
  create mode 120000 sysdeps/tonix/include/abi-bits/abi.h
+ create mode 120000 sysdeps/tonix/include/abi-bits/access.h
  create mode 120000 sysdeps/tonix/include/abi-bits/auxv.h
  create mode 120000 sysdeps/tonix/include/abi-bits/blkcnt_t.h
  create mode 120000 sysdeps/tonix/include/abi-bits/blksize_t.h
@@ -78,10 +80,10 @@ Subject: [PATCH 1/2] mlibc tonix port
  create mode 100644 sysdeps/tonix/meson.build
 
 diff --git a/meson.build b/meson.build
-index 2f9a4f36..9f22bfd9 100644
+index 0eb362a1..e7b82177 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -131,6 +131,10 @@ elif host_machine.system() == 'dripos'
+@@ -142,6 +142,10 @@ elif host_machine.system() == 'dripos'
  	rtdl_include_dirs += include_directories('sysdeps/dripos/include')
  	libc_include_dirs += include_directories('sysdeps/dripos/include')
  	subdir('sysdeps/dripos')
@@ -93,7 +95,7 @@ index 2f9a4f36..9f22bfd9 100644
  	error('No sysdeps defined for OS: ' + host_machine.system())
  endif
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
-index fb301343..6d5b5362 100644
+index ffdf5c34..0f5813c1 100644
 --- a/options/rtdl/generic/linker.cpp
 +++ b/options/rtdl/generic/linker.cpp
 @@ -12,9 +12,9 @@
@@ -110,10 +112,10 @@ index fb301343..6d5b5362 100644
  
  #if defined(__x86_64__)
 diff --git a/options/rtdl/generic/main.cpp b/options/rtdl/generic/main.cpp
-index 86c9e00c..976b6500 100644
+index 0d7b0a8a..1dc861c9 100644
 --- a/options/rtdl/generic/main.cpp
 +++ b/options/rtdl/generic/main.cpp
-@@ -14,8 +14,8 @@
+@@ -15,8 +15,8 @@
  #define HIDDEN  __attribute__ ((visibility ("hidden")))
  #define EXPORT  __attribute__ ((visibility ("default")))
  
@@ -179,10 +181,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..f589762f
+index 00000000..3123123e
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,536 @@
+@@ -0,0 +1,565 @@
 +#include <bits/ensure.h>
 +#include <abi-bits/wait.h>
 +#include <mlibc/debug.hpp>
@@ -210,7 +212,7 @@ index 00000000..f589762f
 +        SystemCall(SystemCallID::Panic, "mlibc panic!");
 +    }
 +
-+    int sys_open(const char* path, int flags, int* fd)
++    int sys_open(const char* path, int flags, mode_t mode, int* fd)
 +    {
 +        mlibc::infoLogger() << "[syscall] Open: " << path << " Flags: " << flags << frg::endlog;
 +
@@ -559,7 +561,7 @@ index 00000000..f589762f
 +
 +    int sys_open_dir(const char* path, int* handle)
 +    {
-+        return sys_open(path, O_DIRECTORY | O_RDONLY, handle);
++        return sys_open(path, O_DIRECTORY | O_RDONLY, 0, handle);
 +    }
 +
 +    int sys_read_entries(int handle, void* buffer, size_t max_size, size_t* bytes_read)
@@ -717,6 +719,35 @@ index 00000000..f589762f
 +        return 0;
 +    }
 +
++    int sys_get_file_descriptor_flags(int fd, FileDescriptorFlags* buffer)
++    {
++        return -SystemCall(SystemCallID::GetFileDescriptorFlags, fd, buffer);
++    }
++
++    int sys_fcntl(int fd, int request, va_list args, int* result_value)
++    {
++        switch (request)
++        {
++            case F_GETFD:
++            {
++                mlibc::infoLogger() << "[syscall] GetFileDescriptorFlags: " << fd << frg::endlog;
++
++                FileDescriptorFlags flags;
++                auto error = sys_get_file_descriptor_flags(fd, &flags);
++                if (error > 0) return error;
++
++                *result_value = flags.closeOnExecute ? FD_CLOEXEC : 0;
++                break;
++            }
++            default:
++                Warn("Unsupported fcntl request, returning ENOSYS");
++                *result_value = -1;
++                return ENOSYS;
++        }
++
++        return 0;
++    }
++
 +#endif // MLIBC_BUILDING_RTDL
 +}
 diff --git a/sysdeps/tonix/include/abi-bits/abi.h b/sysdeps/tonix/include/abi-bits/abi.h
@@ -726,6 +757,14 @@ index 00000000..c9458601
 +++ b/sysdeps/tonix/include/abi-bits/abi.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/abi.h
+\ No newline at end of file
+diff --git a/sysdeps/tonix/include/abi-bits/access.h b/sysdeps/tonix/include/abi-bits/access.h
+new file mode 120000
+index 00000000..171f75f8
+--- /dev/null
++++ b/sysdeps/tonix/include/abi-bits/access.h
+@@ -0,0 +1 @@
++../../../../abis/mlibc/access.h
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/auxv.h b/sysdeps/tonix/include/abi-bits/auxv.h
 new file mode 120000
@@ -946,10 +985,10 @@ index 00000000..953a5a4f
 +}
 diff --git a/sysdeps/tonix/include/tonix/SystemCall.h b/sysdeps/tonix/include/tonix/SystemCall.h
 new file mode 100644
-index 00000000..1444937c
+index 00000000..e37290c8
 --- /dev/null
 +++ b/sysdeps/tonix/include/tonix/SystemCall.h
-@@ -0,0 +1,66 @@
+@@ -0,0 +1,67 @@
 +#pragma once
 +
 +#include <sys/types.h>
@@ -978,6 +1017,7 @@ index 00000000..1444937c
 +    SetWorkingDirectory = 19,
 +    Execute = 20,
 +    ReadDirectory = 21,
++    GetFileDescriptorFlags = 22,
 +    Panic = 254,
 +    Log = 255,
 +    NotImplemented = 253
@@ -1018,10 +1058,10 @@ index 00000000..1444937c
 +}
 diff --git a/sysdeps/tonix/include/tonix/VFS.h b/sysdeps/tonix/include/tonix/VFS.h
 new file mode 100644
-index 00000000..ac113877
+index 00000000..7d3898af
 --- /dev/null
 +++ b/sysdeps/tonix/include/tonix/VFS.h
-@@ -0,0 +1,26 @@
+@@ -0,0 +1,35 @@
 +#pragma once
 +
 +#include <stdint.h>
@@ -1048,6 +1088,15 @@ index 00000000..ac113877
 +    char name[1024];
 +    uint64_t entrySize;
 +};
++
++struct FileDescriptorFlags
++{
++    bool directoryMode = false;
++    bool appendMode = false;
++    bool readMode = false;
++    bool writeMode = false;
++    bool closeOnExecute = false;
++};
 diff --git a/sysdeps/tonix/include/tonix/Warn.h b/sysdeps/tonix/include/tonix/Warn.h
 new file mode 100644
 index 00000000..c82a0d58
@@ -1061,10 +1110,10 @@ index 00000000..c82a0d58
 +#define Warn(message) mlibc::infoLogger() << "\033[95m[LIBC WARNING] " << __FUNCTION__ << " -> " << message << "\033[39m" << frg::endlog
 diff --git a/sysdeps/tonix/meson.build b/sysdeps/tonix/meson.build
 new file mode 100644
-index 00000000..d4139a23
+index 00000000..a638a351
 --- /dev/null
 +++ b/sysdeps/tonix/meson.build
-@@ -0,0 +1,52 @@
+@@ -0,0 +1,53 @@
 +
 +rtdl_sources += files(
 +	'generic/Generic.cpp'
@@ -1078,6 +1127,7 @@ index 00000000..d4139a23
 +if not no_headers
 +	install_headers(
 +		'include/abi-bits/abi.h',
++		'include/abi-bits/access.h',
 +		'include/abi-bits/auxv.h',
 +		'include/abi-bits/seek-whence.h',
 +		'include/abi-bits/vm-flags.h',

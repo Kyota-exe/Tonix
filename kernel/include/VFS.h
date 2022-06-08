@@ -35,6 +35,8 @@ public:
 
     VnodeInfo GetVnodeInfo(int descriptor, Error& error);
     VnodeInfo GetVnodeInfo(int descriptor);
+    FileDescriptorFlags GetFileDescriptorFlags(int descriptor, Error& error);
+    void SetFileDescriptorFlags(int descriptor, const FileDescriptorFlags& flags, Error& error);
     void SetTerminalSettings(int descriptor, bool canonical, bool echo, Error& error);
     WindowSize GetTerminalWindowSize(int descriptor, Error& error);
     String GetWorkingDirectory();

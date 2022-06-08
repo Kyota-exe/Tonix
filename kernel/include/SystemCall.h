@@ -27,6 +27,7 @@ enum class SystemCallType
     SetWorkingDirectory = 19,
     Execute = 20,
     ReadDirectory = 21,
+    GetFileDescriptorFlags = 22,
     Panic = 254,
     Log = 255
 };
