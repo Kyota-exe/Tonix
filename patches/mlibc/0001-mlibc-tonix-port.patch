@@ -1,4 +1,4 @@
-From f86d071d82438a1ffaace906ba43c3213057ffaa Mon Sep 17 00:00:00 2001
+From 77c683c674064e9da6179c8ce07947128695b503 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Wed, 8 Jun 2022 22:29:36 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -11,7 +11,6 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
  sysdeps/tonix/generic/Generic.cpp            | 565 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
- sysdeps/tonix/include/abi-bits/access.h      |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
  sysdeps/tonix/include/abi-bits/blksize_t.h   |   1 +
@@ -41,13 +40,12 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/tonix/SystemCall.h     |  67 +++
  sysdeps/tonix/include/tonix/VFS.h            |  35 ++
  sysdeps/tonix/include/tonix/Warn.h           |   5 +
- sysdeps/tonix/meson.build                    |  53 ++
- 38 files changed, 813 insertions(+), 5 deletions(-)
+ sysdeps/tonix/meson.build                    |  52 ++
+ 37 files changed, 811 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
  create mode 120000 sysdeps/tonix/include/abi-bits/abi.h
- create mode 120000 sysdeps/tonix/include/abi-bits/access.h
  create mode 120000 sysdeps/tonix/include/abi-bits/auxv.h
  create mode 120000 sysdeps/tonix/include/abi-bits/blkcnt_t.h
  create mode 120000 sysdeps/tonix/include/abi-bits/blksize_t.h
@@ -80,10 +78,10 @@ Subject: [PATCH 1/1] mlibc tonix port
  create mode 100644 sysdeps/tonix/meson.build
 
 diff --git a/meson.build b/meson.build
-index 0eb362a1..e7b82177 100644
+index 6c1103d2..2a053a60 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -142,6 +142,10 @@ elif host_machine.system() == 'dripos'
+@@ -136,6 +136,10 @@ elif host_machine.system() == 'dripos'
  	rtdl_include_dirs += include_directories('sysdeps/dripos/include')
  	libc_include_dirs += include_directories('sysdeps/dripos/include')
  	subdir('sysdeps/dripos')
@@ -95,7 +93,7 @@ index 0eb362a1..e7b82177 100644
  	error('No sysdeps defined for OS: ' + host_machine.system())
  endif
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
-index ffdf5c34..0f5813c1 100644
+index bca51f78..45afa2ac 100644
 --- a/options/rtdl/generic/linker.cpp
 +++ b/options/rtdl/generic/linker.cpp
 @@ -12,9 +12,9 @@
@@ -112,7 +110,7 @@ index ffdf5c34..0f5813c1 100644
  
  #if defined(__x86_64__)
 diff --git a/options/rtdl/generic/main.cpp b/options/rtdl/generic/main.cpp
-index 0d7b0a8a..1dc861c9 100644
+index 445dbf84..c1494731 100644
 --- a/options/rtdl/generic/main.cpp
 +++ b/options/rtdl/generic/main.cpp
 @@ -15,8 +15,8 @@
@@ -181,7 +179,7 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..3123123e
+index 00000000..4508dcb3
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
 @@ -0,0 +1,565 @@
@@ -212,7 +210,7 @@ index 00000000..3123123e
 +        SystemCall(SystemCallID::Panic, "mlibc panic!");
 +    }
 +
-+    int sys_open(const char* path, int flags, mode_t mode, int* fd)
++    int sys_open(const char* path, int flags, int* fd)
 +    {
 +        mlibc::infoLogger() << "[syscall] Open: " << path << " Flags: " << flags << frg::endlog;
 +
@@ -561,7 +559,7 @@ index 00000000..3123123e
 +
 +    int sys_open_dir(const char* path, int* handle)
 +    {
-+        return sys_open(path, O_DIRECTORY | O_RDONLY, 0, handle);
++        return sys_open(path, O_DIRECTORY | O_RDONLY, handle);
 +    }
 +
 +    int sys_read_entries(int handle, void* buffer, size_t max_size, size_t* bytes_read)
@@ -757,14 +755,6 @@ index 00000000..c9458601
 +++ b/sysdeps/tonix/include/abi-bits/abi.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/abi.h
-\ No newline at end of file
-diff --git a/sysdeps/tonix/include/abi-bits/access.h b/sysdeps/tonix/include/abi-bits/access.h
-new file mode 120000
-index 00000000..171f75f8
---- /dev/null
-+++ b/sysdeps/tonix/include/abi-bits/access.h
-@@ -0,0 +1 @@
-+../../../../abis/mlibc/access.h
 \ No newline at end of file
 diff --git a/sysdeps/tonix/include/abi-bits/auxv.h b/sysdeps/tonix/include/abi-bits/auxv.h
 new file mode 120000
@@ -1110,10 +1100,10 @@ index 00000000..c82a0d58
 +#define Warn(message) mlibc::infoLogger() << "\033[95m[LIBC WARNING] " << __FUNCTION__ << " -> " << message << "\033[39m" << frg::endlog
 diff --git a/sysdeps/tonix/meson.build b/sysdeps/tonix/meson.build
 new file mode 100644
-index 00000000..a638a351
+index 00000000..d4139a23
 --- /dev/null
 +++ b/sysdeps/tonix/meson.build
-@@ -0,0 +1,53 @@
+@@ -0,0 +1,52 @@
 +
 +rtdl_sources += files(
 +	'generic/Generic.cpp'
@@ -1127,7 +1117,6 @@ index 00000000..a638a351
 +if not no_headers
 +	install_headers(
 +		'include/abi-bits/abi.h',
-+		'include/abi-bits/access.h',
 +		'include/abi-bits/auxv.h',
 +		'include/abi-bits/seek-whence.h',
 +		'include/abi-bits/vm-flags.h',
