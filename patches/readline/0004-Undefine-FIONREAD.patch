@@ -1,0 +1,52 @@
+From 883be87b931c69f8d52d10e5e716cce90ea32f36 Mon Sep 17 00:00:00 2001
+From: Kyota Poeti <kyota.exe@gmail.com>
+Date: Sat, 11 Jun 2022 14:08:13 -0400
+Subject: [PATCH 4/4] Undefine FIONREAD
+
+---
+ input.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/input.c b/input.c
+index 497cdf9..af44012 100644
+--- a/input.c
++++ b/input.c
+@@ -236,7 +236,7 @@ rl_gather_tyi (void)
+ 
+   result = -1;
+   errno = 0;
+-#if defined (FIONREAD)
++#if 0
+   result = ioctl (tty, FIONREAD, &chars_avail);
+   if (result == -1 && errno == EIO)
+     return -1;
+@@ -334,7 +334,7 @@ _rl_input_available (void)
+   fd_set readfds, exceptfds;
+   struct timeval timeout;
+ #endif
+-#if defined(FIONREAD)
++#if 0
+   int chars_avail;
+ #endif
+   int tty;
+@@ -353,7 +353,7 @@ _rl_input_available (void)
+   return (select (tty + 1, &readfds, (fd_set *)NULL, &exceptfds, &timeout) > 0);
+ #else
+ 
+-#if defined (FIONREAD)
++#if 0
+   if (ioctl (tty, FIONREAD, &chars_avail) == 0)
+     return (chars_avail);
+ #endif
+@@ -375,7 +375,7 @@ _rl_nchars_available ()
+   
+   chars_avail = 0;
+      
+-#if defined (FIONREAD)
++#if 0
+   fd = fileno (rl_instream);
+   errno = 0;    
+   result = ioctl (fd, FIONREAD, &chars_avail);    
+-- 
+2.25.1
+

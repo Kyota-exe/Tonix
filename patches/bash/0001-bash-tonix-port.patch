@@ -1,19 +1,18 @@
-From dff37f67d8144f1f1ac0544e111e7ae18e436ebb Mon Sep 17 00:00:00 2001
+From b4a68c4498c33a5bccfe8216dc0d2249799b6a99 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
-Date: Sat, 14 May 2022 16:14:21 -0400
+Date: Sat, 11 Jun 2022 15:02:49 -0400
 Subject: [PATCH 1/1] bash tonix port
 
 ---
- builtins/psize.c         | 27 +++-----------------
- lib/readline/rlprivate.h |  2 +-
- lib/termcap/termcap.c    |  2 +-
- mksyntax.c               | 53 ++--------------------------------------
- shell.c                  |  4 +--
- support/bashversion.c    |  7 ++----
- support/man2html.c       | 24 ------------------
- support/mksignames.c     |  8 +-----
- support/signames.c       |  8 +-----
- 9 files changed, 14 insertions(+), 121 deletions(-)
+ builtins/psize.c      | 27 ++++------------------
+ lib/termcap/termcap.c |  2 +-
+ mksyntax.c            | 53 ++-----------------------------------------
+ shell.c               |  4 ++--
+ support/bashversion.c |  7 ++----
+ support/man2html.c    | 24 --------------------
+ support/mksignames.c  |  8 +------
+ support/signames.c    |  8 +------
+ 8 files changed, 13 insertions(+), 120 deletions(-)
 
 diff --git a/builtins/psize.c b/builtins/psize.c
 index 30881fb..fec55ae 100644
@@ -57,19 +56,6 @@ index 30881fb..fec55ae 100644
  sigpipe (sig)
       int sig;
  {
-diff --git a/lib/readline/rlprivate.h b/lib/readline/rlprivate.h
-index 23ab2d8..091d365 100644
---- a/lib/readline/rlprivate.h
-+++ b/lib/readline/rlprivate.h
-@@ -313,7 +313,7 @@ extern int _rl_search_getchar PARAMS((_rl_search_cxt *));
- 
- /* kill.c */
- #ifndef BRACKETED_PASTE_DEFAULT
--#  define BRACKETED_PASTE_DEFAULT	1	/* XXX - for now */
-+#  define BRACKETED_PASTE_DEFAULT	0	/* XXX - for now */
- #endif
- 
- #define BRACK_PASTE_PREF	"\033[200~"
 diff --git a/lib/termcap/termcap.c b/lib/termcap/termcap.c
 index ba3dab2..2882f0c 100644
 --- a/lib/termcap/termcap.c

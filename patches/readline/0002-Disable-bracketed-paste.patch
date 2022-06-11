@@ -1,0 +1,27 @@
+From c78310be685b6e3c31b3960fff3b9fc3127fdd37 Mon Sep 17 00:00:00 2001
+From: Kyota Poeti <kyota.exe@gmail.com>
+Date: Sat, 11 Jun 2022 14:02:32 -0400
+Subject: [PATCH 2/4] Disable bracketed paste
+
+---
+ rlprivate.h | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/rlprivate.h b/rlprivate.h
+index 23ab2d8..1f13cdd 100644
+--- a/rlprivate.h
++++ b/rlprivate.h
+@@ -312,9 +312,7 @@ extern int _rl_isearch_cleanup PARAMS((_rl_search_cxt *, int));
+ extern int _rl_search_getchar PARAMS((_rl_search_cxt *));
+ 
+ /* kill.c */
+-#ifndef BRACKETED_PASTE_DEFAULT
+-#  define BRACKETED_PASTE_DEFAULT	1	/* XXX - for now */
+-#endif
++#define BRACKETED_PASTE_DEFAULT	0	/* XXX - for now */
+ 
+ #define BRACK_PASTE_PREF	"\033[200~"
+ #define BRACK_PASTE_SUFF	"\033[201~"
+-- 
+2.25.1
+
