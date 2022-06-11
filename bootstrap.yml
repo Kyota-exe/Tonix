@@ -4,6 +4,20 @@ sources:
     git: 'https://github.com/cmatsuoka/figlet.git'
     branch: 'master'
 
+  - name: pkg-config
+    subdir: '3rdparty'
+    git: 'https://gitlab.freedesktop.org/pkg-config/pkg-config.git'
+    tag: 'pkg-config-0.29.2'
+    version: '0.29.2'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+    regenerate:
+      - args: ['./autogen.sh']
+        environ:
+          NOCONFIGURE: 'yes'
+
   - name: gnulib
     subdir: '3rdparty'
     git: 'https://git.savannah.gnu.org/git/gnulib.git'
@@ -112,6 +126,47 @@ tools:
     install:
       - args: ['mkdir', '-p', '@PREFIX@/bin']
       - args: ['cp', 'zic', '@PREFIX@/bin/']
+
+  - name: host-libtool
+    exports_aclocal: true
+    source:
+      name: libtool
+      subdir: '3rdparty'
+      git: 'https://git.savannah.gnu.org/git/libtool.git'
+      tag: 'v2.4.7'
+      version: '2.4.7'
+      sources_required: ['gnulib']
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake-v1.16
+      regenerate:
+        - args: ['rm', '-rf', 'gnulib']
+        - args: ['cp', '-r', '@SOURCE_ROOT@/3rdparty/gnulib', './']
+        - args: ['./bootstrap']
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+    configure:
+      - args:
+          - '@THIS_SOURCE_DIR@/configure'
+          - '--prefix=@PREFIX@'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install-strip']
+
+  - name: host-pkg-config
+    exports_aclocal: true
+    from_source: pkg-config
+    configure:
+      - args:
+          - '@THIS_SOURCE_DIR@/configure'
+          - '--prefix=@PREFIX@'
+          - '--with-internal-glib'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install-strip']
 
   - name: host-autoconf-v2.69
     source:
