@@ -15,14 +15,12 @@ void VFS::Initialize(void* ext2RamDisk)
 {
     kernelVfs = new VFS();
 
-    FileSystem* ext2FileSystem;
-    ext2FileSystem = new Ext2(new RAMDisk(ext2RamDisk));
+    FileSystem* ext2FileSystem = new Ext2(new RAMDisk(ext2RamDisk));
     root = ext2FileSystem->fileSystemRoot;
     currentInCache = root;
 
     VFS::Vnode* devMountPoint = kernelVfs->CreateDirectory(String("/dev"));
-    FileSystem* deviceFileSystem;
-    deviceFileSystem = new DeviceFS(nullptr);
+    FileSystem* deviceFileSystem = new DeviceFS(nullptr);
     Mount(devMountPoint, deviceFileSystem->fileSystemRoot);
 }
 
@@ -34,7 +32,7 @@ void VFS::CacheVNode(VFS::Vnode* vnode)
 
 VFS::FileDescriptor* VFS::GetFileDescriptor(int descriptor)
 {
-    if (descriptor >= (int)fileDescriptors.GetLength())
+    if (descriptor >= static_cast<int>(fileDescriptors.GetLength()))
     {
         return nullptr;
     }
