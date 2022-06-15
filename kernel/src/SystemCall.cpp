@@ -96,7 +96,7 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
         {
             const char* path = reinterpret_cast<const char*>(arg0);
 
-            int fd = scheduler->currentTask.vfs->Open(String(path), 0, error);
+            int fd = scheduler->currentTask.vfs->Open(String(path), VFS::OpenFlag::ReadOnly, error);
             if (error != Error::None) return -1;
 
             auto buffer = reinterpret_cast<VFS::VnodeInfo*>(arg1);
