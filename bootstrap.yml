@@ -1,4 +1,20 @@
 sources:
+  - name: python
+    subdir: '3rdparty'
+    git: 'https://github.com/python/cpython.git'
+    tag: 'v3.8.13'
+    version: '3.8.13'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+      - host-pkg-config
+    regenerate:
+      - args: ['autoreconf', '-f', '-i']
+      - args: ['cp',
+               '@BUILD_ROOT@/tools/host-automake-v1.16/share/automake-1.16/config.sub',
+               '@THIS_SOURCE_DIR@/']
+
   - name: figlet
     subdir: '3rdparty'
     git: 'https://github.com/cmatsuoka/figlet.git'
@@ -631,3 +647,34 @@ packages:
       - args: ['make', '-C', '@THIS_SOURCE_DIR@/doomgeneric', '-f', 'Makefile.tonix', '-j@PARALLELISM@']
       - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/bin']
       - args: ['cp', '@THIS_SOURCE_DIR@/doomgeneric/doomgeneric', '@THIS_COLLECT_DIR@/usr/bin/doomgeneric']
+
+  - name: python
+    from_source: python
+    tools_required:
+      - host-gcc
+      - host-pkg-config
+    pkgs_required:
+      - mlibc
+      - ncurses
+      - readline
+    configure:
+      - args:
+          - '@THIS_SOURCE_DIR@/configure'
+          - '--host=x86_64-tonix'
+          - '--build=x86_64-linux-gnu'
+          - '--prefix=/usr'
+          - '--enable-shared'
+          - '--with-system-ffi'
+          - '--with-system-expat'
+          - '--disable-ipv6'
+          - '--without-ensurepip'
+        environ:
+          PKG_CONFIG_SYSROOT_DIR: '@BUILD_ROOT@/system-root'
+          PKG_CONFIG_LIBDIR: '@BUILD_ROOT@/system-root/usr/lib/pkgconfig:@BUILD_ROOT@/system-root/usr/share/pkgconfig'
+          ac_cv_file__dev_ptmx: 'no'
+          ac_cv_file__dev_ptc: 'no'
+    build:
+      - args: [ 'make', '-j@PARALLELISM@' ]
+      - args: [ 'make', 'install' ]
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
