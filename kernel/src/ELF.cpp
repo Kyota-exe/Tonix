@@ -7,7 +7,7 @@
 
 constexpr uintptr_t RTDL_ADDR = 0x40000000;
 
-void ELF::LoadELF(const String& path, PagingManager& pagingManager, VFS& vfs, uintptr_t& entry, AuxilaryVector*& auxilaryVector)
+void ELF::LoadELF(const String& path, PagingManager& pagingManager, VFS& vfs, uintptr_t& entry, AuxiliaryVector*& auxiliaryVector)
 {
     int elfFile = vfs.Open(path, VFS::OpenFlag::ReadOnly);
 
@@ -54,7 +54,7 @@ void ELF::LoadELF(const String& path, PagingManager& pagingManager, VFS& vfs, ui
 
                 rtdlPath[programHeader.segmentSizeInFile] = 0;
 
-                AuxilaryVector* auxVector = nullptr;
+                AuxiliaryVector* auxVector = nullptr;
                 LoadELF(String(rtdlPath), pagingManager, vfs, entry, auxVector);
                 Assert(auxVector == nullptr);
 
@@ -77,13 +77,13 @@ void ELF::LoadELF(const String& path, PagingManager& pagingManager, VFS& vfs, ui
 
     if (hasDynamicLinking)
     {
-        auxilaryVector = new AuxilaryVector();
-        auxilaryVector->entry = elfHeader->entry;
-        auxilaryVector->programHeaderTableAddr = programHeaderTableAddr;
-        auxilaryVector->programHeaderTableEntrySize = elfHeader->programHeaderTableEntrySize;
-        auxilaryVector->programHeaderTableEntryCount = elfHeader->programHeaderTableEntryCount;
+        auxiliaryVector = new AuxiliaryVector();
+        auxiliaryVector->entry = elfHeader->entry;
+        auxiliaryVector->programHeaderTableAddr = programHeaderTableAddr;
+        auxiliaryVector->programHeaderTableEntrySize = elfHeader->programHeaderTableEntrySize;
+        auxiliaryVector->programHeaderTableEntryCount = elfHeader->programHeaderTableEntryCount;
     }
-    else auxilaryVector = nullptr;
+    else auxiliaryVector = nullptr;
 
     delete elfHeader;
     delete[] programHeaderTable;

@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-struct AuxilaryVector
+struct AuxiliaryVector
 {
     uintptr_t entry = 0;
     uintptr_t programHeaderTableAddr = 0;

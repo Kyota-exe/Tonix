@@ -12,7 +12,7 @@
 #include "GDT.h"
 #include "IDT.h"
 #include "Heap.h"
-#include "AuxilaryVector.h"
+#include "AuxiliaryVector.h"
 
 constexpr uint64_t SYSCALL_STACK_PAGE_COUNT = 3;
 constexpr uintptr_t USER_STACK_BASE = 0x0000'8000'0000'0000 - 0x1000;
@@ -24,7 +24,7 @@ Vector<Task>* taskQueue;
 Spinlock taskQueueLock;
 
 Task CreateTask(PagingManager* pagingManager, VFS* vfs, UserspaceAllocator* userspaceAllocator,
-                uintptr_t entry, uint64_t pid, uint64_t parentPid, bool giveStack, const AuxilaryVector* auxilaryVector,
+                uintptr_t entry, uint64_t pid, uint64_t parentPid, bool giveStack, const AuxiliaryVector* auxiliaryVector,
                 const Vector<String>& arguments, const Vector<String>& environment, bool supervisorTask = false)
 {
     uintptr_t stackPtr = 0;
@@ -89,21 +89,21 @@ Task CreateTask(PagingManager* pagingManager, VFS* vfs, UserspaceAllocator* user
         // B00byedge, the chaddest says this 16-byte aligns the stack (and we don't need a range check, apparently)
         stackHigherHalf &= ~static_cast<uintptr_t>(0xf);
 
-        if (auxilaryVector != nullptr)
+        if (auxiliaryVector != nullptr)
         {
             push(0); // NULL
             push(0);
 
-            push(auxilaryVector->programHeaderTableAddr);
+            push(auxiliaryVector->programHeaderTableAddr);
             push(3);
 
-            push(auxilaryVector->programHeaderTableEntrySize);
+            push(auxiliaryVector->programHeaderTableEntrySize);
             push(4);
 
-            push(auxilaryVector->programHeaderTableEntryCount);
+            push(auxiliaryVector->programHeaderTableEntryCount);
             push(5);
 
-            push(auxilaryVector->entry);
+            push(auxiliaryVector->entry);
             push(9);
         }
 
@@ -406,11 +406,11 @@ void Scheduler::Execute(const String& path, InterruptFrame* interruptFrame, cons
     vfs->OnExecute();
 
     uintptr_t entry = 0;
-    AuxilaryVector* auxilaryVector = nullptr;
-    ELF::LoadELF(path, *pagingManager, *vfs, entry, auxilaryVector);
+    AuxiliaryVector* auxiliaryVector = nullptr;
+    ELF::LoadELF(path, *pagingManager, *vfs, entry, auxiliaryVector);
 
     Task task = CreateTask(pagingManager, vfs, new UserspaceAllocator(), entry, currentTask.pid,
-                           currentTask.parentPid, true, auxilaryVector, arguments, environment);
+                           currentTask.parentPid, true, auxiliaryVector, arguments, environment);
 
     taskQueueLock.Acquire();
     taskQueue->Push(task);
@@ -496,11 +496,11 @@ void Scheduler::CreateTaskFromELF(const String& path, const Vector<String>& argu
     pagingManager->InitializePaging();
 
     uintptr_t entry;
-    AuxilaryVector* auxilaryVector;
-    ELF::LoadELF(path, *pagingManager, *VFS::kernelVfs, entry, auxilaryVector);
+    AuxiliaryVector* auxiliaryVector;
+    ELF::LoadELF(path, *pagingManager, *VFS::kernelVfs, entry, auxiliaryVector);
 
     Task task = CreateTask(pagingManager, new VFS(), new UserspaceAllocator(), entry, GeneratePID(), 0, true,
-                           auxilaryVector, arguments, environment);
+                           auxiliaryVector, arguments, environment);
 
     int desc = task.vfs->Open(String("/dev/tty"), VFS::OpenFlag::ReadWrite);
     Assert(desc == 0);
