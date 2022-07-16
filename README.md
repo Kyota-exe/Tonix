@@ -34,5 +34,7 @@ Build Tonix: `make`
 
 Run it in qemu: `make run`
 
+Make sure you place `doom1.wad` in `root-directory/` if you want to run DOOM.
+
 ## Contributing
 Contributions are always welcome, but please never use `[&]` as a lambda capture.
