@@ -28,6 +28,15 @@ void PushToBuffer(uint8_t scanCode)
 
 uint64_t KeyboardDevice::Read(void* buffer, uint64_t count, uint64_t position)
 {
+    // Temporarily solution for DOOM to work
+    static bool flushed = false;
+    if (!flushed)
+    {
+        readIndex = 0;
+        writeIndex = 0;
+        flushed = true;
+    }
+
     Assert(count == 1);
     Assert(position == 0);
 
