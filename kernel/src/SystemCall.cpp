@@ -129,11 +129,14 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
 
             String workingDirectory = scheduler->currentTask.vfs->GetWorkingDirectory();
 
-            // Chop off the last character '/'
+            // Chop off the last character '/' if working directory is not root
             Assert(workingDirectory[workingDirectory.GetLength() - 1] == '/');
-            workingDirectory = workingDirectory.Substring(0, workingDirectory.GetLength() - 1);
+            if (workingDirectory.GetLength() != 1)
+            {
+                workingDirectory = workingDirectory.Substring(0, workingDirectory.GetLength() - 1);
+            }
 
-            if (bufferSize < workingDirectory.GetLength())
+            if (bufferSize < workingDirectory.GetLength() + 1)
             {
                 error = Error::BadRange;
                 return -1;
@@ -143,6 +146,7 @@ uint64_t SystemCall(SystemCallType type, uint64_t arg0, uint64_t arg1, uint64_t 
             {
                 buffer[i] = workingDirectory[i];
             }
+            buffer[workingDirectory.GetLength()] = '\0';
 
             return 0;
         }
