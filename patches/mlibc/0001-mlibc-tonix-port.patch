@@ -1,4 +1,4 @@
-From 46994aa802464a5168bf3ebd7acbd3f537e3bdf2 Mon Sep 17 00:00:00 2001
+From 406e27f74a98f7d56f1ee482ad6cf19e87fe0dd6 Mon Sep 17 00:00:00 2001
 From: Kyota Poeti <kyota.exe@gmail.com>
 Date: Wed, 8 Jun 2022 22:29:36 -0400
 Subject: [PATCH 1/1] mlibc tonix port
@@ -9,7 +9,7 @@ Subject: [PATCH 1/1] mlibc tonix port
  options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/tonix/crt-x86_64/crt0.S              |   7 +
  sysdeps/tonix/generic/Entry.cpp              |  34 ++
- sysdeps/tonix/generic/Generic.cpp            | 571 +++++++++++++++++++
+ sysdeps/tonix/generic/Generic.cpp            | 576 +++++++++++++++++++
  sysdeps/tonix/include/abi-bits/abi.h         |   1 +
  sysdeps/tonix/include/abi-bits/auxv.h        |   1 +
  sysdeps/tonix/include/abi-bits/blkcnt_t.h    |   1 +
@@ -37,11 +37,11 @@ Subject: [PATCH 1/1] mlibc tonix port
  sysdeps/tonix/include/abi-bits/vm-flags.h    |   1 +
  sysdeps/tonix/include/abi-bits/wait.h        |   1 +
  sysdeps/tonix/include/mlibc/thread-entry.hpp |  11 +
- sysdeps/tonix/include/tonix/SystemCall.h     |  67 +++
+ sysdeps/tonix/include/tonix/SystemCall.h     |  68 +++
  sysdeps/tonix/include/tonix/VFS.h            |  35 ++
  sysdeps/tonix/include/tonix/Warn.h           |   5 +
  sysdeps/tonix/meson.build                    |  52 ++
- 37 files changed, 817 insertions(+), 5 deletions(-)
+ 37 files changed, 823 insertions(+), 5 deletions(-)
  create mode 100644 sysdeps/tonix/crt-x86_64/crt0.S
  create mode 100644 sysdeps/tonix/generic/Entry.cpp
  create mode 100644 sysdeps/tonix/generic/Generic.cpp
@@ -179,10 +179,10 @@ index 00000000..cd1ef677
 +}
 diff --git a/sysdeps/tonix/generic/Generic.cpp b/sysdeps/tonix/generic/Generic.cpp
 new file mode 100644
-index 00000000..532c9f1d
+index 00000000..6e01065b
 --- /dev/null
 +++ b/sysdeps/tonix/generic/Generic.cpp
-@@ -0,0 +1,571 @@
+@@ -0,0 +1,576 @@
 +#include <bits/ensure.h>
 +#include <abi-bits/wait.h>
 +#include <mlibc/debug.hpp>
@@ -752,6 +752,11 @@ index 00000000..532c9f1d
 +        return 0;
 +    }
 +
++    int sys_mkdir(const char* path)
++    {
++        return -SystemCall(SystemCallID::CreateDirectory, path);
++    }
++
 +#endif // MLIBC_BUILDING_RTDL
 +}
 diff --git a/sysdeps/tonix/include/abi-bits/abi.h b/sysdeps/tonix/include/abi-bits/abi.h
@@ -981,10 +986,10 @@ index 00000000..953a5a4f
 +}
 diff --git a/sysdeps/tonix/include/tonix/SystemCall.h b/sysdeps/tonix/include/tonix/SystemCall.h
 new file mode 100644
-index 00000000..e37290c8
+index 00000000..cf8c14d7
 --- /dev/null
 +++ b/sysdeps/tonix/include/tonix/SystemCall.h
-@@ -0,0 +1,67 @@
+@@ -0,0 +1,68 @@
 +#pragma once
 +
 +#include <sys/types.h>
@@ -1014,6 +1019,7 @@ index 00000000..e37290c8
 +    Execute = 20,
 +    ReadDirectory = 21,
 +    GetFileDescriptorFlags = 22,
++    CreateDirectory = 23,
 +    Panic = 254,
 +    Log = 255,
 +    NotImplemented = 253
