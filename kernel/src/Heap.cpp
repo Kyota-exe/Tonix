@@ -40,6 +40,7 @@ constexpr bool DEBUG_DOUBLE_FREE = false;
 void Slab::InitializeSlab(uint64_t _slotSize, uint64_t _slabSize)
 {
     Assert(slabSize % 0x1000 == 0);
+    Assert(slotSize <= slabSize);
     slabSize = _slabSize;
     slotSize = _slotSize;
 
@@ -141,7 +142,7 @@ void InitializeKernelHeap()
 {
     for (uint64_t i = 0; i < SLABS_COUNT; ++i)
     {
-        slabs[i].InitializeSlab(Pow(2, 3 + i), 0x1000 * 2);
+        slabs[i].InitializeSlab(Pow(2, 3 + i), 0x1000 * 5);
     }
 }
 
