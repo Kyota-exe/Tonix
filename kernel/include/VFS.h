@@ -52,6 +52,8 @@ public:
     static Vnode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem);
 private:
     struct FileDescriptor;
+    struct FileHandle;
+
     Vector<FileDescriptor> fileDescriptors;
     String workingDirectory = String('/');
 
@@ -104,12 +106,21 @@ struct VFS::FileDescriptorFlags
     bool closeOnExecute = false;
 };
 
+struct VFS::FileHandle
+{
+    uint64_t refCount = 0;
+    Vnode* vnode = nullptr;
+    uint64_t offset = 0;
+    FileDescriptorFlags flags;
+};
+
 struct VFS::FileDescriptor
 {
+    FileHandle* handle = nullptr;
     bool present = false;
-    uint64_t offset = 0;
-    Vnode* vnode = nullptr;
-    FileDescriptorFlags flags;
+    Vnode*& vnode() { return handle->vnode; };
+    uint64_t& offset() { return handle->offset; }
+    FileDescriptorFlags& flags() { return handle->flags; };
 };
 
 enum VFS::OpenFlag : int

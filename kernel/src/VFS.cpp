@@ -180,12 +180,16 @@ int VFS::FindFreeFileDescriptor(FileDescriptor*& fileDescriptor)
     {
         Assert(fileDescriptors.GetLength() <= INT32_MAX);
         descriptorIndex = static_cast<int>(fileDescriptors.GetLength());
-        fileDescriptors.Push({false, 0, nullptr, {}});
+        fileDescriptors.Push({});
     }
 
     fileDescriptor = &fileDescriptors.Get(descriptorIndex);
-    fileDescriptor->offset = 0;
-    fileDescriptor->vnode = nullptr;
+
+    fileDescriptor->handle = new FileHandle;
+    fileDescriptor->handle->refCount++;
+
+    fileDescriptor->offset() = 0;
+    fileDescriptor->vnode() = nullptr;
 
     return descriptorIndex;
 }
@@ -226,44 +230,44 @@ int VFS::Open(const String& path, int flags, Error& error)
     int accessBits = flags & 0b111;
     if (accessBits == OpenFlag::WriteOnly)
     {
-        fileDescriptor->flags.readMode = false;
-        fileDescriptor->flags.writeMode = true;
+        fileDescriptor->flags().readMode = false;
+        fileDescriptor->flags().writeMode = true;
     }
     else if (accessBits == OpenFlag::ReadWrite)
     {
-        fileDescriptor->flags.readMode = true;
-        fileDescriptor->flags.writeMode = true;
+        fileDescriptor->flags().readMode = true;
+        fileDescriptor->flags().writeMode = true;
     }
     else
     {
-        fileDescriptor->flags.readMode = true;
-        fileDescriptor->flags.writeMode = false;
+        fileDescriptor->flags().readMode = true;
+        fileDescriptor->flags().writeMode = false;
     }
 
-    if (fileDescriptor->flags.writeMode && (flags & OpenFlag::Truncate))
+    if (fileDescriptor->flags().writeMode && (flags & OpenFlag::Truncate))
     {
         Assert(vnode->type == VFS::VnodeType::RegularFile);
         vnode->fileSystem->Truncate(vnode);
     }
 
-    fileDescriptor->flags.appendMode = flags & OpenFlag::Append;
-    fileDescriptor->flags.directoryMode = flags & OpenFlag::DirectoryMode;
-    fileDescriptor->flags.closeOnExecute = flags & OpenFlag::CloseOnExecute;
+    fileDescriptor->flags().appendMode = flags & OpenFlag::Append;
+    fileDescriptor->flags().directoryMode = flags & OpenFlag::DirectoryMode;
+    fileDescriptor->flags().closeOnExecute = flags & OpenFlag::CloseOnExecute;
 
-    if (fileDescriptor->flags.directoryMode && vnode->type != VnodeType::Directory)
+    if (fileDescriptor->flags().directoryMode && vnode->type != VnodeType::Directory)
     {
         error = Error::NotDirectory;
         return -1;
     }
 
-    if (fileDescriptor->flags.writeMode && vnode->type == VFS::VnodeType::Directory)
+    if (fileDescriptor->flags().writeMode && vnode->type == VFS::VnodeType::Directory)
     {
         error = Error::IsDirectory;
         return -1;
     }
 
     Assert(vnode->type != VnodeType::Unknown);
-    fileDescriptor->vnode = vnode;
+    fileDescriptor->vnode() = vnode;
     fileDescriptor->present = true;
     return descriptorIndex;
 }
@@ -287,17 +291,17 @@ void VFS::Read(int descriptor, void* buffer, uint64_t count)
 uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count, Error& error)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-    if (fileDescriptor == nullptr || !fileDescriptor->flags.readMode)
+    if (fileDescriptor == nullptr || !fileDescriptor->flags().readMode)
     {
         error = Error::BadFileDescriptor;
         return 0;
     }
 
-    VFS::Vnode* vnode = fileDescriptor->vnode;
+    VFS::Vnode* vnode = fileDescriptor->vnode();
 
     uint64_t readCount = 0;
 
-    if (!fileDescriptor->flags.directoryMode)
+    if (!fileDescriptor->flags().directoryMode)
     {
         if (vnode->type == VnodeType::Directory)
         {
@@ -305,17 +309,17 @@ uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count, Error& error)
             return -1;
         }
 
-        readCount = vnode->fileSystem->Read(vnode, buffer, count, fileDescriptor->offset);
+        readCount = vnode->fileSystem->Read(vnode, buffer, count, fileDescriptor->offset());
     }
     else
     {
         Assert(count == sizeof(DirectoryEntry));
         Assert(vnode->type == VnodeType::Directory);
 
-        if (fileDescriptor->offset < vnode->fileSize)
+        if (fileDescriptor->offset() < vnode->fileSize)
         {
             auto directoryEntry = static_cast<DirectoryEntry*>(buffer);
-            *directoryEntry = vnode->fileSystem->ReadDirectory(vnode, fileDescriptor->offset);
+            *directoryEntry = vnode->fileSystem->ReadDirectory(vnode, fileDescriptor->offset());
             readCount = directoryEntry->entrySize;
         }
         else
@@ -326,7 +330,7 @@ uint64_t VFS::Read(int descriptor, void* buffer, uint64_t count, Error& error)
 
     if (vnode->type == VnodeType::RegularFile || vnode->type == VnodeType::Directory)
     {
-        fileDescriptor->offset += readCount;
+        fileDescriptor->offset() += readCount;
     }
 
     return readCount;
@@ -343,13 +347,13 @@ void VFS::Write(int descriptor, const void* buffer, uint64_t count)
 uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count, Error& error)
 {
     FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-    if (fileDescriptor == nullptr || !fileDescriptor->flags.writeMode)
+    if (fileDescriptor == nullptr || !fileDescriptor->flags().writeMode)
     {
         error = Error::BadFileDescriptor;
         return 0;
     }
 
-    VFS::Vnode* vnode = fileDescriptor->vnode;
+    VFS::Vnode* vnode = fileDescriptor->vnode();
 
     if (vnode->type == VnodeType::Directory)
     {
@@ -357,28 +361,28 @@ uint64_t VFS::Write(int descriptor, const void* buffer, uint64_t count, Error& e
         return 0;
     }
 
-    if (fileDescriptor->flags.appendMode)
+    if (fileDescriptor->flags().appendMode)
     {
-        fileDescriptor->offset = fileDescriptor->vnode->fileSize;
+        fileDescriptor->offset() = fileDescriptor->vnode()->fileSize;
     }
 
-    if (vnode->type == VnodeType::RegularFile && fileDescriptor->offset > vnode->fileSize)
+    if (vnode->type == VnodeType::RegularFile && fileDescriptor->offset() > vnode->fileSize)
     {
         uint8_t null = 0;
         auto originalFileSize = vnode->fileSize;
-        for (uint64_t i = 0; i < fileDescriptor->offset - originalFileSize; ++i)
+        for (uint64_t i = 0; i < fileDescriptor->offset() - originalFileSize; ++i)
         {
             vnode->fileSystem->Write(vnode, &null, 1, originalFileSize + i);
         }
 
-        Assert(vnode->fileSize == fileDescriptor->offset);
+        Assert(vnode->fileSize == fileDescriptor->offset());
     }
 
-    uint64_t wroteCount = vnode->fileSystem->Write(vnode, buffer, count, fileDescriptor->offset);
+    uint64_t wroteCount = vnode->fileSystem->Write(vnode, buffer, count, fileDescriptor->offset());
 
     if (vnode->type == VnodeType::RegularFile)
     {
-        fileDescriptor->offset += wroteCount;
+        fileDescriptor->offset() += wroteCount;
     }
 
     return wroteCount;
@@ -393,7 +397,7 @@ uint64_t VFS::RepositionOffset(int descriptor, int64_t offset, VFS::SeekType see
         return -1;
     }
 
-    VFS::Vnode* vnode = fileDescriptor->vnode;
+    VFS::Vnode* vnode = fileDescriptor->vnode();
 
     if (vnode->type == VFS::VnodeType::Terminal)
     {
@@ -404,20 +408,20 @@ uint64_t VFS::RepositionOffset(int descriptor, int64_t offset, VFS::SeekType see
     switch (seekType)
     {
         case VFS::SeekType::Set:
-            fileDescriptor->offset = offset;
+            fileDescriptor->offset() = offset;
             break;
         case VFS::SeekType::Cursor:
-            fileDescriptor->offset += offset;
+            fileDescriptor->offset() += offset;
             break;
         case VFS::SeekType::End:
-            fileDescriptor->offset = vnode->fileSize + offset;
+            fileDescriptor->offset() = vnode->fileSize + offset;
             break;
         default:
             error = Error::InvalidArgument;
             return -1;
     }
 
-    return fileDescriptor->offset;
+    return fileDescriptor->offset();
 }
 
 void VFS::SetTerminalSettings(int descriptor, bool canonical, bool echo, Error& error)
@@ -455,7 +459,7 @@ TerminalDevice* VFS::GetTerminal(int descriptor, Error& error)
     if (vnodeInfo.type == VnodeType::Terminal)
     {
         FileDescriptor* fileDescriptor = GetFileDescriptor(descriptor);
-        return static_cast<TerminalDevice*>(fileDescriptor->vnode->context);
+        return static_cast<TerminalDevice*>(fileDescriptor->vnode()->context);
     }
     else
     {
@@ -489,6 +493,13 @@ void VFS::Close(int descriptor, Error& error)
     }
 
     fileDescriptor->present = false;
+
+    Assert(fileDescriptor->handle->refCount > 0);
+    fileDescriptor->handle->refCount--;
+    if (fileDescriptor->handle->refCount == 0)
+    {
+        delete fileDescriptor->handle;
+    }
 }
 
 VFS::VnodeInfo VFS::GetVnodeInfo(int descriptor, Error& error)
@@ -500,7 +511,7 @@ VFS::VnodeInfo VFS::GetVnodeInfo(int descriptor, Error& error)
         return {};
     }
 
-    Vnode* vnode = fileDescriptor->vnode;
+    Vnode* vnode = fileDescriptor->vnode();
     return {vnode->type, vnode->inodeNum, vnode->fileSize};
 }
 
@@ -521,7 +532,7 @@ VFS::FileDescriptorFlags VFS::GetFileDescriptorFlags(int descriptor, Error& erro
         return {};
     }
 
-    return fileDescriptor->flags;
+    return fileDescriptor->flags();
 }
 
 void VFS::SetFileDescriptorFlags(int descriptor, const FileDescriptorFlags& flags, Error& error)
@@ -533,7 +544,7 @@ void VFS::SetFileDescriptorFlags(int descriptor, const FileDescriptorFlags& flag
         return;
     }
 
-    fileDescriptor->flags = flags;
+    fileDescriptor->flags() = flags;
 }
 
 String VFS::GetWorkingDirectory()
@@ -599,7 +610,7 @@ void VFS::OnExecute()
     for (uint64_t i = 0; i < fileDescriptors.GetLength(); ++i)
     {
         FileDescriptor& fileDescriptor = fileDescriptors.Get(i);
-        if (fileDescriptor.present && fileDescriptor.flags.closeOnExecute)
+        if (fileDescriptor.present && fileDescriptor.flags().closeOnExecute)
         {
             Close(static_cast<int>(i));
         }
