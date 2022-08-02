@@ -50,6 +50,9 @@ public:
     static void CacheVNode(Vnode* vnode);
     static Vnode* ConstructVnode(uint32_t inodeNum, FileSystem* fileSystem, void* context, uint64_t fileSize, VnodeType type);
     static Vnode* SearchInCache(uint32_t inodeNum, FileSystem* fileSystem);
+
+    VFS() = default;
+    VFS(const VFS& original);
 private:
     struct FileDescriptor;
     struct FileHandle;

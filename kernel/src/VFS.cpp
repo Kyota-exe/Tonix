@@ -11,6 +11,19 @@ VFS::Vnode* root;
 VFS::Vnode* currentInCache = nullptr;
 VFS* VFS::kernelVfs = nullptr;
 
+VFS::VFS(const VFS& original) :
+    fileDescriptors(original.fileDescriptors),
+    workingDirectory(original.workingDirectory)
+{
+    for (FileDescriptor fileDescriptor : fileDescriptors)
+    {
+        if (!fileDescriptor.present) continue;
+        Assert(fileDescriptor.handle != nullptr);
+        Assert(fileDescriptor.handle->refCount > 0);
+        fileDescriptor.handle->refCount++;
+    }
+}
+
 void VFS::Initialize(void* ext2RamDisk)
 {
     kernelVfs = new VFS();
